@@ -1,0 +1,20 @@
+<bbf-l2-fwd:forwarding xmlns:bbf-l2-fwd="urn:bbf:yang:bbf-l2-forwarding">
+    <bbf-l2-fwd:forwarders>
+        <!-- forwarder configuration from User 1 to S-TAG 201 -->
+        <bbf-l2-fwd:forwarder>
+            <bbf-l2-fwd:name>user1_uni100_to_svlan_201</bbf-l2-fwd:name>
+            <bbf-l2-fwd:ports>
+                <bbf-l2-fwd:port>
+                <bbf-l2-fwd:name>olt-user1-eth.1.100</bbf-l2-fwd:name>
+                <bbf-l2-fwd:sub-interface>olt-user1-eth.1.100</bbf-l2-fwd:sub-interface>
+                </bbf-l2-fwd:port>
+                <bbf-l2-fwd:port>
+                <bbf-l2-fwd:name>network1.201.301</bbf-l2-fwd:name>
+                <bbf-l2-fwd:sub-interface>network1.201.301</bbf-l2-fwd:sub-interface>
+                </bbf-l2-fwd:port>
+            </bbf-l2-fwd:ports>
+            <!-- disable MAC Learning -->
+            <bbf-l2-fwd:mac-learning />
+        </bbf-l2-fwd:forwarder>
+    </bbf-l2-fwd:forwarders>
+</bbf-l2-fwd:forwarding>

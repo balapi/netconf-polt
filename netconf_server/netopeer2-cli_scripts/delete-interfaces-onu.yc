@@ -1,0 +1,17 @@
+ <if:interfaces xmlns:if="urn:ietf:params:xml:ns:yang:ietf-interfaces">
+    <if:interface xmlns:nc="urn:ietf:params:xml:ns:netconf:base:1.0" nc:operation="delete">
+       <if:name>vani-user1</if:name>
+    </if:interface>
+    <if:interface xmlns:nc="urn:ietf:params:xml:ns:netconf:base:1.0" nc:operation="delete">
+       <if:name>olt-v-enet-user1.1</if:name>
+    </if:interface>
+   <if:interface  xmlns:nc="urn:ietf:params:xml:ns:netconf:base:1.0" nc:operation="delete">
+      <if:name>ani-user1</if:name>
+   </if:interface>
+   <if:interface xmlns:nc="urn:ietf:params:xml:ns:netconf:base:1.0" nc:operation="delete">
+      <if:name>onu-user1-eth.1</if:name>
+   </if:interface>
+   <if:interface xmlns:nc="urn:ietf:params:xml:ns:netconf:base:1.0" nc:operation="delete">
+      <if:name>uplink.1</if:name>
+   </if:interface>
+</if:interfaces>

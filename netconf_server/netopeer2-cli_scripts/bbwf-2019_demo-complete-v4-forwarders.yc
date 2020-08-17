@@ -1,0 +1,30 @@
+<!-- infrastructure -->
+<!-- ani<->vani linktable -->
+<link-table xmlns="urn:bbf:yang:bbf-link-table">
+   <link-table>
+      <from-interface>ontAni_ont1</from-interface>
+      <to-interface>vAni_ont1</to-interface>
+   </link-table>
+   <link-table>
+      <from-interface>enet_uni_ont1_1_1</from-interface>
+      <to-interface>venet_uni_ont1_1_1</to-interface>
+   </link-table>
+</link-table>
+<!-- olt-side l2fwd forwarder -->
+<forwarding xmlns="urn:bbf:yang:bbf-l2-forwarding">
+   <forwarders>
+      <forwarder>
+         <name>ont1_20_100</name>
+         <ports>
+            <port>
+               <name>fwd_user_port_ont1</name>
+               <sub-interface>ont1_venet_vlan_user</sub-interface>
+            </port>
+            <port>
+               <name>fwd_net_port_ont1</name>
+               <sub-interface>ont1_olt_uplink_vlan_network</sub-interface>
+            </port>
+         </ports>
+      </forwarder>
+   </forwarders>
+</forwarding>

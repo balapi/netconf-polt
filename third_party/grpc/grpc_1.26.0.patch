@@ -1,0 +1,11 @@
+diff -Naur grpc-1.26.0.org/cmake/protobuf.cmake grpc-1.26.0/cmake/protobuf.cmake
+--- grpc-1.26.0.org/cmake/protobuf.cmake	2020-06-21 21:07:05.749960406 +1000
++++ grpc-1.26.0/cmake/protobuf.cmake	2020-06-21 21:08:25.465847128 +1000
+@@ -62,6 +62,7 @@
+     else()
+       set(_gRPC_PROTOBUF_LIBRARIES ${PROTOBUF_LIBRARIES})
+     endif()
++    set(_gRPC_PROTOBUF_LIBRARIES ${_gRPC_PROTOBUF_LIBRARIES} -lz)
+     if(TARGET protobuf::libprotoc)
+       set(_gRPC_PROTOBUF_PROTOC_LIBRARIES protobuf::libprotoc)
+       # extract the include dir from target's properties

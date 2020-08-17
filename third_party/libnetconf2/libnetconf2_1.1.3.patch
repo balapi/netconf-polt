@@ -1,0 +1,15 @@
+diff -urN libnetconf2-devel.org/CMakeLists.txt libnetconf2-devel/CMakeLists.txt
+--- libnetconf2-devel.org/CMakeLists.txt	2020-01-20 23:45:47.000000000 +1100
++++ libnetconf2-devel/CMakeLists.txt	2020-01-23 10:12:02.439060178 +1100
+@@ -76,11 +76,6 @@
+ 
+ if(ENABLE_SSH)
+     find_library(LIBCRYPT crypt)
+-    if(LIBCRYPT STREQUAL LIBCRYPT-NOTFOUND)
+-        message(WARNING "LIBCRYPT not found! SSH, and TLS support disabled.")
+-        set(ENABLE_SSH OFF)
+-        set(ENABLE_TLS OFF)
+-    endif()
+ endif()
+ 
+ # package options

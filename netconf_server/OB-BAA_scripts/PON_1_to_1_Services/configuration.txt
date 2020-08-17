@@ -1,0 +1,34 @@
+test config
+
+
+OLT side:
+=========
+
+- uplink1
+- network1.201.301 <-- forward --> olt-user1-eth.1.100
+    VID: 201, 301
+    action: POP
+- network1.202.401 <-- forward --> olt-user1-eth.1.101
+    VID: 202, 401
+    action: POP
+
+- olt-user1-eth.1.100 @ olt-v-enet-user1.1  <--link--> onu-user1-eth.1.100
+    VID=301
+
+- olt-user1-eth.1.101 @ olt-v-enet-user1.1  <--link--> onu-user1-eth.1.101
+    VID=401
+
+
+
+
+ONU side
+========
+onu-user1-eth.1.100 @ onu-user1-eth.1  <--link--> olt-user1-eth.1.100
+    VID=100
+    translate to
+    VID=301
+
+onu-user1-eth.1.101 @ onu-user1-eth.1  <--link--> olt-user1-eth.1.101
+    VID=101
+    translate to
+    VID=401,PBIT=7

@@ -1,0 +1,361 @@
+module bbf-xponcommon-performance-management {
+  yang-version 1.1;
+  namespace "urn:bbf:yang:bbf-xponcommon-performance-management";
+  prefix bbf-xponcommon-pm;
+
+  import bbf-yang-types {
+    prefix bbf-yang;
+  }
+
+  import ietf-interfaces {
+    prefix if; 
+  }
+
+  import bbf-xpon-if-type {
+    prefix bbf-xponift;
+  }
+
+  import bbf-interfaces-performance-management {
+    prefix bbf-if-pm;
+  }
+
+  organization 
+    "Broadband Forum <https://www.broadband-forum.org>
+     PON Management Project Stream";
+
+  contact
+    "Comments or questions about this Broadband Forum YANG module
+     should be directed to <mailto:help@broadband-forum.org>.
+
+     Editor:      Joey Boyd, ADTRAN
+
+     Editor:      Samuel Chen, Broadcom
+
+     Editor:      Robert Peschi, Nokia
+
+     WA Director: Marta Seda, Calix
+
+     WA Director: Lin Wei, Huawei";
+
+  description 
+    "This module contains the performance management of 
+     statistics for xpon interfaces.
+
+     Copyright (c) 2019, Broadband Forum
+
+     Redistribution and use in source and binary forms, with or
+     without modification, are permitted provided that the following
+     conditions are met:
+
+     1. Redistributions of source code must retain the above copyright
+        notice, this list of conditions and the following disclaimer.
+
+     2. Redistributions in binary form must reproduce the above
+        copyright notice, this list of conditions and the following
+        disclaimer in the documentation and/or other materials
+        provided with the distribution.
+
+     3. Neither the name of the copyright holder nor the names of its
+        contributors may be used to endorse or promote products
+        derived from this software without specific prior written
+        permission.
+
+     THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+     CONTRIBUTORS \"AS IS\" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+     INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+     MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+     DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+     CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+     SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+     NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+     LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+     CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+     STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+     ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+     ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+     The above license is used as a license under copyright only.
+     Please reference the Forum IPR Policy for patent licensing terms
+     <https://www.broadband-forum.org/ipr-policy>.
+
+     Any moral rights which are necessary to exercise under the above
+     license grant are also deemed granted under this license.";
+
+  revision 2019-03-15 {
+    description 
+      "Initial revision.";
+    reference
+      "TBD";
+  }
+
+  grouping xpon-phy-pm {
+    description
+      "xPON PHY performance counters.";
+    container phy-pm {
+      description
+        "xPON PHY performance counters.";
+
+      leaf corrected-fec-bytes {
+        type bbf-yang:performance-counter64;
+        description
+          "The number of bytes that were corrected by the FEC
+           function.
+           For G-PON, expected available per v-ANI.
+           For XG-PON, expected available per ANI and per v-ANI.
+           For XGS-PON, expected available per ANI and per v-ANI.
+           For NG-PON2, expected available per ANI and per v-ANI.";
+        reference
+          "Rec. ITU-T G.987.3 (01/2014),
+           Table 14-1 Corrected FEC bytes.
+
+           Rec. ITU-T G.9807.1 (2016)/Amd.1 (10/2017),
+           Table C.14.1 Corrected FEC bytes.
+
+           Rec. ITU-T G.989.3 (2015)/Amd.2 (11/2018),
+           Table 14-1 Corrected FEC bytes.
+
+           Counter not standardized for GPON.";
+      }
+
+      leaf corrected-fec-codewords {
+        type bbf-yang:performance-counter64;
+        description
+          "Count of FEC codewords that contained errors but were
+           corrected by the FEC function.
+           For G-PON, expected available per v-ANI.
+           For XG-PON, expected available per ANI and per v-ANI.
+           For XGS-PON, expected available per ANI and per v-ANI.
+           For NG-PON2, expected available per ANI and per v-ANI.";
+        reference
+          "Rec. ITU-T G.987.3 (01/2014),
+           Table 14-1 Corrected FEC codewords.
+
+           Rec. ITU-T G.9807.1 (2016)/Amd.1 (10/2017),
+           Table C.14.1 Corrected FEC codewords.
+
+           Rec. ITU-T G.989.3 (2015)/Amd.2 (11/2018),
+           Table 14-1 Corrected FEC codewords.
+
+           Counter not standardized for GPON.";
+      }
+
+      leaf uncorrectable-fec-codewords {
+        type bbf-yang:performance-counter64;
+        description
+          "Count of FEC codewords that contained errors and could
+           not be corrected by the FEC function.
+           For G-PON, expected available per v-ANI and per channel 
+           termination.
+           For XG-PON, expected available per ANI, per v-ANI and 
+           per channel termination.
+           For XGS-PON, expected available per ANI, per v-ANI and 
+           per channel termination.
+           For NG-PON2, expected available per ANI, per v-ANI and 
+           per channel termination.";
+        reference
+          "Rec. ITU-T G.987.3 (01/2014),
+           Table 14-1 Uncorrectable FEC codewords.
+  
+           Rec. ITU-T G.9807.1 (2016)/Amd.1 (10/2017),
+           Table C.14.1 Uncorrectable FEC codewords.
+  
+           Rec. ITU-T G.989.3 (2015)/Amd.2 (11/2018),
+           Table 14-1 Uncorrectable FEC codewords.
+
+           Counter not standardized for GPON.";
+      }
+
+      leaf total-fec-codewords {
+        type bbf-yang:performance-counter64;
+        description
+          "Count of total received FEC codewords.
+           For G-PON, expected available per v-ANI and per channel 
+           termination.
+           For XG-PON, expected available per ANI, per v-ANI and 
+           per channel termination.
+           For XGS-PON, expected available per ANI, per v-ANI and 
+           per channel termination.
+           For NG-PON2, expected available per ANI, per v-ANI and 
+           per channel termination.";
+        reference
+          "Rec. ITU-T G.987.3 (01/2014),
+           Table 14-1 Total FEC codewords.
+
+           Rec. ITU-T G.9807.1 (2016)/Amd.1 (10/2017),
+           Table C.14.1 Total FEC codewords.
+
+           Rec. ITU-T G.989.3 (2015)/Amd.2 (11/2018),
+           Table 14-1 Total FEC codewords.
+
+           Counter not standardized for GPON.";
+      }
+
+      leaf fec-seconds{
+        type bbf-yang:performance-counter32;
+        description
+          "The seconds during which there was a forward error
+           correction anomaly. Expected available on ANI, for 
+           all xPON variants.";
+        reference
+          "Rec. ITU-T G.988 (11/2017),
+           Section 9.2.9 FEC Seconds.";
+      }
+
+      leaf in-bip-protected-words {
+        type bbf-yang:performance-counter64;
+        description
+          "Count of received 4-byte words that are included in 
+           BIP check.
+           For G-PON, expected available per ANI (via PLOAM), per
+           v-ANI and per channel termination.
+           For XG-PON, expected available per v-ANI and per channel 
+           termination.
+           For XGS-PON, expected available per v-ANI and per channel 
+           termination.
+           For NG-PON2, expected available per ANI (via OMCI), per 
+           vANI and per channel termination.";
+        reference
+          "Rec. ITU-T G.984.3 (2014), 
+           Sections 8.1.3.4 and 8.2.2.1.
+
+           Rec. ITU-T G.987.3 (01/2014) 
+           Table 14-1, Total received words protected by BIP-32.
+           
+           Rec. ITU-T G.9807.1 (2016)/Amd.1 (10/2017)
+           Table C.14.1, Total received words protected by BIP-32.
+           
+           Rec. ITU-T G.989.3 (2015)/Amd.2 (11/2018)
+           Table 14-1, Total received words protected by BIP-32.";
+      }
+
+      leaf in-bip-errors {
+        type bbf-yang:performance-counter64;
+        description
+          "Count of the bit errors according to BIP.
+           For G-PON, expected available per ANI (via PLOAM), per
+           v-ANI and per channel termination.
+           For XG-PON, expected available per v-ANI and per channel 
+           termination.
+           For XGS-PON, expected available per v-ANI and per channel 
+           termination.
+           For NG-PON2, expected available per ANI (via OMCI), per 
+           vANI and per channel termination.";
+        reference
+          "Rec. ITU-T G.984.3 (2014) 
+           Sections 8.1.3.4, 8.2.2.1, 9.2.2 and 11.2:
+           BIP-8 errors of ONUi at OLT side (section 11.2.1) and 
+           BIP-8 errors at ONU side (section 11.2.2)
+
+           Rec. ITU-T G.987.3 (01/2014) 
+           Table 14-1 BIP-32 error count
+
+           Rec. ITU-T G.9807.1 (2016)/Amd.1 (10/2017)
+           Table C.14.1 BIP-32 error count
+
+           Rec. ITU-T G.989.3 (2015)/Amd.2 (11/2018)
+           Table 14-1 BIP-32 error count.";
+      }
+    }
+  }
+
+  grouping xpon-performance-counters {
+    description
+      "Counters associated with current and historical 15 minute 
+       and 24 hour performance counters for xPON.";
+    uses xpon-phy-pm;
+  }
+
+  augment '/if:interfaces-state/if:interface/bbf-if-pm:performance/'
+        + 'bbf-if-pm:intervals-15min/bbf-if-pm:current' {
+    when 
+      " derived-from-or-self(../../../if:type, "
+    + "'bbf-xponift:ani') or "
+    + " derived-from-or-self(../../../if:type, "
+    + "'bbf-xponift:v-ani') or "
+    + " derived-from-or-self(../../../if:type, "
+    + "'bbf-xponift:channel-termination')" {
+      description
+        "Only applicable to ANI, virtual ANI or channel termination
+         interfaces."; 
+    }    
+    description
+      "Augment the current 15 minute interface performance counts 
+       with xPON specific attributes.";
+    container xpon {
+      description
+        "Current 15 minute xPON performance counters";
+      uses xpon-performance-counters;
+    }
+  }
+
+  augment '/if:interfaces-state/if:interface/bbf-if-pm:performance/'
+        + 'bbf-if-pm:intervals-15min/bbf-if-pm:history' {
+    when 
+      " derived-from-or-self(../../../if:type, "
+    + "'bbf-xponift:ani') or "
+    + " derived-from-or-self(../../../if:type, "
+    + "'bbf-xponift:v-ani') or "
+    + " derived-from-or-self(../../../if:type, "
+    + "'bbf-xponift:channel-termination')" {
+      description
+        "Only applicable to ANI, virtual ANI or channel termination
+         interfaces."; 
+    }    
+    description
+      "Augment the historic 15 minute interface performance counts 
+       with xPON specific attributes.";
+    container xpon {
+      description
+        "Historic 15 minute xPON performance counters";
+      uses xpon-performance-counters;
+    }
+  }
+
+  augment '/if:interfaces-state/if:interface/bbf-if-pm:performance/'
+        + 'bbf-if-pm:intervals-24hr/bbf-if-pm:current' {
+    when 
+      " derived-from-or-self(../../../if:type, "
+    + "'bbf-xponift:ani') or "
+    + " derived-from-or-self(../../../if:type, "
+    + "'bbf-xponift:v-ani') or "
+    + " derived-from-or-self(../../../if:type, "
+    + "'bbf-xponift:channel-termination')" {
+      description
+        "Only applicable to ANI, virtual ANI or channel termination
+         interfaces."; 
+    }  
+    if-feature "bbf-if-pm:performance-24hr";
+    description
+      "Augment the current 24 hour interface performance counts 
+       with xPON specific attributes.";
+    container xpon {
+      description
+        "Current 24 hour xPON performance counters";
+      uses xpon-performance-counters;
+    }
+  }
+
+  augment '/if:interfaces-state/if:interface/bbf-if-pm:performance/'
+        + 'bbf-if-pm:intervals-24hr/bbf-if-pm:history' {
+    when 
+      " derived-from-or-self(../../../if:type, "
+    + "'bbf-xponift:ani') or "
+    + " derived-from-or-self(../../../if:type, "
+    + "'bbf-xponift:v-ani') or "
+    + " derived-from-or-self(../../../if:type, "
+    + "'bbf-xponift:channel-termination')" {
+      description
+        "Only applicable to ANI, virtual ANI or channel termination
+         interfaces."; 
+    }  
+    if-feature "bbf-if-pm:performance-24hr";
+    description
+      "Augment the historic 24 hour interface performance counts 
+       with xPON specific attributes.";
+    container xpon {
+      description
+        "Historic 24 hour xPON performance counters";
+      uses xpon-performance-counters;
+    }
+  }
+}

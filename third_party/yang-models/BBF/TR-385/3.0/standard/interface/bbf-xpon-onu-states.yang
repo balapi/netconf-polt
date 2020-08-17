@@ -1,0 +1,258 @@
+module bbf-xpon-onu-states {
+  yang-version 1.1;
+  namespace "urn:bbf:yang:bbf-xpon-onu-states";
+  prefix bbf-xpon-onu-states;
+
+  import ietf-interfaces {
+    prefix if;
+  }
+  import ietf-yang-types {
+    prefix yang;
+  }
+  import bbf-xpon-types {
+    prefix bbf-xpon-types;
+  }
+  import bbf-xpon-onu-types {
+    prefix bbf-xpon-onu-types;
+  }
+  import bbf-xpon {
+    prefix bbf-xpon;
+  }
+
+  organization
+    "Broadband Forum <https://www.broadband-forum.org>
+     Fiber Access Networks Work Area";
+  contact
+    "Comments or questions about this Broadband Forum YANG module
+     should be directed to <mailto:help@broadband-forum.org>.
+
+     Editor:      Joey Boyd, ADTRAN
+
+     Editor:      Samuel Chen, Broadcom
+
+     Editor:      Robert Peschi, Nokia
+
+     WA Director: Marta Seda, Calix
+
+     WA Director: Lin Wei, Huawei";
+  description
+    "This module contains a collection of YANG definitions about 
+     ONUs for which a virtual ANI may be or may be not configured.
+
+     Copyright (c) 2018, Broadband Forum
+
+     Redistribution and use in source and binary forms, with or
+     without modification, are permitted provided that the following
+     conditions are met:
+
+     1. Redistributions of source code must retain the above copyright
+        notice, this list of conditions and the following disclaimer.
+
+     2. Redistributions in binary form must reproduce the above
+        copyright notice, this list of conditions and the following
+        disclaimer in the documentation and/or other materials
+        provided with the distribution.
+
+     3. Neither the name of the copyright holder nor the names of its
+        contributors may be used to endorse or promote products
+        derived from this software without specific prior written
+        permission.
+
+     THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+     CONTRIBUTORS \"AS IS\" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+     INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+     MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+     DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+     CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+     SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+     NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+     LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+     CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+     STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+     ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+     ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+     The above license is used as a license under copyright only.
+     Please reference the Forum IPR Policy for patent licensing terms
+     <https://www.broadband-forum.org/ipr-policy>.
+
+     Any moral rights which are necessary to exercise under the above
+     license grant are also deemed granted under this license.
+
+     This version of this YANG module is part of TR-385; see
+     the TR itself for full legal notices.";
+
+  revision 2019-02-25 {
+    description
+      "Initial revision.
+       * Approval Date:    2019-02-25.
+       * Publication Date: 2019-02-25.";
+    reference
+      "TR-385: ITU-T PON YANG Modules
+               <https://www.broadband-forum.org/technical/download/
+                        TR-385.pdf>";
+  }
+
+  
+  grouping onu-state-data {
+    description 
+      "Information about an ONU.";
+    leaf onu-state {
+      type identityref {
+        base bbf-xpon-onu-types:onu-state-base;
+      }
+      mandatory true;
+      description
+        "This leaf presents the state of the ONU. The most 
+         specific applicable identity should be provided as 
+         value.";
+    }
+    leaf onu-id {
+      type bbf-xpon-types:onu-id;
+      description
+        "This is the ITU-T TC layer ONU-ID identifier which the 
+         ONU is currently using on the channel group.";
+      reference
+        "ITU-T G.984.3 clause 5.5.2
+         ITU-T G.987.3 clause 6.4.2
+         ITU-T G.9807.1 clause C.6.1.5.6
+         ITU-T G.989.3 clause 6.1.5.6";
+    }
+    leaf detected-registration-id {
+      type string {
+        length "0..36";
+      }
+      description
+        "The registration ID value which the OLT has received from 
+         the ONU. This YANG leaf is not present if the ONU has not 
+         provided any registration ID to the OLT. Registration ID
+         may be useful in identifying a particular ONU installed
+         at a particular location. For ITU-T G.984.3, the leaf
+         can only be up to 10 octets long (refer to 'password'),
+         for ITU-T G.987.3, ITU-T G.9807.3 and ITU-T G.989.3
+         the leaf can be up to 36 bytes long.";
+      reference
+        "ITU-T G.984.3 clause 9.2.4.2
+         ITU-T G.987.3 clause 11.3.4.2
+         ITU-T G.9807.3 clause C.11.3.4.2
+         ITU-T G.989.3 clause 11.3.4.2";
+    }
+    leaf v-ani-ref {
+      type if:interface-ref;
+      description
+        "The virtual ANI corresponding to this ONU when configured 
+         on this OLT. This YANG leaf is not present if no virtual 
+         ANI is corresponding to the ONU in the OLT.";
+    }
+  }
+
+  grouping onus-present-on-local-channel-termination {
+    description
+      "State data of all ONUs present on a given channel termination
+       local to this OLT.";
+    container onus-present-on-local-channel-termination {
+      description
+        "State data of all ONUs present on a given channel 
+         termination local to this OLT (Refer to 'inside-olt').
+         Even the ONUs for which no corresponding virtual ANI is 
+         configured in the OLT are accounted.
+         An ONU is considered present on a channel termination 
+         when it is using the optical signal of this channel 
+         termination i.e. as early as the channel termination
+         receives from the ONU a PLOAM Serial_Number_ONU message 
+         or as early as it receives a PLOAM Tuning_Resp(Complete_u) 
+         message and as long as the channel termination is not in 
+         LOBi state for this ONU (i.e in practice the ONU keeps 
+         responding to downstream OLT bandwidth map messages).";
+      list onu {
+        key "detected-serial-number";
+        description
+          "The list of all ONUs present on the channel termination.";
+        leaf detected-serial-number {
+          type bbf-xpon-types:onu-serial-number;
+          mandatory true;
+          description
+            "The serial number of the ONU.";
+          reference
+            "ITU-T G.984.3, clause 9.2.4.1
+             ITU-T G.987.3, clause 11.3.3.2
+             ITU-T G.9807.1, clauses C11.2.6.1, C11.2.6.2 and C11.3.4.1
+             ITU-T G.989.3, clauses 11.2.6.1, 11.2.6.2 and 11.3.4.1.";  
+        }
+        uses onu-state-data;
+        leaf onu-detected-datetime {
+          type yang:date-and-time;
+          mandatory true;
+          description
+            "The OLT system date and time when the ONU was detected
+             present on the channel termination.";
+        }
+        leaf onu-state-last-change {
+          type yang:date-and-time;
+          mandatory true;
+          description
+            "The OLT system date and time when the 'onu-state' 
+             YANG leaf got its current value.";
+        }
+      }  
+    }
+  }
+
+  augment '/if:interfaces-state/if:interface'
+        + '/bbf-xpon:channel-termination' {
+    when "derived-from-or-self"
+       + "(/if:interfaces/if:interface[if:name=current()]"
+       + "/bbf-xpon:channel-termination/bbf-xpon:location, "
+       + "'bbf-xpon-types:inside-olt')";
+    description
+      "State data of all ONUs present on a given channel 
+       termination local to this OLT (Refer to 'inside-olt').
+       Even the ONUs for which no corresponding virtual ANI is 
+       configured in the OLT are accounted.
+       An ONU is considered present on a channel termination 
+       when it is using the optical signal of this channel 
+       termination i.e. as early as the channel termination
+       receives from the ONU a PLOAM Serial_Number_ONU message 
+       or as early as it receives a PLOAM Tuning_Resp(Complete_u) 
+       message and as long as the channel termination is not in 
+       LOBi state for this ONU (i.e in practice the ONU keeps 
+       responding to downstream OLT bandwidth map messages).";
+     uses onus-present-on-local-channel-termination;
+  }
+
+  notification onu-state-change {
+    description
+      "A notification traceable to a channel termination which 
+       signifies that an ONU has transitioned into the indicated 
+       state. This notification considers not only ONUs for which a 
+       corresponding virtual ANI is configured in the OLT but also  
+       ONUs for which no corresponding virtual ANI is configured 
+       in the OLT.";
+    leaf detected-serial-number {
+      type bbf-xpon-types:onu-serial-number;
+      mandatory true;
+      description
+        "The serial number of the ONU entering the new state.";
+      reference
+        "ITU-T G.984.3, clause 9.2.4.1
+         ITU-T G.987.3, clause 11.3.3.2
+         ITU-T G.9807.1, clauses C11.2.6.1, C11.2.6.2 and C11.3.4.1
+         ITU-T G.989.3, clauses 11.2.6.1, 11.2.6.2 and 11.3.4.1.";  
+    }
+    leaf channel-termination-ref {
+      type if:interface-ref;
+      mandatory true;
+      description
+        "The channel termination reporting from its point of view the 
+         new state of the ONU.";
+    }
+    leaf onu-state-last-change {
+      type yang:date-and-time;
+      mandatory true;
+      description
+        "The OLT system date and time when the ONU has transitioned 
+         into the indicated state.";
+    }
+    uses onu-state-data;
+  }
+}

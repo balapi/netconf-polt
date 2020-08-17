@@ -1,0 +1,12 @@
+diff -Naur libnetconf2-devel.org/src/io.c libnetconf2-devel/src/io.c
+--- libnetconf2-devel.org/src/io.c	2020-03-18 11:26:38.709665252 +1100
++++ libnetconf2-devel/src/io.c	2020-03-18 11:26:46.132798435 +1100
+@@ -451,7 +451,7 @@
+     nc_session_io_unlock(session, __func__);
+     io_locked = 0;
+
+-    DBG("Session %u: received message:\n%s\n", session->id, msg);
++    VRB("Session %u: received message:\n%s\n", session->id, msg);
+
+     /* build XML tree */
+     *data = lyxml_parse_mem(session->ctx, msg, LYXML_PARSE_NOMIXEDCONTENT);

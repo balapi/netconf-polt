@@ -1,0 +1,59 @@
+<?xml version="1.0"?>
+
+<!--
+  ~ Copyright 2018 Broadband Forum
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+
+<!DOCTYPE suppressions PUBLIC
+        "-//Puppy Crawl//DTD Suppressions 1.0//EN"
+        "http://www.puppycrawl.com/dtds/suppressions_1_0.dtd">
+
+<suppressions>
+    <suppress files="NetconfConnectionManagerImpl.java" checks="IllegalCatch"/>
+    <suppress files="PmaRegistryImpl.java" checks="IllegalCatch"/>
+    <suppress files="NetconfDeviceAlignmentServiceImpl.java" checks="IllegalCatch"/>
+    <suppress files="StandaloneApp.java" checks="HideUtilityClassConstructor"/>
+    <suppress files="DeviceXmlStore.java" checks="MemberName"/>
+    <suppress files="org.broadband_forum.obbaa.aggregator.jaxb.*" checks="MemberName"/>
+    <suppress files="org.broadband_forum.obbaa.aggregator.*" checks="CustomImportOrder"/>
+    <suppress files="CallHomeListenerCompositeImpl.java" checks="IllegalCatch"/>
+    <suppress files="org.broadband_forum.obbaa.dmyang.entities.*" checks="MemberName"/>
+    <suppress files="DataStoreTransactionInterceptor.java" checks="IllegalCatch"/>
+    <suppress files="DeviceManagementSubsystem.java" checks="IllegalCatch"/>
+    <suppress files="DeviceDaoImpl.java" checks="IllegalCatch"/>
+    <suppress files="TxService.java" checks="IllegalCatch"/>
+    <suppress files="TxService.java" checks="IllegalThrows"/>
+    <suppress files="AdapterManagerImpl.java" checks="IllegalCatch"/>
+    <suppress files="DeviceAdapter.java" checks="IllegalCatch"/>
+    <suppress files="CommonFileUtil.java" checks="IllegalCatch"/>
+    <suppress files="DeviceAdapterActionHandlerImpl.java" checks="IllegalCatch"/>
+    <suppress files="PmaAdapter.java" checks="IllegalCatch"/>
+    <suppress files="TimerService.java" checks="IllegalCatch"/>
+    <suppress files="AlignmentTimer.java" checks="IllegalCatch"/>
+    <suppress files="PmaServerImpl.java" checks="IllegalCatch"/>
+    <suppress files="AbstractBaaMojo.java" checks="IllegalCatch"/>
+    <suppress files="YangLibraryMojo.java" checks="IllegalCatch"/>
+    <suppress files="NcCompliantRequestExecutor.java" checks="IllegalCatch"/>
+    <suppress files="ProtocolTranslDevInterface.java" checks="IllegalCatch"/>
+    <suppress files="DefaultConfigService.java" checks="IllegalCatch"/>
+    <suppress files="org.broadband_forum.obbaa.netconf.alarm.entity.*" checks="MemberName"/>
+    <suppress files="AlarmQueue.java" checks="IllegalCatch"/>
+    <suppress files="AlarmServiceImpl.java" checks="IllegalCatch"/>
+    <suppress files="AlarmDefinitionServiceImpl.java" checks="IllegalCatch"/>
+    <suppress files="AlarmNotificationUtil.java" checks="IllegalCatch"/>
+    <suppress files="DeviceNotificationListener.java" checks="IllegalCatch"/>
+    <suppress files="AlarmUtil.java" checks="LocalVariableName"/>
+    <suppress files="AlarmUtil.java" checks="ParameterName"/>
+</suppressions>

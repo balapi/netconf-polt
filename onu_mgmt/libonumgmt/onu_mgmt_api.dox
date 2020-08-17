@@ -1,0 +1,86 @@
+/*
+ * ONU Management Programmers Guide - introduction
+ */
+
+/** \mainpage ONU Management Interface Concept
+
+\section intro Introduction
+This document describes the ONU Management user interface. The user interface is constructed from a
+small set of public APIs and an objects model.
+
+The objects model is designed to manage different entities in the system, and enables a simple and intuitive
+approach for managing line card.
+
+The API layer is designed to enable the management of GPON, XGPON1, XGS PON, NGPON2, and EPON ONUs
+and support any OMCI or EPON OAM stack. It includes a set of APIs for ONU configuration using service level requests
+and asynchronous indications to send events to the host application.
+
+The API layer is part of the Broadcom® ONU Management, which is provided as C source code, which is
+independent of the CPU and operating system being used.
+
+\section object_model_table ONU Management Object Model
+
+The system is modeled as a set of managed objects. The term “object” here doesn’t imply any inheritance, it
+means an entity that can be addressed individually and has a set of properties (attributes) and methods
+(operations), for example, OLT, flow, etc.
+
+Each object can have multiple properties (aka attributes), whereas a property is an object parameter that can be set or
+retrieved independently.
+        - A property is a simple type or a structure containing one or more fields, where fields can themselves be
+structures
+        - Each property has a specific permission type, such as Read-Only (RO) and Read-Write (RW).
+
+Object properties are grouped into sections/management groups. The following sections can contain zero or
+more properties:
+        - Key—Field(s) that uniquely identify the object instance (for example, ONU key = {subs_id, pon_ni}).
+        - Configuration
+            - Read-Write, Read-Only and Write-Only configuration properties
+        - Autonomous Indications
+                - Notifications that are generated asynchronously.
+                  Indications can be either autonomous (such as alarms) or asynchronous responses to previously
+          submitted configuration change (for instance, ONU admin_state=up request).
+
+\section object_model_prop Object and Properties Implementation
+
+\subsection object_model_structs Object Structures
+
+The main input parameter of all the APIs is an object structure, referred to as the Object Request Message. Each
+object section has a different structure that includes a generic header, object key, and a specific section structure
+according to the section type (for example, configuration, etc).
+        - The configuration structure bcmonu_mgmt_xx_cfg contains:
+                - The generic header \ref bcmonu_mgmt_cfg
+                - The object key, if any
+                - The structure bcmonu_mgmt_xx_cfg_data, containing all object configuration properties
+
+\subsection object_model_init_macros Structure Initialization Macros
+The following macros are used for initializing objects:
+        - \ref BCMONU_MGMT_CFG_INIT(cfg_msg, _object, _key)
+
+The macros perform the following tasks:
+        - Check that the structure matches the object section.
+        - Clear all control fields in the generic header \ref bcmonu_mgmt_cfg.
+
+\subsection object_model_prop_macros Property Presence Mask Manipulation Macros
+The presence mask indicates which of the properties in the object structure need to be accessed (set/get, etc.)
+The mask is a bit field, wherein each bit corresponds to a specific property. The following macros should be used
+for setting the presence mask:
+
+ - Set configuration parameter value:\n
+        \ref BCMONU_MGMT_CFG_PROP_SET(_msg, _object, _parm_name, _parm_value)
+ - Indicate that the property should be fetched by a bcmolt_cfg_get() request:\n
+        \ref BCMONU_MGMT_CFG_PROP_GET(_msg, _object, _parm_name)
+
+\subsection object_model_enums Enumerations
+In the following descriptions, XX is the object name and YY is the property name from the XML model.
+
+The system model includes the enumerations:
+        - The bcmonu_mgmt_obj_id enumeration lists all objects. It includes per-object BCMONU_MGMT_OBJ_ID_XX constants,
+                where XX is the object name from the XML model.
+        - The bcmonu_mgmt_xx_cfg_id enumeration lists all XX objects' properties from the “Configuration” section in the
+                XML model. It includes the BCMONU_MGMT_XX_CFG_ID_YY constants.
+        - The bcmonu_mgmt_xx_auto_id enumeration lists all XX object's indications from the “Autonomous Indications”
+                section in the XML model. It includes the BCMONU_MGMT_XX_AUTO_ID_YY constants.
+
+\section api_section ONU Management Public API
+  See \ref onu_mgmt_api in API Reference chapter
+*/

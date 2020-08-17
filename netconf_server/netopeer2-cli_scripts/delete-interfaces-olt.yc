@@ -1,0 +1,21 @@
+ <if:interfaces xmlns:if="urn:ietf:params:xml:ns:yang:ietf-interfaces">
+    <if:interface xmlns:nc="urn:ietf:params:xml:ns:netconf:base:1.0" nc:operation="delete">
+       <if:name>channeltermination.1</if:name>
+    </if:interface>
+    <if:interface xmlns:nc="urn:ietf:params:xml:ns:netconf:base:1.0" nc:operation="delete">
+       <if:name>channelpair.1</if:name>
+    </if:interface>
+    <if:interface xmlns:nc="urn:ietf:params:xml:ns:netconf:base:1.0" nc:operation="delete">
+       <if:name>channelpartition.1</if:name>
+    </if:interface>
+    <if:interface xmlns:nc="urn:ietf:params:xml:ns:netconf:base:1.0" nc:operation="delete">
+       <if:name>channelgroup.1</if:name>
+    </if:interface>
+</if:interfaces>
+<bbf-xpon:xpon xmlns:bbf-xpon="urn:bbf:yang:bbf-xpon">
+   <bbf-xpon:wavelength-profiles>
+      <bbf-xpon:wavelength-profile xmlns:nc="urn:ietf:params:xml:ns:netconf:base:1.0" nc:operation="delete">
+         <bbf-xpon:name>wavelengthprofile.A</bbf-xpon:name>
+      </bbf-xpon:wavelength-profile>
+   </bbf-xpon:wavelength-profiles>
+</bbf-xpon:xpon>

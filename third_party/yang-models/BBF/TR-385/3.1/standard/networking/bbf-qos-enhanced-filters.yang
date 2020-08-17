@@ -1,0 +1,541 @@
+module bbf-qos-enhanced-filters {
+  yang-version 1.1;
+  namespace "urn:bbf:yang:bbf-qos-enhanced-filters";
+  prefix bbf-qos-enhfilt;
+
+  import bbf-yang-types {
+    prefix bbf-yang;
+  }
+  import bbf-dot1q-types {
+    prefix bbf-dot1qt;
+  }
+  import bbf-qos-filters {
+    prefix bbf-qos-filt;
+  }
+  import bbf-qos-classifiers {
+    prefix bbf-qos-cls;
+  }
+  import bbf-frame-classification {
+    prefix bbf-classif;
+  }
+  import ietf-packet-fields {
+    prefix packet-fields;
+  }
+
+  organization
+    "Broadband Forum <https://www.broadband-forum.org>
+     Common YANG Work Area";
+  contact
+    "Comments or questions about this Broadband Forum YANG module
+     should be directed to <mailto:help@broadband-forum.org>.
+
+     Editor:      Nick Hancock, ADTRAN
+
+     Editor:      Ludwig Pauwels, Nokia
+
+     PS Leader:   Joey Boyd, ADTRAN
+
+     PS Leader:   Sowrirajan Padmanabhan, Nokia
+
+     WA Director: Joey Boyd, ADTRAN
+
+     WA Director: Sven Ooghe, Nokia";
+  description
+    "This module contains a collection of YANG definitions for
+     supporting the Broadband Forum requirements on the management of
+     Quality of Service (QoS) as applicable to access network
+     equipment. As such, this module is specific to access network
+     equipment (e.g., BBF-specified Access Nodes and FTTdp DPUs).
+
+     Specifically, this module contains definitions of filter
+     criteria.
+
+     Copyright (c) 2017-2020, Broadband Forum
+
+     Redistribution and use in source and binary forms, with or
+     without modification, are permitted provided that the following
+     conditions are met:
+
+     1. Redistributions of source code must retain the above copyright
+        notice, this list of conditions and the following disclaimer.
+
+     2. Redistributions in binary form must reproduce the above
+        copyright notice, this list of conditions and the following
+        disclaimer in the documentation and/or other materials
+        provided with the distribution.
+
+     3. Neither the name of the copyright holder nor the names of its
+        contributors may be used to endorse or promote products
+        derived from this software without specific prior written
+        permission.
+
+     THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+     CONTRIBUTORS \"AS IS\" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+     INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+     MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+     DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+     CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+     SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+     NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+     LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+     CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+     STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+     ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+     ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+     The above license is used as a license under copyright only.
+     Please reference the Forum IPR Policy for patent licensing terms
+     <https://www.broadband-forum.org/ipr-policy>.
+
+     Any moral rights which are necessary to exercise under the above
+     license grant are also deemed granted under this license.
+
+     This version of this YANG module is part of TR-383a3; see
+     the TR itself for full legal notices.";
+
+  revision 2020-05-11 {
+    description
+      "Amendment 3 Straw Ballot
+       * Approval Date:    TBD.
+       * Publication Date: TBD.";
+    reference
+      "TR-383a3: Common YANG Modules
+                 <https://www.broadband-forum.org/technical/download/
+                          TR-383_Amendment-3.pdf>";
+  }
+
+  feature match-on-specific-ipv4-header-fields {
+    description
+      "This feature indicates whether the system supports classifying
+       packets based on the IP header fields that are specific for
+       IPv4 packets with the purpose of giving the matching packets a
+       special QoS treatment.";
+  }
+
+  feature match-on-specific-ipv6-header-fields {
+    description
+      "This feature indicates whether the system supports classifying
+       packets based on the IP header fields that are specific for
+       IPv6 packets with the purpose of giving the matching packets a
+       special QoS treatment.";
+  }
+
+  feature match-on-common-ip-header-fields {
+    description
+      "This feature indicates whether the system supports classifying
+       packets based on the IP header fields that are common for IPV4
+       and IPv6 packets with the purpose of giving the matching
+       packets a special QoS treatment.";
+  }
+
+  grouping acl-transport-header-fields {
+    description
+      "Transport header fields";
+    container source-port-range {
+      presence "Enables setting source port range";
+      description
+        "Set of alternatives to specify one or more source ports. The
+         range case provides an inclusive range of source ports
+         through the specification of a lower port and an upper port.
+         The operator case allows to specify a single port and an
+         operator that together identify a single or a set of ports.
+         For example, the use of the operator equal identifies the
+         single specified port.";
+      uses packet-fields:port-range-or-operator;
+    }
+    container destination-port-range {
+      presence "Enables setting destination port range";
+      description
+        "Set of alternatives to specify one or more destination ports.
+         The range case provides an inclusive range of destination
+         ports through the specification of a lower port and an upper
+         port. The operator case allows to specify a single port and
+         an operator that together identify a single or a set of
+         ports. For example, the use of the operator equal identifies
+         the single specified port.";
+      uses packet-fields:port-range-or-operator;
+    }
+  }
+
+  grouping extended-filter {
+    description
+      "List of actions to be applied to a policy.";
+    container source-mac-address {
+      presence "Enables setting a filter on the source MAC address.";
+      leaf filter-match {
+        type boolean;
+        default "true";
+        description
+          "This is logical operator for a filter.
+
+           When true, it indicates the filter looks for a match with
+           a pattern defined by the filter-field. When false, it looks
+           for a 'no match' with the pattern defined by the filter
+           field.";
+      }
+      uses bbf-classif:mac-address-match {
+        refine "mac-address" {
+          mandatory true;
+        }
+      }
+      description
+        "Filter containing source MAC address.";
+    }
+    container destination-mac-address {
+      presence
+        "Enables setting a filter on the destination MAC address.";
+      leaf filter-match {
+        type boolean;
+        default "true";
+        description
+          "This is logical operator for a filter.
+
+           When true, it indicates the filter looks for a match with
+           a pattern defined by the filter-field. When false, it looks
+           for a 'no match' with the pattern defined by the filter
+           field.";
+      }
+      uses bbf-classif:mac-address-match {
+        refine "mac-address" {
+          mandatory true;
+        }
+      }
+      description
+        "Filter containing destination MAC address.";
+    }
+    container vlans {
+      presence "Enables setting a filter on the frame's VLAN tags.";
+      description
+        "Match criteria associated with VLAN tags.";
+      choice vlan-match {
+        description
+          "Match based on VLAN tag.";
+        case match-untagged {
+          leaf untagged {
+            type empty;
+            description
+              "Match all untagged traffic.";
+          }
+        }
+        case match-vlan-tagged {
+          list tag {
+            key "index";
+            min-elements 1;
+            max-elements 2;
+            description
+              "Provides values to evaluate against packet's their
+               corresponding VLAN tag fields. When multiple match
+               criteria are specified, then all of them must evaluate
+               positive to have a match. The outermost tag is
+               assigned index 0. ";
+            leaf index {
+              type bbf-classif:tag-index;
+              must 'count(../../tag[index = 0]) > 0' {
+                error-message
+                  "An inner tag can only be matched on when also
+                   matching on an outer tag.";
+                description
+                  "Only allow matching on an inner tag, if also
+                   matching on the outer tags at the same time.";
+              }
+              description
+                "The index into the tag stack with the outermost tag
+                 represented by index 0.";
+            }
+            uses bbf-qos-cls:in-pbit-list;
+            uses bbf-qos-cls:in-dei;
+          }
+        }
+      }
+    }
+    leaf ethernet-frame-type {
+      type union {
+        type bbf-dot1qt:ether-type;
+        type enumeration {
+          enum ipv4 {
+            description
+              "Matches the Ethertype value 0x0800 or 0x0806 or
+               0x8035.";
+          }
+          enum pppoe {
+            description
+              "Matches the Ethertype value 0x8863 or 0x8864.";
+          }
+          enum ipv6 {
+            description
+              "Matches the Ethertype value 0x86DD.";
+          }
+        }
+      }
+      description
+        "The value to be compared with the first Ethertype of an
+         untagged Ethernet frame; or for frames that contain one or
+         more VLAN tags it is the value to be compared with the
+         Ethertype that is defined by the context where this grouping
+         is used. It can be even the Ethertype that identifies a VLAN
+         tag.";
+    }
+    container ipv4 {
+      if-feature
+        "bbf-qos-enhfilt:match-on-specific-ipv4-header-fields";
+      presence
+        "Enables setting a filter on fields of the frame's IPv4
+         header.";
+      uses packet-fields:acl-ipv4-header-fields;
+      description
+        "Rule set that matches IPv4 headers.";
+    }
+    container ipv6 {
+      if-feature
+        "bbf-qos-enhfilt:match-on-specific-ipv6-header-fields";
+      presence
+        "Enables setting a filter on fields of the frame's IPv6
+         header.";
+      uses packet-fields:acl-ipv6-header-fields;
+      description
+        "Rule set that matches IPv6 headers.";
+    }
+    container ip-common {
+      if-feature "bbf-qos-enhfilt:match-on-common-ip-header-fields";
+      presence
+        "Enables setting a filter on fields of the frame's IPv4 or
+         IPv6 header.";
+      leaf dscp-range {
+        type bbf-classif:dscp-range-or-any;
+        description
+          "String identifying the DSCP values and/or range.";
+      }
+      uses packet-fields:acl-ip-header-fields;
+      description
+        "Rule set that matches for common IPv4 and IPv6 header
+         fields.";
+    }
+    container transport {
+      if-feature "bbf-qos-enhfilt:match-on-common-ip-header-fields";
+      presence
+        "Enables setting a filter on fields of the frame's source
+         and/or destination port numbers.";
+      uses acl-transport-header-fields;
+      description
+        "Rule set that matches port numbers in IP headers.";
+    }
+    leaf-list protocol {
+      type bbf-classif:protocols;
+      description
+        "This leaf-list provides a set of protocols as a criterion for
+         classifying packets with the intention to apply actions at
+         matching condition.
+
+         There is a match if the packet is of one of the protocols
+         specified in the leaf-list. If the leaf-list is not
+         configured, then the protocol is not a criterion and then
+         'all packets match'.";
+    }
+    list pbit-marking-list {
+      key "index";
+      description
+        "The P-bit marking list provides match criteria for
+         classifying packets with the intention to apply actions at
+         matching condition. The to be evaluated P-bits are part of a
+         packet's metadata as provided as output of another QoS
+         policy.
+
+         The match criteria provides a list because a packet can
+         contain multiple VLAN tags and correspondingly can contain
+         multiple metadata P-bit fields.
+
+         There is a match if all the packet's metadata P-bit fields
+         have a match with the corresponding 'pbit-values' in this
+         list. If the list is not configured, then the metdata P-bit
+         is not a criterion and then 'all packets match'.";
+      leaf index {
+        type bbf-qos-cls:qos-pbit-marking-index;
+        description
+          "The index associated with a metadata P-bit value.";
+      }
+      leaf-list pbit-value {
+        type bbf-dot1qt:pbit;
+        min-elements 1;
+        description
+          "This leaf-list provides a set of possible P-bit values as a
+           criterion for classifying packets.
+
+           There is a match if the identified packet 's metadata P-bit
+           is one of the values specified in the leaf-list.";
+      }
+    }
+    uses bbf-qos-cls:dei-marking-list {
+      refine "dei-marking-list" {
+        description
+          "The DEI marking list provides match criteria for
+           classifying packets with the intention to apply actions at
+           matching condition. The to be evaluated DEIs are part of a
+           packet's metadata as provided as output of another QoS
+           policy.
+
+           The match criteria provides a list because a packet can
+           contain multiple VLAN tags and correspondingly can contain
+           multiple DEI fields.
+
+           There is a match if all the identified packet's metadata
+           DEI fields have a match with the corresponding DEI values
+           in this list. If the list is not configured, then the DEI
+           is not a criterion and then 'all packets match'.";
+      }
+      refine "dei-marking-list/dei-value" {
+        description
+          "A DEI value to be used as match criteria.";
+      }
+    }
+    leaf-list flow-color {
+      type bbf-qos-cls:qos-color;
+      description
+        "This leaf-list provides a set of flow colors as a criterion
+         for classifying packets with the intention to apply actions
+         at matching condition. The to be evaluated flow color can be
+         part of a packet's metadata as provided as output of another
+         QoS policy.
+
+         There is a match if the packet has a flow-color that is one
+         of the values specified in the leaf-list. If the leaf-list is
+         not configured, then the flow-color is not a criterion and
+         then 'all packets match'.";
+    }
+  }
+
+  augment "/bbf-qos-filt:filters" {
+    description
+      "Augments the container with additional filter mechanisms.";
+    list enhanced-filter {
+      key "name";
+      description
+        "List of enhanced filter entries.
+
+         An enhanced filter entry can contain multiple filter entries.
+         In case it contains multiple filter entries, then these
+         entries have to be combined using the setting of a filter
+         operations.";
+      leaf name {
+        type bbf-yang:string-ascii64;
+        description
+          "Filter name.";
+      }
+      leaf description {
+        type bbf-yang:string-ascii64-or-empty;
+        description
+          "Description of the class template.";
+      }
+      leaf filter-operation {
+        type identityref {
+          base bbf-qos-cls:classifier-entry-filter-operation-type;
+        }
+        default "bbf-qos-cls:match-any-filter";
+        description
+          "The enhanced filter contains a 'filter' list. This leaf
+           specifies how the entries of the 'filter' list have to be
+           combined.
+
+           The value 'match-any-filter' means a packet is declared to
+           have a match with the enhanced filter entry if there is a
+           match with at least one of the entries of its contained
+           'filter' list.
+
+           The value 'match-all-filter' means a packet is declared to
+           have a match with the enhanced filter entry if there is a
+           match with all entries of its contained filter list.";
+      }
+      list filter {
+        key "name";
+        description
+          "List of filter entries.
+
+           When filter criteria are used for multiple fields, then all
+           of them need a match in order to conclude there is a match
+           for this filter entry, i.e. all the match criteria
+           specified in this filter have to be combined with a logical
+           AND.";
+        leaf name {
+          type bbf-yang:string-ascii64;
+          description
+            "Filter name.";
+        }
+        leaf description {
+          type bbf-yang:string-ascii64-or-empty;
+          description
+            "Description of the class template.";
+        }
+        choice filter-method {
+          description
+            "Choice of filter configuration way.";
+          case by-reference {
+            description
+              "The classifier is specified in the referenced enhanced
+               filter.";
+            uses enhanced-filter-entry-ref;
+          }
+          case inline {
+            description
+              "The classifier criteria are directly configured here.
+
+               When filter criteria are used for multiple fields, then
+               all of them need a match in order to conclude there is
+               a match for this enhanced-filter entry, i.e. all the
+               match criteria specified in this filter have to be
+               combined with a logical AND.";
+            uses extended-filter;
+          }
+        }
+      }
+    }
+  }
+
+  grouping enhanced-filter-entry-ref {
+    description
+      "A reference to an enhanced filter.";
+    leaf enhanced-filter-name {
+      type leafref {
+        path "/bbf-qos-filt:filters/bbf-qos-enhfilt:enhanced-filter"
+           + "/bbf-qos-enhfilt:name";
+      }
+      description
+        "A reference to an enhanced filter.";
+    }
+  }
+
+  augment "/bbf-qos-cls:classifiers/bbf-qos-cls:classifier-entry/"
+        + "bbf-qos-cls:filter-method" {
+    description
+      "The QoS policy framework allows to configure match criteria
+       against which frames are evaluated in order to decide on
+       actions to be applied on these frames. Here these matching
+       criteria are extended with a more advanced classification
+       method.";
+    case any-frame {
+      description
+        "There are no specific classifier criteria. The corresponding
+         actions have to be applied to any frame.";
+      leaf any-frame {
+        type empty;
+        description
+          "Match all frames.";
+      }
+    }
+    case enhanced-filter {
+      description
+        "The classifier criteria are configured as an entry in a
+         separate independent list, which is referenced from here.";
+      uses enhanced-filter-entry-ref;
+    }
+    case enhanced-classifier {
+      description
+        "The classifier criteria are directly configured here.
+
+         When filter criteria are used for multiple fields, then
+         all of them need a match in order to conclude there is
+         a match for this enhanced-filter entry, i.e. all the
+         match criteria specified in this filter have to be
+         combined with a logical AND.";
+      uses extended-filter;
+    }
+  }
+}

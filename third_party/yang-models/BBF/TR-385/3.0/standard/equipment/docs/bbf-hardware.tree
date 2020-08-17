@@ -1,0 +1,10 @@
+
+module: bbf-hardware
+  augment /hw:hardware/hw:component:
+    +--rw configuration {additional-hardware-configuration}?
+    |  +--rw model-name?   string {model-name-configuration}?
+    +---x reset {hardware-component-reset}?
+       +---w input
+          +---w reset-type?   identityref
+  augment /if:interfaces/if:interface:
+    +--rw port-layer-if*   -> /hw:hardware/component/name {interface-hardware-reference}?

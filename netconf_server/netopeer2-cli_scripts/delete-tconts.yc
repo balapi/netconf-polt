@@ -1,0 +1,18 @@
+<bbf-xpongemtcont:xpongemtcont xmlns:bbf-xpongemtcont="urn:bbf:yang:bbf-xpongemtcont">
+   <bbf-xpongemtcont:tconts>
+      <bbf-xpongemtcont:tcont xmlns:nc="urn:ietf:params:xml:ns:netconf:base:1.0" nc:operation="delete">
+         <bbf-xpongemtcont:name>vani-user1-tcont.1</bbf-xpongemtcont:name>
+      </bbf-xpongemtcont:tcont>
+      <bbf-xpongemtcont:tcont xmlns:nc="urn:ietf:params:xml:ns:netconf:base:1.0" nc:operation="delete">
+         <bbf-xpongemtcont:name>vani-user1-tcont.2</bbf-xpongemtcont:name>
+      </bbf-xpongemtcont:tcont>
+   </bbf-xpongemtcont:tconts>
+   <bbf-xpongemtcont:traffic-descriptor-profiles>
+      <bbf-xpongemtcont:traffic-descriptor-profile xmlns:nc="urn:ietf:params:xml:ns:netconf:base:1.0" nc:operation="delete">
+         <bbf-xpongemtcont:name>traffic-desc-max20m</bbf-xpongemtcont:name>
+      </bbf-xpongemtcont:traffic-descriptor-profile>
+      <bbf-xpongemtcont:traffic-descriptor-profile xmlns:nc="urn:ietf:params:xml:ns:netconf:base:1.0" nc:operation="delete">
+         <bbf-xpongemtcont:name>assured-10m</bbf-xpongemtcont:name>
+      </bbf-xpongemtcont:traffic-descriptor-profile>
+   </bbf-xpongemtcont:traffic-descriptor-profiles>
+</bbf-xpongemtcont:xpongemtcont>

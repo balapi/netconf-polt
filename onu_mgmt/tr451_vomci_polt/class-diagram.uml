@@ -1,0 +1,113 @@
+class-diagram.uml
+@startuml
+top to bottom direction
+package "Classes implementing bbf-polt-vomci.yang configuration.configuration" {
+
+class Endpoint {
+    This class represents WT-451 server's
+    listen-endpoint and client's access-point
+    ==
+    + name()
+    + host_name()
+    + port()
+}
+
+class ClientEndpoint {
+    This class represents WT-451 client's local-endpoint.
+    Every local endpoint includes a list oif 1 or more
+    access-points
+    ==
+    + name()
+    + AddEntry()
+    + Endpoint *entry() // access-point iterator
+}
+
+Endpoint <|-- ClientEndpoint
+
+class OnuFilterSet {
+    Client / Server filter set.
+    Every filter can match ONU by vendor-id, serial-number or any
+    ==
+    + FilterSet()         // Add filter to set
+    + FilterGet(name)     // Get filter by name
+    + FindConnectedFilter(serial_number) // Find connected filter matching the ONU
+    + UpdateOnuAssignmentsFilterAdded() // Update ONU->filter assignment when a new filter is added
+    + UpdateOnuAssignmentsFilterRemoved() // Update ONU->filter assignment when filter is removed
+    ==
+    Friends
+    --
+    + UpdateOnuAssignmentsConnected() // Update ONU->filter assignments when endpoint is connected
+    + UpdateOnuAssignmentsDisconnected() // Update ONU->filter assignments when endpoint is disconnected
+}
+
+class FilterEntry {
+    Individual ONU filter
+    --
+    + bool isMatch(serial_number)
+}
+
+OnuFilterSet -down-> FilterEntry
+
+}
+
+package "Classes implementing gRPC communitation" {
+
+class VomciConnection {
+    Active vOMCI - pOLT gRPC connection
+    ==
+    + name() // vOMCI instance name
+    + endpoint()  // Local endpoint/access-point name
+    + isConnected()
+    --
+    + OmciRxFromOnu() // Packet received from ONU
+    + PopPacketFromOnuFromTxQueue() // Pop packet received from ONU from queue and forward to vOMCI
+    --
+    + conn_lock()
+    + conn_unlock()
+}
+
+class GrpcProcessor {
+    gRPC handling common for client and server.
+    It is the base class of BcmPoltClient and BcmPoltServer classes.
+    There is an instance per client local-endpoint and per server listen-endpoint
+    ==
+    + name() // Processor name is derived from endpoint name
+    + type() // Client or server
+    + Start() // Start client/server processor
+    + Stop() // Stop gRPC processor
+    + isStarted()
+    --
+    + OmciTxToOnu() // Forward OMCI packet to ONU
+    --
+    + GetNext() // iterator
+}
+
+class BcmPoltServer {
+    gRPC server class.
+    Instance per listen-endpoint
+    ==
+    + Start() // Start gRPC server
+    + Stop() // Stop gRPC server
+    + endpoint() // listen-endpoint
+    --
+    + connection_by_name() // Find VomciConnection by vOMCI instance name
+    + connection_by_peer() // Find VomciConnection by vOMCI instance address
+}
+GrpcProcessor <|-- BcmPoltServer
+
+class BcmPoltClient {
+    gRPC client class.
+    Instance per local-endpoint
+    ==
+    + Start() // Start gRPC client
+    + Stop() // Stop gRPC client
+    + endpoint() // local-endpoint
+    + OmciTxToVomci() // Send packet to vOMCI instance
+}
+GrpcProcessor <|-- BcmPoltClient
+
+}
+
+FilterEntry -down-> VomciConnection
+
+@enduml

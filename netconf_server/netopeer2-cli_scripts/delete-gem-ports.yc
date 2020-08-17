@@ -1,0 +1,16 @@
+<bbf-xpongemtcont:xpongemtcont xmlns:bbf-xpongemtcont="urn:bbf:yang:bbf-xpongemtcont">
+   <bbf-xpongemtcont:gemports>
+      <bbf-xpongemtcont:gemport xmlns:nc="urn:ietf:params:xml:ns:netconf:base:1.0" nc:operation="delete">
+         <bbf-xpongemtcont:name>gem-user1-eth.1-tc0</bbf-xpongemtcont:name>
+      </bbf-xpongemtcont:gemport>
+      <bbf-xpongemtcont:gemport xmlns:nc="urn:ietf:params:xml:ns:netconf:base:1.0" nc:operation="delete">
+         <bbf-xpongemtcont:name>gem-user1-eth.1-tc1</bbf-xpongemtcont:name>
+      </bbf-xpongemtcont:gemport>
+      <bbf-xpongemtcont:gemport xmlns:nc="urn:ietf:params:xml:ns:netconf:base:1.0" nc:operation="delete">
+         <bbf-xpongemtcont:name>gem-user1-eth.1-tc2</bbf-xpongemtcont:name>
+      </bbf-xpongemtcont:gemport>
+      <bbf-xpongemtcont:gemport xmlns:nc="urn:ietf:params:xml:ns:netconf:base:1.0" nc:operation="delete">
+         <bbf-xpongemtcont:name>gem-user1-eth.1-tc3</bbf-xpongemtcont:name>
+      </bbf-xpongemtcont:gemport>
+   </bbf-xpongemtcont:gemports>
+</bbf-xpongemtcont:xpongemtcont>

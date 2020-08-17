@@ -1,0 +1,89 @@
+
+module: bbf-hardware-transceivers
+  augment /hw:hardware/hw:component:
+    +--rw transceiver
+       +--rw identifiers-and-codes
+       |  +--ro physical-device?                       identityref
+       |  +--ro physical-device-extended-identifier?   enumeration
+       |  +--ro connector?                             identityref
+       |  +--rw compliance-codes
+       |  |  +--ro ten-gigabit-ethernet?               enumeration
+       |  |  +--ro infiniband?                         enumeration
+       |  |  +--ro escon?                              enumeration
+       |  |  +--ro sonet?                              enumeration
+       |  |  +--ro ethernet?                           enumeration
+       |  |  +--ro fibre-channel-link-length?          enumeration
+       |  |  +--ro fiber-channel-technology?           enumeration
+       |  |  +--ro sfp-plus-cable-technology?          enumeration
+       |  |  +--ro fibre-channel-transmission-media?   enumeration
+       |  |  +--ro fibre-channel-speed?                enumeration
+       |  +--ro encoding?                              enumeration
+       |  +--ro nominal-bit-rate?                      uint8
+       |  +--ro maximum-bit-rate?                      uint8
+       |  +--ro minimum-bit-rate?                      uint8
+       +--rw link-length
+       |  +--ro length-single-mode-km?           uint8
+       |  +--ro length-single-mode-100m?         uint8
+       |  +--ro length-50um-om2?                 uint8
+       |  +--ro length-62.5um-om2?               uint8
+       |  +--ro length-50um-om4?                 uint8
+       |  +--ro length-active-cable-or-copper?   uint8
+       |  +--ro length-50um-om3?                 uint8
+       +--rw vendor-fields
+       |  +--ro oui?           string
+       |  +--ro part-number?   string
+       +--ro diagnostics-monitoring-type?   bits
+       +--ro enhanced-options?              bits
+       +--rw diagnostics
+       |  +--ro temperature?      int16
+       |  +--ro supply-voltage?   uint16
+       |  +--ro alarm-flag*       identityref
+       |  +--ro warning-flag*     identityref
+       +--rw thresholds
+          +--ro temperature-high-alarm?           int16
+          +--ro temperature-low-alarm?            int16
+          +--ro temperature-high-warning?         int16
+          +--ro temperature-low-warning?          int16
+          +--ro supply-voltage-high-alarm?        uint16
+          +--ro supply-voltage-low-alarm?         uint16
+          +--ro supply-voltage-high-warning?      uint16
+          +--ro supply-voltage-low-warning?       uint16
+          +--ro tx-bias-high-alarm?               uint16
+          +--ro tx-bias-low-alarm?                uint16
+          +--ro tx-bias-high-warning?             uint16
+          +--ro tx-bias-low-warning?              uint16
+          +--ro tx-power-high-alarm?              uint16
+          +--ro tx-power-low-alarm?               uint16
+          +--ro tx-power-high-warning?            uint16
+          +--ro tx-power-low-warning?             uint16
+          +--ro rx-power-high-alarm?              uint16
+          +--ro rx-power-low-alarm?               uint16
+          +--ro rx-power-high-warning?            uint16
+          +--ro rx-power-low-warning?             uint16
+          +--ro laser-temperature-high-alarm?     int16
+          +--ro laser-temperature-low-alarm?      int16
+          +--ro laser-temperature-high-warning?   int16
+          +--ro laser-temperature-low-warning?    int16
+          +--ro tec-current-high-alarm?           int16
+          +--ro tec-current-low-alarm?            int16
+          +--ro tec-current-high-warning?         int16
+          +--ro tec-current-low-warning?          int16
+  augment /hw:hardware/hw:component:
+    +--rw transceiver-link
+       +--ro (wavelength-or-specification-compliance)?
+       |  +--:(unspecified)
+       |  |  +--ro unspecified?                              empty
+       |  +--:(wavelength)
+       |  |  +--ro wavelength?                               uint32
+       |  +--:(passive-cable-specification-compliance)
+       |  |  +--ro passive-cable-specification-compliance?   enumeration
+       |  +--:(active-cable-specification-compliance)
+       |     +--ro active-cable-specification-compliance?    enumeration
+       +--rw diagnostics
+          +--ro tx-bias?             uint16
+          +--ro tx-power?            uint16
+          +--ro rx-power?            uint16
+          +--ro laser-temperature?   int16
+          +--ro tec-current?         int16
+          +--ro alarm-flag*          identityref
+          +--ro warning-flag*        identityref

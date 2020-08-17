@@ -1,0 +1,3 @@
+<nacm:nacm xmlns:nacm="urn:ietf:params:xml:ns:yang:ietf-netconf-acm">
+   <nacm:enable-nacm>false</nacm:enable-nacm>
+</nacm:nacm>

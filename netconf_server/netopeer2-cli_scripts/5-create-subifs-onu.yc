@@ -1,0 +1,43 @@
+<if:interfaces xmlns:if="urn:ietf:params:xml:ns:yang:ietf-interfaces">
+   <if:interface>
+      <if:name>onu-user1-eth.1.100</if:name>
+      <if:type xmlns:bbfift="urn:bbf:yang:bbf-if-type">bbfift:vlan-sub-interface</if:type>
+      <bbf-subif:subif-lower-layer xmlns:bbf-subif="urn:bbf:yang:bbf-sub-interfaces">
+         <bbf-subif:interface>onu-user1-eth.1</bbf-subif:interface>
+      </bbf-subif:subif-lower-layer>
+      <bbf-subif:inline-frame-processing xmlns:bbf-subif="urn:bbf:yang:bbf-sub-interfaces">
+         <bbf-subif:ingress-rule>
+            <bbf-subif:rule>
+               <bbf-subif:name>u1_uni100_to_cvlan301</bbf-subif:name>
+               <bbf-subif:priority>1</bbf-subif:priority>
+               <!-- filter by VLAN 100 -->
+               <bbf-subif:flexible-match>
+                  <bbf-subif-tag:match-criteria xmlns:bbf-subif-tag="urn:bbf:yang:bbf-sub-interface-tagging">
+                     <bbf-subif-tag:tag>
+                        <bbf-subif-tag:index>0</bbf-subif-tag:index>
+                        <bbf-subif-tag:dot1q-tag>
+                           <bbf-subif-tag:vlan-id>100</bbf-subif-tag:vlan-id>
+                           <bbf-subif-tag:tag-type xmlns:bbf-dot1qt="urn:bbf:yang:bbf-dot1q-types">bbf-dot1qt:c-vlan</bbf-subif-tag:tag-type>
+                        </bbf-subif-tag:dot1q-tag>
+                     </bbf-subif-tag:tag>
+                  </bbf-subif-tag:match-criteria>
+               </bbf-subif:flexible-match>
+               <bbf-subif:ingress-rewrite>
+                  <!-- replace the incoming VLAN with VLAN 301 -->
+                  <bbf-subif-tag:pop-tags xmlns:bbf-subif-tag="urn:bbf:yang:bbf-sub-interface-tagging">1</bbf-subif-tag:pop-tags>
+                  <bbf-subif-tag:push-tag xmlns:bbf-subif-tag="urn:bbf:yang:bbf-sub-interface-tagging">
+                     <bbf-subif-tag:index>0</bbf-subif-tag:index>
+                     <bbf-subif-tag:dot1q-tag>
+                        <bbf-subif-tag:vlan-id>301</bbf-subif-tag:vlan-id>
+                        <bbf-subif-tag:tag-type xmlns:bbf-dot1qt="urn:bbf:yang:bbf-dot1q-types">bbf-dot1qt:c-vlan</bbf-subif-tag:tag-type>
+                        <bbf-subif-tag:write-pbit-0 />
+                        <bbf-subif-tag:write-dei-0 />
+                     </bbf-subif-tag:dot1q-tag>
+                  </bbf-subif-tag:push-tag>
+               </bbf-subif:ingress-rewrite>
+            </bbf-subif:rule>
+         </bbf-subif:ingress-rule>
+      </bbf-subif:inline-frame-processing>
+      <bbf-qos-pol:ingress-qos-policy-profile xmlns:bbf-qos-pol="urn:bbf:yang:bbf-qos-policies">ex1-qos-policy-profile-tc0</bbf-qos-pol:ingress-qos-policy-profile>
+   </if:interface>
+</if:interfaces>

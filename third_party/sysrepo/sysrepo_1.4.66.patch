@@ -1,0 +1,13 @@
+diff -Naur sysrepo-1.4.66.org/CMakeLists.txt sysrepo-1.4.66/CMakeLists.txt
+--- sysrepo-1.4.66.org/CMakeLists.txt	2020-05-07 21:13:48.000000000 +1000
++++ sysrepo-1.4.66/CMakeLists.txt	2020-05-11 15:33:07.088196632 +1000
+@@ -207,6 +207,8 @@
+ find_library(LIBRT rt)
+ if(LIBRT)
+     target_link_libraries(sysrepo ${LIBRT})
++elseif(NOT APPLE)
++    target_link_libraries(sysrepo rt)
+ endif()
+ 
+ # atomic
+

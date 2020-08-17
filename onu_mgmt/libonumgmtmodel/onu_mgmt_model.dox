@@ -1,0 +1,78 @@
+/** \page object_model Object Model
+
+<table>
+\TABLE_HDR3{Object Name,Object Description,Object ID}
+\TABLE_ROW3{\subpage object_flow "flow", Flow,\ref BCMONU_MGMT_OBJ_ID_FLOW}
+\TABLE_ROW3{\subpage object_onu "onu", ONU,\ref BCMONU_MGMT_OBJ_ID_ONU}
+</table>
+
+@{ */
+
+/** \page object_flow Object: flow - Flow
+
+\n
+Object key: bcmonu_mgmt_flow_key\n
+
+<table>
+\TABLE_HDR2{Subgroup,Description}
+\TABLE_ROW2{\subpage object_flow_cfg "cfg", Object configuration}
+</table>
+
+@{ */
+
+/** \page object_flow_cfg Object configuration
+
+ - APIs: bcmonu_mgmt_cfg_get(), bcmonu_mgmt_cfg_set(), bcmonu_mgmt_cfg_clear(), bcmonu_mgmt_multi_cfg_get()
+ - Parameter: \ref bcmonu_mgmt_flow_cfg\n
+<table>
+\TABLE_HDR4{Parameter Name,Parameter Description,Data Type,Access}
+\TABLE_ROW4{admin_state,Administrative state,\ref bcmonu_mgmt_admin_state,RW}
+\TABLE_ROW4{oper_status,Operational status,\ref bcmonu_mgmt_status,R}
+\TABLE_ROW4{onu_key,ONU Key,\ref bcmonu_mgmt_flow_onu_key,RW}
+\TABLE_ROW4{flow_type,Flow type,\ref bcmonu_mgmt_flow_type,RW}
+\TABLE_ROW4{svc_port_id,Service Port ID,\ref bcmonu_mgmt_svc_port_id,RW}
+\TABLE_ROW4{agg_port_id,Aggregate Port ID,\ref bcmonu_mgmt_agg_port_id,RW}
+\TABLE_ROW4{uni_port,UNI port,\ref bcmonu_mgmt_uni_port,RW}
+\TABLE_ROW4{match,Match,\ref bcmonu_mgmt_flow_match,RW}
+\TABLE_ROW4{action,Action,\ref bcmonu_mgmt_flow_action,RW}
+\TABLE_ROW4{igmp_us_action,IGMP action on Upstream,\ref bcmonu_mgmt_igmp_us_action,RW}
+</table>
+\n\n */
+
+/** @}  */
+/** \page object_onu Object: onu - ONU
+
+\n
+Object key: bcmonu_mgmt_onu_key\n
+
+<table>
+\TABLE_HDR2{Subgroup,Description}
+\TABLE_ROW2{\subpage object_onu_cfg "cfg", Object configuration}
+</table>
+
+@{ */
+
+/** \page object_onu_cfg Object configuration
+
+ - APIs: bcmonu_mgmt_cfg_get(), bcmonu_mgmt_cfg_set(), bcmonu_mgmt_cfg_clear(), bcmonu_mgmt_multi_cfg_get()
+ - Parameter: \ref bcmonu_mgmt_onu_cfg\n
+<table>
+\TABLE_HDR4{Parameter Name,Parameter Description,Data Type,Access}
+\TABLE_ROW4{admin_state,Administrative state,\ref bcmonu_mgmt_admin_state,RW}
+\TABLE_ROW4{oper_status,Operational status,\ref bcmonu_mgmt_status,R}
+\TABLE_ROW4{input_tpid,Input TPID,uint16_t,RW}
+\TABLE_ROW4{output_tpid,Output TPID,uint16_t,RW}
+\TABLE_ROW4{unis,UNIs,\ref bcmonu_mgmt_arr_uni_8,RW}
+\TABLE_ROW4{num_of_unis,Number of UNIs,uint32_t,RW}
+\TABLE_ROW4{agg_ports,T-CONTs,\ref bcmonu_mgmt_arr_agg_port_list_entry_64,RW}
+\TABLE_ROW4{num_of_agg_ports,Number of T-CONTs,uint32_t,RW}
+\TABLE_ROW4{us_priority_queues,US priority queues,\ref bcmonu_mgmt_arr_priority_queue_128,RW}
+\TABLE_ROW4{num_of_us_priority_queues,Number of US priority queues,uint32_t,RW}
+\TABLE_ROW4{ds_priority_queues,DS priority queues,\ref bcmonu_mgmt_arr_priority_queue_128,RW}
+\TABLE_ROW4{num_of_ds_priority_queues,Number of DS priority queues,uint32_t,RW}
+\TABLE_ROW4{downstream_mode,downstream frames tagging action based on upstream rules. Sent in Extended vlan tagging ME for the ONU,\ref bcmonu_mgmt_downstream_mode_values,RW}
+</table>
+\n\n */
+
+/** @}  */
+/** @}  */
