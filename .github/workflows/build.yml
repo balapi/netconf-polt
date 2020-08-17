@@ -1,0 +1,38 @@
+# This is a basic workflow that is manually triggered
+
+name: CI
+
+# Controls when the action will run. Triggers the workflow on pull and push request events
+on:
+  push:
+    branches:
+      - devel
+  pull_request:
+    branches:
+      - master
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+
+    # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+    - uses: actions/checkout@v2
+
+    # Runs a set of commands using the runners shell
+    - name: Build NETCONF pOLT
+      run: |
+        echo Building NETCONF pOLT for BCM6862x,BCM6865x in $GITHUB_WORKSPACE/build ..
+        make CCACHE=n
+        echo NETCONF pOLT built successfully.
+        echo Build artifacts can be found in $GITHUB_WORKSPACE/build/fs
+    - uses: actions/upload-artifact@v1
+      if: success()
+      with:
+        name: build-artifacts
+        path: build/fs
