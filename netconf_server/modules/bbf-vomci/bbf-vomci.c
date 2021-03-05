@@ -1,22 +1,22 @@
 /*
  *  <:copyright-BRCM:2016-2020:Apache:standard
- *  
+ *
  *   Copyright (c) 2016-2020 Broadcom. All Rights Reserved
- *  
+ *
  *   The term “Broadcom” refers to Broadcom Inc. and/or its subsidiaries
- *  
+ *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
  *   You may obtain a copy of the License at
- *  
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *   Unless required by applicable law or agreed to in writing, software
  *   distributed under the License is distributed on an "AS IS" BASIS,
  *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
- *  
+ *
  *  :>
  *
  *****************************************************************************/
@@ -60,8 +60,11 @@ static int bbf_polt_vomci_server_change_cb(sr_session_ctx_t *srs, const char *mo
     tr451_endpoint endpoint = {};
     tr451_polt_filter filter = {};
     const char *filter_endpoint_name = NULL;
+    char qualified_xpath[BCM_MAX_XPATH_LENGTH];
     int sr_rc;
     bcmos_errno err = BCM_ERR_OK;
+
+    nc_config_lock();
 
     NC_LOG_INFO("xpath=%s event=%d\n", xpath, event);
 
@@ -72,9 +75,15 @@ static int bbf_polt_vomci_server_change_cb(sr_session_ctx_t *srs, const char *mo
      * ABORT event will roll-back the changes.
      */
     if (event == SR_EV_DONE)
+    {
+        nc_config_unlock();
         return SR_ERR_OK;
+    }
 
-    sr_rc = sr_get_changes_iter(srs, "//.", &sr_iter);
+    snprintf(qualified_xpath, sizeof(qualified_xpath)-1, "%s//.", xpath);
+    qualified_xpath[sizeof(qualified_xpath)-1] = 0;
+
+    sr_rc = sr_get_changes_iter(srs, qualified_xpath, &sr_iter);
     while ((err == BCM_ERR_OK) && (sr_rc == SR_ERR_OK) &&
            ((sr_rc = sr_get_change_tree_next(srs, sr_iter, &sr_oper,
                 &node, &prev_val, &prev_list, &prev_dflt)) == SR_ERR_OK))
@@ -219,6 +228,8 @@ static int bbf_polt_vomci_server_change_cb(sr_session_ctx_t *srs, const char *mo
 
     sr_free_change_iter(sr_iter);
 
+    nc_config_unlock();
+
     return nc_bcmos_errno_to_sr_errno(err);
 }
 
@@ -235,8 +246,11 @@ static int bbf_polt_vomci_client_change_cb(sr_session_ctx_t *srs, const char *mo
     tr451_endpoint entry = {};
     tr451_polt_filter filter = {};
     const char *filter_endpoint_name = NULL;
+    char qualified_xpath[BCM_MAX_XPATH_LENGTH];
     int sr_rc;
     bcmos_errno err = BCM_ERR_OK;
+
+    nc_config_lock();
 
     NC_LOG_INFO("xpath=%s event=%d\n", xpath, event);
 
@@ -247,9 +261,15 @@ static int bbf_polt_vomci_client_change_cb(sr_session_ctx_t *srs, const char *mo
      * ABORT event will roll-back the changes.
      */
     if (event == SR_EV_DONE)
+    {
+        nc_config_unlock();
         return SR_ERR_OK;
+    }
 
-    sr_rc = sr_get_changes_iter(srs, "//.", &sr_iter);
+    snprintf(qualified_xpath, sizeof(qualified_xpath)-1, "%s//.", xpath);
+    qualified_xpath[sizeof(qualified_xpath)-1] = 0;
+
+    sr_rc = sr_get_changes_iter(srs, qualified_xpath, &sr_iter);
     while ((err == BCM_ERR_OK) && (sr_rc == SR_ERR_OK) &&
            ((sr_rc = sr_get_change_tree_next(srs, sr_iter, &sr_oper,
                 &node, &prev_val, &prev_list, &prev_dflt)) == SR_ERR_OK))
@@ -433,6 +453,8 @@ static int bbf_polt_vomci_client_change_cb(sr_session_ctx_t *srs, const char *mo
         bcm_tr451_client_endpoint_free(endpoint);
 
     sr_free_change_iter(sr_iter);
+
+    nc_config_unlock();
 
     return nc_bcmos_errno_to_sr_errno(err);
 }

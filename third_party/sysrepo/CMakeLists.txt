@@ -2,10 +2,12 @@
 #
 include(third_party)
 
+bcm_make_normal_option(SYSREPO_SHM_PREFIX STRING "sysrepo SHM file prefix" "none")
+
 if(NETCONF_TOOLS_FROM_DEVEL)
     set(_VERSION "devel")
 else()
-    set(_VERSION "1.4.66")
+    set(_VERSION "1.4.104")
 endif()
 bcm_3rdparty_module_name(sysrepo ${_VERSION})
 
@@ -16,8 +18,11 @@ else()
 endif()
 
 bcm_3rdparty_add_dependencies(libev libredblack libyang protobuf protobuf-c sysrepo-commands)
-bcm_3rdparty_add_build_options(-DBUILD_CPP_EXAMPLES=OFF -DBUILD_EXAMPLES=OFF -DGEN_LANGUAGE_BINDINGS=OFF)
-bcm_3rdparty_add_build_options(-DENABLE_TESTS=OFF -DGEN_PYTHON_BINDINGS=OFF)
+bcm_3rdparty_add_build_options(-DBUILD_CPP_EXAMPLES=OFF -DBUILD_EXAMPLES=ON -DGEN_LANGUAGE_BINDINGS=OFF)
+bcm_3rdparty_add_build_options(-DENABLE_TESTS=OFF -DENABLE_VALGRIND_TESTS=OFF -DGEN_PYTHON_BINDINGS=OFF)
+if(SYSREPO_SHM_PREFIX AND NOT "${SYSREPO_SHM_PREFIX}" STREQUAL "none")
+    bcm_3rdparty_add_env_variables(SYSREPO_SHM_PREFIX=${SYSREPO_SHM_PREFIX})
+endif()
 set(_REPO_LOC ${_${_MOD_NAME_UPPER}_INSTALL_TOP}/sysrepo)
 # Use native tools when compiling for target other than x86*
 if(BCM_CONFIG_HOST MATCHES "x86")

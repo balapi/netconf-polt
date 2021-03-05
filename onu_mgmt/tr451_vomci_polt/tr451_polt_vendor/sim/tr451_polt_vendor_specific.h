@@ -27,19 +27,11 @@
 #ifndef TR451_POLT_VENDOR_SPECIFIC_H_
 #define TR451_POLT_VENDOR_SPECIFIC_H_
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
-
 #define TR451_POLT_MAX_PONS_PER_OLT        16
 #define TR451_POLT_MAX_ONUS_PER_PON        128
 
-#ifdef __cplusplus
-}
-#endif
-
 #define TR451_POLT_ENABLE_VENDOR_CLI
+
 /**
  * @brief  Initialize vendor CLI
  * @param[in]  *dir: main vomci direcory

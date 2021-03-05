@@ -1,22 +1,22 @@
 /*
  *  <:copyright-BRCM:2016-2020:Apache:standard
- *  
+ *
  *   Copyright (c) 2016-2020 Broadcom. All Rights Reserved
- *  
+ *
  *   The term “Broadcom” refers to Broadcom Inc. and/or its subsidiaries
- *  
+ *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
  *   You may obtain a copy of the License at
- *  
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *   Unless required by applicable law or agreed to in writing, software
  *   distributed under the License is distributed on an "AS IS" BASIS,
  *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
- *  
+ *
  *  :>
  *
  *****************************************************************************/
@@ -64,6 +64,12 @@ bcmos_errno xpon_cgroup_transaction(sr_session_ctx_t *srs, nc_transact *tr)
     err = xpon_cgroup_get_by_name(keyname, &cgroup, &was_added);
     if (err != BCM_ERR_OK)
         return err;
+    /* If the channel group has already been created by forward reference - stop here */
+    if (cgroup->hdr.created_by_forward_reference)
+    {
+        cgroup->hdr.created_by_forward_reference = BCMOS_FALSE;
+        return BCM_ERR_OK;
+    }
 
     /* Go over transaction elements and map to BAL */
     STAILQ_FOREACH(elem, &tr->elems, next)

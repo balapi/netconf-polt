@@ -1,22 +1,22 @@
 /*
  *  <:copyright-BRCM:2016-2020:Apache:standard
- *  
+ *
  *   Copyright (c) 2016-2020 Broadcom. All Rights Reserved
- *  
+ *
  *   The term “Broadcom” refers to Broadcom Inc. and/or its subsidiaries
- *  
+ *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
  *   You may obtain a copy of the License at
- *  
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *   Unless required by applicable law or agreed to in writing, software
  *   distributed under the License is distributed on an "AS IS" BASIS,
  *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
- *  
+ *
  *  :>
  *
  *****************************************************************************/
@@ -48,6 +48,12 @@ extern dev_log_id log_id_netconf;
 #define NC_LOG_WARN(fmt, args...)  BCM_LOG(WARNING, log_id_netconf, fmt, ##args);
 #define NC_LOG_DBG(fmt, args...)   BCM_LOG(DEBUG, log_id_netconf, fmt, ##args);
 
+/*
+ * Serialization primitives. Lock/unlock configuration
+ */
+void nc_config_lock(void);
+void nc_config_unlock(void);
+
 /* Datastore type */
 typedef enum
 {
@@ -78,6 +84,7 @@ typedef struct nc_transact
     int plugin_elem_type;   /* Plugin-specific element type (ie, iftype) */
 #define NC_TRANSACT_PLUGIN_ELEM_TYPE_INVALID    (-1)
     STAILQ_HEAD(trans_elems, nc_transact_elem) elems;
+    bcmos_bool do_not_free_values;
 } nc_transact;
 
 void nc_transact_init(nc_transact *tr, sr_event_t event);

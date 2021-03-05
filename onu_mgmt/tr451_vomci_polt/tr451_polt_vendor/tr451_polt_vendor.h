@@ -35,6 +35,7 @@ extern "C"
 
 #include <bcmos_system.h>
 #include <bcmcli.h>
+#include <bcm_tr451_polt.h>
 
 #ifdef __cplusplus
 }
@@ -71,8 +72,7 @@ typedef struct
 #define POLT_PON_ID_UNDEFINED    0xffff
    uint16_t onu_id;
 #define POLT_ONU_ID_UNDEFINED    0xffff
-   bcmos_bool present;              /* TRUE = ONU is present */
-   bcmos_bool active;               /* TRUE=ONU is in O5 state */
+   xpon_onu_presence_flags presence_flags; /* ONU presence flags */
 } tr451_polt_onu_info;
 
 /**

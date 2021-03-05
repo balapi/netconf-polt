@@ -127,10 +127,10 @@ class GrpcProcessor {
         Status OmciTxToOnu(const OmciPacket &grpc_omci_packet, const char *peer = nullptr);
         bcmos_errno CreateTaskAndStart();
         virtual void Stop();
-        bool isStarted() { return started_; }
-        const char *name() { return endpoint_name_.c_str(); }
-        processor_type type() { return type_; }
-        const char *type_name() {
+        bool isStarted() const { return started_; }
+        const char *name() const { return endpoint_name_.c_str(); }
+        processor_type type() const { return type_; }
+        const char *type_name() const {
             static const char *type_name[2] = { "server", "client" };
             return type_name[(int)type_];
         }

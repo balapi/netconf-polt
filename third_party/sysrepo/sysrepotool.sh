@@ -7,7 +7,9 @@
 fs_bin_dir=`dirname $0`
 tool_name=$1
 tool_dir=`dirname $1`
-sysrepo_dir=$fs_bin_dir/../sysrepo
+pushd $fs_bin_dir/../sysrepo
+sysrepo_dir=`pwd`
+popd
 lib_dir=$tool_dir/../lib
 
 export LD_LIBRARY_PATH=$lib_dir:$LD_LIBRARY_PATH

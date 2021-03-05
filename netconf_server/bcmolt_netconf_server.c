@@ -97,6 +97,7 @@ static int print_help(const char *cmd)
 #ifndef BCM_OPEN_SOURCE_SIM
             "\t\t -tr451_polt - ONU management is done by TR-451 vOMCI. Enable pOLT support\n"
 #endif
+            "\t\t -polt_name name\t\tSet pOLT name\n"
             "\t\t -tr451_polt_log error|info|debug TR-451 pOLT log level\n"
 #endif
             "\t\t -log error|info|debug - netconf server log level\n"
@@ -134,7 +135,7 @@ static void bcm_netconf_shutdown(void)
     sr_session_stop(sr_sess);
     sr_disconnect(sr_conn);
 #ifndef BCM_OPEN_SOURCE_SIM
-    /* bcmtr_exit(); */
+    bcmtr_exit();
 #endif
     bcmcli_stop(current_session);
     bcmcli_session_close(current_session);
@@ -345,6 +346,13 @@ int main(int argc, char *argv[])
         else if (!strcmp(argv[i], "-tr451_polt"))
         {
             startup_opts.tr451_onu_management = BCMOS_TRUE;
+        }
+        else if (!strcmp(argv[i], "-polt_name"))
+        {
+            ++i;
+            if (i >= argc)
+                return print_help(argv[0]);
+            tr451_init_parms.polt_name = argv[i];
         }
 #endif
         else if (!strcmp(argv[i], "-tr451_polt_log"))

@@ -43,18 +43,19 @@ extern sr_subscription_ctx_t *sr_ctx;
 /* Object type */
 typedef enum
 {
+    XPON_OBJ_TYPE__FIRST,
+    XPON_OBJ_TYPE_ENET = XPON_OBJ_TYPE__FIRST,
     XPON_OBJ_TYPE_CGROUP,
-    XPON_OBJ_TYPE_CPAIR,
     XPON_OBJ_TYPE_CPART,
+    XPON_OBJ_TYPE_CPAIR,
     XPON_OBJ_TYPE_CTERM,
     XPON_OBJ_TYPE_V_ANI,
     XPON_OBJ_TYPE_ANI,
     XPON_OBJ_TYPE_V_ANI_V_ENET,
     XPON_OBJ_TYPE_ANI_V_ENET,
-    XPON_OBJ_TYPE_ENET,
+    XPON_OBJ_TYPE_VLAN_SUBIF,
     XPON_OBJ_TYPE_TCONT,
     XPON_OBJ_TYPE_GEM,
-    XPON_OBJ_TYPE_VLAN_SUBIF,
     XPON_OBJ_TYPE_WAVELENGTH_PROFILE,
     XPON_OBJ_TYPE_TRAFFIC_DESCR_PROFILE,
     XPON_OBJ_TYPE_QOS_CLASSIFIER,
@@ -66,6 +67,11 @@ typedef enum
     XPON_OBJ_TYPE_FWD_DB,
     XPON_OBJ_TYPE_HARDWARE,
     XPON_OBJ_TYPE_DHCPR_PROFILE,
+    XPON_OBJ_TYPE_TM_TC_ID_TO_Q_PROFILE,
+    XPON_OBJ_TYPE_TM_BAC_PROFILE,
+    XPON_OBJ_TYPE__LAST = XPON_OBJ_TYPE_DHCPR_PROFILE,
+
+    XPON_OBJ_TYPE_ANY = (-2),
     XPON_OBJ_TYPE_INVALID = NC_TRANSACT_PLUGIN_ELEM_TYPE_INVALID
 } xpon_obj_type;
 
@@ -94,6 +100,7 @@ struct xpon_obj_hdr
     bcmolt_presence_mask presence_mask;
     STAILQ_ENTRY(xpon_obj_hdr) next;
     bcmos_bool being_deleted;
+    bcmos_bool created_by_forward_reference;
 };
 typedef STAILQ_HEAD(xpon_obj_list, xpon_obj_hdr) xpon_obj_list;
 
@@ -101,14 +108,29 @@ typedef STAILQ_HEAD(xpon_obj_list, xpon_obj_hdr) xpon_obj_list;
 #define XPON_PROP_MASK(_obj_type, _p) \
     (1ULL << (uint64_t)xpon_  ## _obj_type ## _prop_id_ ## _p)
 
+#define XPON_STR_PROP_SET_PRESENT(_str, _str_type, _p) \
+    ((_str)->presence_mask |= XPON_PROP_MASK(_str_type, _p))
+
+#define XPON_STR_PROP_CLEAR(_str, _str_type, _p) \
+    ((_str)->presence_mask &= ~XPON_PROP_MASK(_str_type, _p))
+
+#define XPON_STR_PROP_IS_SET(_str, _str_type, _p) \
+    (((_str)->presence_mask & XPON_PROP_MASK(_str_type, _p)) != 0)
+
+#define XPON_STR_PROP_SET(_str, _str_type, _p, _val) \
+    do { \
+        XPON_STR_PROP_SET_PRESENT(_str, _str_type, _p);\
+        (_str)->_p = _val;\
+    } while (0)
+
 #define XPON_PROP_SET_PRESENT(_obj, _obj_type, _p) \
-    ((_obj)->hdr.presence_mask |= XPON_PROP_MASK(_obj_type, _p))
+    XPON_STR_PROP_SET_PRESENT(&(_obj)->hdr, _obj_type, _p)
 
 #define XPON_PROP_CLEAR(_obj, _obj_type, _p) \
-    ((_obj)->hdr.presence_mask &= ~XPON_PROP_MASK(_obj_type, _p))
+    XPON_STR_PROP_CLEAR(&(_obj)->hdr, _obj_type, _p)
 
 #define XPON_PROP_IS_SET(_obj, _obj_type, _p) \
-    (((_obj)->hdr.presence_mask & XPON_PROP_MASK(_obj_type, _p)) != 0)
+    XPON_STR_PROP_IS_SET(&(_obj)->hdr, _obj_type, _p)
 
 #define XPON_PROP_SET(_obj, _obj_type, _p, _val) \
     do { \
@@ -157,6 +179,9 @@ typedef struct xpon_fwd_split_horizon_profile xpon_fwd_split_horizon_profile;
 typedef struct xpon_fwd_db xpon_fwd_db;
 typedef struct xpon_hardware xpon_hardware;
 typedef struct xpon_dhcpr_profile xpon_dhcpr_profile;
+typedef struct xpon_tm_tc_id_to_q_mapping_profile xpon_tm_tc_id_to_q_mapping_profile;
+typedef struct xpon_tm_bac_profile xpon_tm_bac_profile;
+typedef struct xpon_tm_root xpon_tm_root;
 
 /* vlan-subif list head */
 typedef STAILQ_HEAD(xpon_subif_list, xpon_vlan_subif) xpon_subif_list;
@@ -166,6 +191,87 @@ typedef STAILQ_HEAD(xpon_tcont_list, xpon_tcont) xpon_tcont_list;
 
 /* GEM port list head */
 typedef STAILQ_HEAD(xpon_gem_list, xpon_gem) xpon_gem_list;
+
+/*
+ * Scheduling support. See TR-383: bbf-qos-traffic0mngt.yang, bbf-qos-enhanced-scheduling.yang
+ */
+
+typedef struct xpon_tm_sched_queue xpon_tm_sched_queue;
+typedef struct xpon_tm_sched_node xpon_tm_sched_node;
+typedef struct xpon_tm_root xpon_tm_root;
+
+typedef STAILQ_HEAD(xpon_tm_sched_queue_list, xpon_tm_sched_queue) xpon_tm_sched_queue_list;
+typedef STAILQ_HEAD(xpon_tm_sched_node_list, xpon_tm_sched_node) xpon_tm_sched_node_list;
+
+typedef enum
+{
+    xpon_tm_sched_level_1,
+    xpon_tm_sched_level_2,
+    xpon_tm_sched_level_3
+} xpon_tm_sched_level;
+
+typedef struct xpon_tm_sched_gen_attr
+{
+    bcmolt_presence_mask presence_mask;
+    uint8_t weight;
+    uint8_t extended_weight;
+    uint8_t priority;
+} xpon_tm_sched_gen_attr;
+
+typedef enum
+{
+    xpon_tm_sched_gen_attr_prop_id_wight,
+    xpon_tm_sched_gen_attr_prop_id_extended_wight,
+    xpon_tm_sched_gen_attr_prop_id_priority,
+} xpon_tm_sched_gen_attr_prop_id;
+
+struct xpon_tm_sched_queue
+{
+    uint32_t queue_id;
+    xpon_tm_sched_gen_attr sched_attr;
+    STAILQ_ENTRY(xpon_tm_sched_queue) next;
+};
+
+typedef enum
+{
+    xpon_tm_sched_node_type_queue,
+    xpon_tm_sched_node_type_scheduler,
+    xpon_tm_sched_node_type_child_queue,
+} xpon_tm_sched_node_type;
+
+struct xpon_tm_sched_node
+{
+    const char *name;
+    xpon_tm_sched_node_type node_type;
+    xpon_tm_sched_level sched_level;
+    union
+    {
+        xpon_tm_sched_queue_list queues;
+        xpon_tm_sched_node_list nodes;
+    };
+    STAILQ_ENTRY(xpon_tm_sched_node) next;
+};
+
+typedef enum
+{
+    xpon_tm_root_child_type_queue,
+    xpon_tm_root_child_type_node,
+} xpon_tm_root_child_type;
+
+struct xpon_tm_root
+{
+    xpon_tm_root_child_type child_type;
+    union
+    {
+        xpon_tm_sched_queue_list queues;
+        xpon_tm_sched_node_list nodes;
+    };
+    const char *tc_id_to_q_mapping_profile_name;
+};
+
+/*
+ * Other scheduling support structures and objects are TODO
+ * ---------------------------------------------------------- */
 
 /* Wavelength profile */
 struct xpon_wavelength_profile
@@ -215,7 +321,9 @@ struct xpon_tcont
 #define ALLOC_ID_UNDEFINED   0xffff
     xpon_td_profile *td_profile;
     xpon_v_ani *v_ani;
+    xpon_tm_root tm_root;
     xpon_resource_state state;
+    bcmolt_interface pon_ni;
     STAILQ_ENTRY(xpon_tcont) next; /* next on ONU */
 };
 
@@ -225,6 +333,7 @@ typedef enum
     xpon_tcont_prop_id_alloc_id,
     xpon_tcont_prop_id_td_profile,
     xpon_tcont_prop_id_v_ani,
+    xpon_tcont_prop_id_tm_root,
 } xpon_tcont_prop_id;
 
 typedef enum
@@ -248,6 +357,7 @@ struct xpon_gem
     xpon_tcont *tcont;
     xpon_resource_state state;
     xpon_v_ani *v_ani;
+    bcmolt_interface pon_ni;
     STAILQ_ENTRY(xpon_gem) next; /* next on ONU */
 };
 
@@ -277,6 +387,8 @@ struct xpon_v_ani
     bcmolt_serial_number serial_number;
     bcmolt_bin_str_36 registration_id;
     bcmolt_onu_rate onu_rate;
+    xpon_tm_root tm_root;
+
     bcmos_bool registered;
     bcmos_bool omci_ready;
     uint8_t num_unis;
@@ -297,7 +409,8 @@ typedef enum
     xpon_v_ani_prop_id_cpart,
     xpon_v_ani_prop_id_cpair,
     xpon_v_ani_prop_id_protection_cpair,
-    xpon_v_ani_prop_id_rate,
+    xpon_v_ani_prop_id_onu_rate,
+    xpon_v_ani_prop_id_tm_root,
 } xpon_v_ani_prop_id;
 
 /* ani info record */
@@ -341,6 +454,8 @@ struct xpon_ani_v_enet
 {
     xpon_obj_hdr hdr;
     xpon_ani *ani;
+    xpon_tm_root tm_root;
+
     xpon_obj_hdr *linked_if;
     xpon_ani *lower_layer;
     xpon_subif_list subifs;
@@ -350,6 +465,7 @@ struct xpon_ani_v_enet
 typedef enum
 {
     xpon_ani_v_enet_prop_id_ani,
+    xpon_ani_v_enet_prop_id_tm_root,
 } xpon_ani_v_enet_prop_id;
 
 /* Raman mitigation type */
@@ -406,6 +522,7 @@ struct xpon_channel_partition
     uint16_t max_differential_xpon_distance;
     xpon_auth_method_type authentication_method;
     bcmos_bool multicast_aes_indicator;
+    xpon_tm_root tm_root;
 
     /* State info */
 
@@ -424,6 +541,7 @@ typedef enum
     xpon_cpart_prop_id_max_differential_xpon_distance,
     xpon_cpart_prop_id_authentication_method,
     xpon_cpart_prop_id_multicast_aes_indicator,
+    xpon_cpart_prop_id_tm_root,
 } xpon_cpart_prop_id;
 
 /* Channel pair */
@@ -457,6 +575,12 @@ typedef enum
     xpon_cpair_prop_id_channel_type,
 } xpon_cpair_prop_id;
 
+typedef struct notifiable_onu_presence_state
+{
+    char *presence_state;
+    STAILQ_ENTRY(notifiable_onu_presence_state) next;
+} notifiable_onu_presence_state;
+
 /* Channel termination */
 struct xpon_channel_termination
 {
@@ -469,6 +593,8 @@ struct xpon_channel_termination
     xpon_hardware *port_layer_if;
     uint64_t hw_ponid;
     bcmos_bool interface_up;
+    STAILQ_HEAD(, notifiable_onu_presence_state) notifiable_presence_states;
+    xpon_tm_root tm_root;
 
     /* ToDo: Other parameters */
 
@@ -483,11 +609,26 @@ typedef enum
     xpon_cterm_prop_id_channel_pair_ref,
     xpon_cterm_prop_id_hw_ponid,
     xpon_cterm_prop_id_port_layer_if,
+    xpon_cterm_prop_id_notifiable_presence_states,
+    xpon_cterm_prop_id_tm_root
 } xpon_cterm_prop_id;
 
 /*
  * vlan-subif
  */
+
+/* ingress rule flow entry */
+typedef struct bbf_subif_ingress_rule_flow bbf_subif_ingress_rule_flow;
+struct bbf_subif_ingress_rule_flow
+{
+    const xpon_gem *gem;
+    const xpon_qos_classifier *qos_class;
+    bcmolt_flow_id flow_id;
+    uint8_t flow_dir;
+#define XPON_FLOW_DIR_UPSTREAM      0x1
+#define XPON_FLOW_DIR_DOWNSTREAM    0x2
+#define XPON_FLOW_DIR_MULTICAST     0x4
+};
 
 /* ingress rule */
 typedef struct bbf_subif_ingress_rule bbf_subif_ingress_rule;
@@ -499,14 +640,9 @@ struct bbf_subif_ingress_rule
     bbf_flexible_rewrite rewrite;
     STAILQ_ENTRY(bbf_subif_ingress_rule) next;
     bcmos_bool being_deleted;
-    const xpon_gem *gem;
-    bcmolt_flow_id flow_id;
-    bcmolt_group_id group_id;
-    uint8_t flow_dir;
-#define XPON_FLOW_DIR_UPSTREAM      0x1
-#define XPON_FLOW_DIR_DOWNSTREAM    0x2
-#define XPON_FLOW_DIR_MULTICAST     0x4
     struct dhcp_relay_interface *dhcpr_iface;
+    bbf_subif_ingress_rule_flow flows[8]; /* Indexed by TC */
+    bcmolt_group_id group_id;
 };
 
 typedef struct xpon_dhcpr_ref
@@ -529,6 +665,7 @@ struct xpon_vlan_subif
     STAILQ_ENTRY(xpon_vlan_subif) next;
     xpon_forwarder_port *forwarder_port;
     xpon_dhcpr_ref dhcpr;
+    xpon_tm_root tm_root;
 
     bcmos_bool is_olt_subif; /* TRUE=OLT subif, FALSE=ONU subif */
 };
@@ -542,6 +679,7 @@ typedef enum
     xpon_vlan_subif_prop_id_egress_rewrite,
     xpon_vlan_subif_prop_id_qos_policy_profile,
     xpon_vlan_subif_prop_id_dhcpr,
+    xpon_vlan_subif_prop_id_tm_root,
 
     /* Internal properties */
     xpon_vlan_subif_prop_id_flow_id,
@@ -585,6 +723,7 @@ struct xpon_qos_classifier
     xpon_obj_hdr hdr;
     bbf_match_criteria match;
     uint8_t traffic_class;
+    xpon_qos_policy *policy;
 };
 
 /* xpon_qos_classifier properties */
@@ -603,6 +742,7 @@ struct xpon_qos_policy
     uint32_t num_classifiers;
 #define XPON_MAX_QOS_CLASSIFIERS_PER_QOS_POLICY         8
     xpon_qos_classifier *classifier[XPON_MAX_QOS_CLASSIFIERS_PER_QOS_POLICY];
+    xpon_qos_policy_profile *profile;
 };
 
 /*
@@ -696,6 +836,7 @@ struct xpon_hardware
     xpon_hardware *parent;
     char expected_model[XPON_HW_MODEL_LENGTH];
     uint32_t parent_rel_pos;
+    xpon_channel_termination *cterm;
 #define BCMOLT_PARENT_REL_POS_INVALID   0xffffffff
 };
 
@@ -743,9 +884,62 @@ struct xpon_dhcpr_profile
     bcmos_bool use_leading_zeros;
 };
 
+/*
+ * TM profiles - can be referenced by multiple tm-root
+ */
+
+/* Traffic Class --> queue_id mapper */
+struct xpon_tm_tc_id_to_q_mapping_profile
+{
+    xpon_obj_hdr hdr;
+    uint32_t queue_id[8];    /* Queue id by tc_id */
+#define XPON_QUEUE_ID_INVALID       ((uint32_t)-1)
+};
+
+/* TM BAC profile properties */
+typedef enum
+{
+    xpon_tm_bac_profile_prop_id_max_queue_size,
+    xpon_tm_bac_profile_prop_id_bac_type,
+} xpon_tm_bac_profile_prop_id;
+
+/* BAC types */
+typedef enum
+{
+    xpon_tm_bac_type_taildrop,
+    xpon_tm_bac_type_red,
+    xpon_tm_bac_type_wtaildrop,
+    xpon_tm_bac_type_wred,
+} xpon_tm_bac_type;
+
+/* TM BAC profile (Admission Control) */
+struct xpon_tm_bac_profile
+{
+    xpon_obj_hdr hdr;
+    uint32_t max_queue_size;    /* Max queue size (bytes) */
+    xpon_tm_bac_type bac_type;
+    union
+    {
+        struct
+        {
+            uint32_t max_threshold; /* % of max_queue_size to start discarding */
+        } taildrop;
+        struct
+        {
+            uint32_t max_threshold; /* % of max_queue_size to start discarding */
+            uint32_t min_threshold; /* % of max_queue_size to stop discarding */
+            uint32_t probability;   /* Discard probability when between occupancy is min and max */
+        } red;
+    };
+};
+
 #define XPON_MAX_ONUS_PER_PON      (256+1)
 
 #define SINGLE_LINE_B64         256
+
+bcmos_errno xpon_interface_get_populate(sr_session_ctx_t *srs, const char *name,
+    xpon_obj_type expected_obj_type, xpon_obj_hdr **p_obj);
+void xpon_interface_delete(xpon_obj_hdr *obj);
 
 bcmos_errno xpon_cgroup_init(sr_session_ctx_t *srs);
 bcmos_errno xpon_cgroup_start(sr_session_ctx_t *srs);
@@ -777,6 +971,7 @@ bcmos_errno xpon_cterm_get_by_name(const char *name, xpon_channel_termination **
 xpon_channel_termination *xpon_cterm_get_by_id(bcmolt_oltid olt, bcmolt_interface pon_ni);
 void xpon_cterm_delete(xpon_channel_termination *cterm);
 int xpon_cterm_state_get_cb(sr_session_ctx_t *session, const char *xpath, struct lyd_node **parent);
+bcmos_bool xpon_cterm_is_onu_state_notifiable(const char *cterm_name, const char *state);
 
 bcmos_errno xpon_v_ani_init(sr_session_ctx_t *srs);
 bcmos_errno xpon_v_ani_start(sr_session_ctx_t *srs);
@@ -830,18 +1025,19 @@ int xpon_vlan_subif_state_get_cb(sr_session_ctx_t *session, const char *xpath, s
 bcmos_errno xpon_vlan_subif_ingress_rule_get(xpon_vlan_subif *subif, const char *name,
     bbf_subif_ingress_rule **p_rule, bcmos_bool *is_added);
 void xpon_vlan_subif_ingress_rule_delete(xpon_vlan_subif *subif, bbf_subif_ingress_rule *rule);
-bbf_subif_ingress_rule *xpon_vlan_subif_ingress_rule_get_match(const xpon_vlan_subif *from_subif,
-    const bbf_subif_ingress_rule *from_rule, xpon_vlan_subif *to_subif);
-bcmos_errno xpon_vlan_subif_subif_rule_get_match(const xpon_vlan_subif *from_subif,
-    const bbf_subif_ingress_rule *from_rule, xpon_obj_hdr *to_if,
-    xpon_vlan_subif **to_subif, bbf_subif_ingress_rule **to_rule);
+bbf_subif_ingress_rule *xpon_vlan_subif_ingress_rule_get_match(const bbf_subif_ingress_rule *from_rule,
+    xpon_vlan_subif *to_subif);
+bcmos_errno xpon_vlan_subif_subif_rule_get_next_match(const bbf_subif_ingress_rule *from_rule,
+    xpon_obj_hdr *to_if, xpon_vlan_subif **to_subif, bbf_subif_ingress_rule **to_rule);
 
 bcmos_errno xpon_tcont_init(sr_session_ctx_t *srs);
 bcmos_errno xpon_tcont_start(sr_session_ctx_t *srs);
 void xpon_tcont_exit(sr_session_ctx_t *srs);
 bcmos_errno xpon_tcont_get_by_name(const char *name, xpon_tcont **p_tcont, bcmos_bool *is_added);
+bcmos_errno xpon_tcont_get_populate(sr_session_ctx_t *srs, const char *name, xpon_tcont **p_tcont);
 void xpon_tcont_delete(xpon_tcont *tcont);
 bcmos_errno xpon_td_prof_get_by_name(const char *name, xpon_td_profile **p_prof, bcmos_bool *is_added);
+bcmos_errno xpon_td_prof_get_populate(sr_session_ctx_t *srs, const char *name, xpon_td_profile **p_prof);
 void xpon_td_prof_delete(xpon_td_profile *prof);
 
 bcmos_errno xpon_gem_init(sr_session_ctx_t *srs);
@@ -856,28 +1052,31 @@ bcmos_errno xpon_wavelen_prof_start(sr_session_ctx_t *srs);
 void xpon_wavelen_prof_exit(sr_session_ctx_t *srs);
 bcmos_errno xpon_wavelen_prof_get_by_name(const char *name, xpon_wavelength_profile **p_prof, bcmos_bool *is_added);
 void xpon_wavelen_prof_delete(xpon_wavelength_profile *prof);
+bcmos_errno xpon_wavelen_prof_get_populate(sr_session_ctx_t *srs, const char *name, xpon_wavelength_profile **p_prof);
 
 bcmos_errno xpon_qos_classifier_init(sr_session_ctx_t *srs);
 bcmos_errno xpon_qos_classifier_start(sr_session_ctx_t *srs);
 void xpon_qos_classifier_exit(sr_session_ctx_t *srs);
 bcmos_errno xpon_qos_classifier_get_by_name(const char *name, xpon_qos_classifier **p_obj, bcmos_bool *is_added);
+bcmos_errno xpon_qos_classifier_get_populate(sr_session_ctx_t *srs, const char *name, xpon_qos_classifier **p_obj);
 void xpon_qos_classifier_delete(xpon_qos_classifier *obj);
-const xpon_qos_classifier *xpon_qos_classifier_get_by_profile_subif(const xpon_qos_policy_profile *prof,
-    const xpon_vlan_subif *subif, const bbf_subif_ingress_rule *olt_rule);
-const xpon_qos_classifier *xpon_qos_classifier_get_by_if_subif(const xpon_vlan_subif *olt_subif,
-    const bbf_subif_ingress_rule *olt_rule, const xpon_obj_hdr *ani_if);
+const xpon_qos_classifier *xpon_qos_classifier_get_next(const xpon_qos_policy_profile *prof,
+    const bbf_subif_ingress_rule *rule, const xpon_qos_classifier *prev);
 
 bcmos_errno xpon_qos_policy_init(sr_session_ctx_t *srs);
 bcmos_errno xpon_qos_policy_start(sr_session_ctx_t *srs);
 void xpon_qos_policy_exit(sr_session_ctx_t *srs);
 bcmos_errno xpon_qos_policy_get_by_name(const char *name, xpon_qos_policy **p_obj, bcmos_bool *is_added);
 void xpon_qos_policy_delete(xpon_qos_policy *obj);
+bcmos_errno xpon_qos_policy_get_populate(sr_session_ctx_t *srs, const char *name, xpon_qos_policy **p_obj);
 
 bcmos_errno xpon_qos_policy_profile_init(sr_session_ctx_t *srs);
 bcmos_errno xpon_qos_policy_profile_start(sr_session_ctx_t *srs);
 void xpon_qos_policy_profile_exit(sr_session_ctx_t *srs);
 bcmos_errno xpon_qos_policy_profile_get_by_name(const char *name, xpon_qos_policy_profile **p_obj, bcmos_bool *is_added);
 void xpon_qos_policy_profile_delete(xpon_qos_policy_profile *obj);
+bcmos_errno xpon_qos_policy_profile_get_populate(sr_session_ctx_t *srs, const char *name,
+    xpon_qos_policy_profile **p_obj);
 
 bcmos_errno xpon_link_init(sr_session_ctx_t *srs);
 bcmos_errno xpon_link_start(sr_session_ctx_t *srs);
@@ -905,6 +1104,7 @@ bcmos_errno xpon_hardware_init(sr_session_ctx_t *srs);
 bcmos_errno xpon_hardware_start(sr_session_ctx_t *srs);
 void xpon_hardware_exit(sr_session_ctx_t *srs);
 bcmos_errno xpon_hardware_get_by_name(const char *name, xpon_hardware **p_obj, bcmos_bool *is_added);
+bcmos_errno xpon_hardware_get_populate(sr_session_ctx_t *srs, const char *name, xpon_hardware **p_component);
 void xpon_hardware_delete(xpon_hardware *obj);
 
 bcmos_errno xpon_dhcpr_init(sr_session_ctx_t *srs);
@@ -913,6 +1113,21 @@ void xpon_dhcpr_exit(sr_session_ctx_t *srs);
 bcmos_errno xpon_dhcpr_prof_get_by_name(const char *name, xpon_dhcpr_profile **p_prof,
     bcmos_bool *is_added);
 void xpon_dhcpr_prof_delete(xpon_dhcpr_profile *prof);
+bcmos_errno xpon_dhcpr_prof_get_populate(sr_session_ctx_t *srs, const char *name, xpon_dhcpr_profile **p_obj);
+
+bcmos_errno xpon_tm_profile_init(sr_session_ctx_t *srs);
+bcmos_errno xpon_tm_profile_start(sr_session_ctx_t *srs);
+void xpon_tm_profile_exit(sr_session_ctx_t *srs);
+bcmos_errno xpon_tm_tc_id_to_q_prof_get_by_name(const char *name, xpon_tm_tc_id_to_q_mapping_profile **p_prof,
+    bcmos_bool *is_added);
+void xpon_tm_tc_id_to_q_prof_delete(xpon_tm_tc_id_to_q_mapping_profile *prof);
+bcmos_errno xpon_tm_tc_id_to_q_prof_get_populate(sr_session_ctx_t *srs, const char *name,
+    xpon_tm_tc_id_to_q_mapping_profile **p_obj);
+bcmos_errno xpon_tm_bac_prof_get_by_name(const char *name, xpon_tm_bac_profile **p_prof,
+    bcmos_bool *is_added);
+void xpon_tm_bac_prof_delete(xpon_tm_bac_profile *prof);
+bcmos_errno xpon_tm_bac_prof_get_populate(sr_session_ctx_t *srs, const char *name,
+    xpon_tm_bac_profile **p_obj);
 
 /* Protection lock */
 bcmos_errno bcmolt_xpon_utils_init(void);
@@ -921,6 +1136,7 @@ void bbf_xpon_lock(void);
 void bbf_xpon_unlock(void);
 
 xpon_obj_type xpon_iftype_to_obj_type(const char *iftype);
+const char *xpon_obj_type_to_str(xpon_obj_type);
 bcmos_errno xpon_object_add(xpon_obj_hdr *hdr);
 bcmos_errno xpon_object_delete(xpon_obj_hdr *hdr);
 bcmos_errno xpon_object_get(const char *name, xpon_obj_hdr **p_hdr);
@@ -932,6 +1148,7 @@ void xpon_apply_actions_to_match(bbf_match_criteria *match, const bbf_flexible_r
 bcmos_bool xpon_is_match(const bbf_match_criteria *from, const bbf_match_criteria *to);
 bcmos_errno xpon_add_flexible_match(sr_session_ctx_t *srs, bbf_match_criteria *match, const char *xpath,
     sr_val_t *old_val, sr_val_t *new_val);
+bcmos_errno xpon_merge_match(bbf_match_criteria *match, const bbf_match_criteria *with_match);
 bcmos_errno xpon_merge_actions(bbf_flexible_rewrite *actions, const bbf_flexible_rewrite *with_actions);
 bcmos_bool xpon_is_actions_match(const bbf_flexible_rewrite *actions1, const bbf_flexible_rewrite *actions2);
 bcmolt_tm_sched_id xpon_tm_sched_id(bcmolt_interface_type type, bcmolt_interface ni);
@@ -943,13 +1160,16 @@ bcmos_errno xpon_match_diff(const bbf_match_criteria *from_match, const bbf_matc
 bcmos_errno xpon_tm_qmp_create(bcmolt_tm_qmp_id id, bcmolt_tm_queue_set_id tmq_set_id, uint8_t pbit_to_queue_map[]);
 bcmos_errno xpon_default_tm_qmp_create(bcmolt_tm_qmp_id id);
 
+/* tm-mgmt */
+bcmos_errno xpon_tm_root_attribute_populate(sr_session_ctx_t *srs,
+    xpon_tm_root *tm_root, sr_val_t *sr_old_val, sr_val_t *sr_new_val);
+bcmos_errno xpon_tm_root_delete(sr_session_ctx_t *srs, xpon_tm_root *tm_root);
+
 /*
  * Apply configuration
  */
 
 bcmos_errno xpon_apply_flow_delete(sr_session_ctx_t *srs, xpon_vlan_subif *subif, xpon_forwarder *forwarder);
-bcmos_errno xpon_create_onu_flows(sr_session_ctx_t *srs, xpon_v_ani *v_ani,
-    xpon_vlan_subif *subif, bbf_subif_ingress_rule *rule, const xpon_gem *gem);
 bcmos_errno xpon_apply_flow_create(sr_session_ctx_t *srs, xpon_forwarder *fwd);
 bcmos_errno xpon_create_onu_flows_on_subif(sr_session_ctx_t *srs, xpon_obj_hdr *uni, xpon_vlan_subif *subif);
 bcmos_errno xpon_create_onu_flows_on_uni(sr_session_ctx_t *srs, xpon_obj_hdr *uni);

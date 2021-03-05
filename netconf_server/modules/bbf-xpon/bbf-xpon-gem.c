@@ -1,22 +1,22 @@
 /*
  *  <:copyright-BRCM:2016-2020:Apache:standard
- *  
+ *
  *   Copyright (c) 2016-2020 Broadcom. All Rights Reserved
- *  
+ *
  *   The term “Broadcom” refers to Broadcom Inc. and/or its subsidiaries
- *  
+ *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
  *   You may obtain a copy of the License at
- *  
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *   Unless required by applicable law or agreed to in writing, software
  *   distributed under the License is distributed on an "AS IS" BASIS,
  *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
- *  
+ *
  *  :>
  *
  *****************************************************************************/
@@ -36,48 +36,51 @@ static bcmos_errno _gem_apply(sr_session_ctx_t *srs, const char *xpath,
 {
     bcmolt_gem_port_id gem_port_id = XPON_PROP_IS_SET(gem_changes, gem, gemport_id) ?
         gem_changes->gemport_id : gem->gemport_id;
-    bcmolt_interface pon_ni = BCMOLT_INTERFACE_UNDEFINED;
+    bcmolt_interface pon_ni = gem->pon_ni;
     bcmolt_onu_id onu_id = BCMOLT_ONU_ID_INVALID;
-    bcmos_bool is_provision;
+    bcmos_bool is_provision = BCMOS_FALSE;
     bcmos_bool is_active = BCMOS_FALSE;
     bcmos_errno err = BCM_ERR_OK;
 
-    if (gem_changes->type == XPON_GEM_TYPE_UNICAST)
+    if (!gem_changes->hdr.being_deleted)
     {
-        xpon_tcont *tcont = XPON_PROP_IS_SET(gem_changes, gem, tcont) ?
-            gem_changes->tcont : gem->tcont;
-        xpon_v_ani *v_ani = tcont ? tcont->v_ani : NULL;
-        if (v_ani != NULL)
+        if (gem_changes->type == XPON_GEM_TYPE_UNICAST)
         {
-            pon_ni = v_ani->pon_ni;
-            onu_id = v_ani->onu_id;
-            is_active = v_ani->registered;
-            gem->v_ani = v_ani;
-            STAILQ_INSERT_TAIL(&v_ani->gems, gem, next);
-        }
-    }
-    else
-    {
-        xpon_channel_pair *cpair = XPON_PROP_IS_SET(gem_changes, gem, interface) ?
-            (xpon_channel_pair *)gem_changes->interface : (xpon_channel_pair *)gem->interface;
-        xpon_channel_termination *cterm = NULL;
-        if (cpair != NULL && cpair->hdr.obj_type != XPON_OBJ_TYPE_CPAIR)
-        {
-            cterm = cpair->primary_cterm ? cpair->primary_cterm : cpair->secondary_cterm;
-            if (cterm != NULL)
+            xpon_tcont *tcont = XPON_PROP_IS_SET(gem_changes, gem, tcont) ?
+                gem_changes->tcont : gem->tcont;
+            xpon_v_ani *v_ani = tcont ? tcont->v_ani : NULL;
+            if (v_ani != NULL)
             {
-                pon_ni = cterm->pon_ni;
-                is_active = (cterm->admin_state == XPON_ADMIN_STATE_ENABLED);
+                pon_ni = v_ani->pon_ni;
+                onu_id = v_ani->onu_id;
+                is_active = v_ani->registered;
+                gem->v_ani = v_ani;
+                STAILQ_INSERT_TAIL(&v_ani->gems, gem, next);
             }
         }
+        else
+        {
+            xpon_channel_pair *cpair = XPON_PROP_IS_SET(gem_changes, gem, interface) ?
+                (xpon_channel_pair *)gem_changes->interface : (xpon_channel_pair *)gem->interface;
+            xpon_channel_termination *cterm = NULL;
+            if (cpair != NULL && cpair->hdr.obj_type != XPON_OBJ_TYPE_CPAIR)
+            {
+                cterm = cpair->primary_cterm ? cpair->primary_cterm : cpair->secondary_cterm;
+                if (cterm != NULL)
+                {
+                    pon_ni = cterm->pon_ni;
+                    is_active = (cterm->admin_state == XPON_ADMIN_STATE_ENABLED);
+                }
+            }
+        }
+        /* See if there is enough info to provision */
+        is_provision = pon_ni < BCM_MAX_PONS_PER_OLT &&
+            ((gem_changes->type == XPON_GEM_TYPE_UNICAST && onu_id < XPON_MAX_ONUS_PER_PON) ||
+            (gem_changes->type != XPON_GEM_TYPE_UNICAST && gem_port_id != BCMOLT_GEM_PORT_ID_INVALID));
     }
-    /* See if there is enough info to provision */
-    is_provision = pon_ni < BCM_MAX_PONS_PER_OLT &&
-        ((gem_changes->type == XPON_GEM_TYPE_UNICAST && onu_id < XPON_MAX_ONUS_PER_PON) ||
-         (gem_changes->type != XPON_GEM_TYPE_UNICAST && gem_port_id != BCMOLT_GEM_PORT_ID_INVALID));
 
     NC_LOG_DBG("gem %s: applying configuration. %s\n",
-        gem->hdr.name, is_provision ? "PROVISION" : "CLEAR");
+        gem->hdr.name, gem_changes->hdr.being_deleted ? "CLEAR" : "PROVISION");
 
     do
     {
@@ -110,6 +113,7 @@ static bcmos_errno _gem_apply(sr_session_ctx_t *srs, const char *xpath,
                         gem_changes->downstream_aes_indicator : gem->downstream_aes_indicator);
                 BCMOLT_MSG_FIELD_SET(&cfg, control, BCMOLT_CONTROL_STATE_ENABLE);
                 gem->state = is_active ? XPON_RESOURCE_STATE_ACTIVE : XPON_RESOURCE_STATE_IN_PROGRESS;
+                gem->pon_ni = pon_ni;
                 err = bcmolt_cfg_set(netconf_agent_olt_id(), &cfg.hdr);
                 if (err != BCM_ERR_OK)
                 {
@@ -154,6 +158,9 @@ static bcmos_errno _gem_apply(sr_session_ctx_t *srs, const char *xpath,
         /* All good. Update NC config */
         XPON_PROP_COPY(gem_changes, gem, gem, gemport_id);
         XPON_PROP_COPY(gem_changes, gem, gem, tcont);
+        gem_changes->tcont = NULL;
+        XPON_PROP_COPY(gem_changes, gem, gem, interface);
+        gem_changes->interface = NULL;
         XPON_PROP_COPY(gem_changes, gem, gem, traffic_class);
         XPON_PROP_COPY(gem_changes, gem, gem, downstream_aes_indicator);
         XPON_PROP_COPY(gem_changes, gem, gem, upstream_aes_indicator);
@@ -186,6 +193,8 @@ static int _gem_change_cb(sr_session_ctx_t *srs, const char *module_name,
     int sr_rc;
     bcmos_errno err = BCM_ERR_OK;
 
+    nc_config_lock();
+
     NC_LOG_INFO("xpath=%s event=%d\n", xpath, event);
     is_multicast = (strstr(xpath, "multicast-gemports/") != NULL);
     XPON_PROP_SET(&gem_changes, gem, type, is_multicast ? XPON_GEM_TYPE_MULTICAST : XPON_GEM_TYPE_UNICAST);
@@ -198,7 +207,10 @@ static int _gem_change_cb(sr_session_ctx_t *srs, const char *module_name,
      * ABORT event will roll-back the changes.
      */
     if (event == SR_EV_DONE)
+    {
+        nc_config_unlock();
         return SR_ERR_OK;
+    }
 
     snprintf(qualified_xpath, sizeof(qualified_xpath)-1, "%s//.", xpath);
     qualified_xpath[sizeof(qualified_xpath)-1] = 0;
@@ -272,18 +284,21 @@ static int _gem_change_cb(sr_session_ctx_t *srs, const char *module_name,
         {
             gem_changes.hdr.being_deleted = (sr_new_val == NULL);
         }
-        else if (!strcmp(leaf, "gemport-id"))
+        if (gem_changes.hdr.being_deleted)
+            continue;
+
+        if (!strcmp(leaf, "gemport-id"))
         {
             XPON_PROP_SET(&gem_changes, gem, gemport_id,
                 sr_new_val ? sr_new_val->data.uint32_val : BCMOLT_GEM_PORT_ID_INVALID);
         }
         else if (!strcmp(leaf, "interface"))
         {
-            const char *_name = sr_new_val ? sr_new_val->data.string_val : sr_old_val->data.string_val;
             xpon_obj_hdr *_if = NULL;
             if (sr_new_val)
             {
-                err = xpon_object_get(_name, &_if);
+                const char *_name = sr_new_val->data.string_val;
+                err = xpon_interface_get_populate(srs, _name, XPON_OBJ_TYPE_ANY, &_if);
                 if (err != BCM_ERR_OK)
                 {
                     NC_ERROR_REPLY(srs, iter_xpath, "gem %s references interface %s which doesn't exist\n",
@@ -300,7 +315,7 @@ static int _gem_change_cb(sr_session_ctx_t *srs, const char *module_name,
             xpon_tcont *_tcont = NULL;
             if (sr_new_val)
             {
-                err = xpon_tcont_get_by_name(_name, &_tcont, NULL);
+                err = xpon_tcont_get_populate(srs, _name, &_tcont);
                 if (err != BCM_ERR_OK)
                 {
                     NC_ERROR_REPLY(srs, iter_xpath, "gem %s references tcont %s which doesn't exist\n",
@@ -340,11 +355,20 @@ static int _gem_change_cb(sr_session_ctx_t *srs, const char *module_name,
         if (err != BCM_ERR_OK && (was_added || gem_changes.hdr.being_deleted))
             xpon_gem_delete(gem);
     }
+
+    /* Remove forward references in case of error */
+    if (gem_changes.tcont != NULL && gem_changes.tcont->hdr.created_by_forward_reference)
+        xpon_tcont_delete(gem_changes.tcont);
+    if (gem_changes.interface != NULL && gem_changes.interface->created_by_forward_reference)
+        xpon_interface_delete(gem_changes.interface);
+
     if (gem_changes.hdr.being_deleted)
         err = BCM_ERR_OK;
 
     nc_sr_free_value_pair(&sr_old_val, &sr_new_val);
     sr_free_change_iter(sr_iter);
+
+    nc_config_unlock();
 
     return nc_bcmos_errno_to_sr_errno(err);
 }
@@ -492,6 +516,7 @@ bcmos_errno xpon_gem_get_by_name(const char *name, xpon_gem **p_gem, bcmos_bool 
     {
         (*p_gem)->gemport_id = BCMOLT_GEM_PORT_ID_INVALID;
         (*p_gem)->state = XPON_RESOURCE_STATE_NOT_CONFIGURED;
+        (*p_gem)->pon_ni = BCMOLT_INTERFACE_UNDEFINED;
         STAILQ_INSERT_TAIL(&gem_list, obj, next);
         NC_LOG_INFO("gem %s added\n", name);
     }
@@ -505,6 +530,10 @@ void xpon_gem_delete(xpon_gem *gem)
     NC_LOG_INFO("gem %s deleted\n", gem->hdr.name);
     if (gem->v_ani != NULL)
         STAILQ_REMOVE(&gem->v_ani->gems, gem, xpon_gem, next);
+    if (gem->tcont != NULL && gem->tcont->hdr.created_by_forward_reference)
+        xpon_tcont_delete(gem->tcont);
+    if (gem->interface != NULL && gem->interface->created_by_forward_reference)
+        xpon_interface_delete(gem->interface);
     xpon_object_delete(&gem->hdr);
 }
 

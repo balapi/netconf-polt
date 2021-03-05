@@ -1,22 +1,22 @@
 /*
  *  <:copyright-BRCM:2016-2020:Apache:standard
- *  
+ *
  *   Copyright (c) 2016-2020 Broadcom. All Rights Reserved
- *  
+ *
  *   The term “Broadcom” refers to Broadcom Inc. and/or its subsidiaries
- *  
+ *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
  *   You may obtain a copy of the License at
- *  
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *   Unless required by applicable law or agreed to in writing, software
  *   distributed under the License is distributed on an "AS IS" BASIS,
  *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
- *  
+ *
  *  :>
  *
  *****************************************************************************/
@@ -137,6 +137,8 @@ static int bbf_xpon_forwarder_change_cb(sr_session_ctx_t *srs, const char *modul
     char qualified_xpath[BCM_MAX_XPATH_LENGTH];
     bcmos_errno err = BCM_ERR_OK;
 
+    nc_config_lock();
+
     NC_LOG_INFO("xpath=%s event=%d\n", xpath, event);
 
     /* We only handle CHANGE and ABORT events.
@@ -146,7 +148,10 @@ static int bbf_xpon_forwarder_change_cb(sr_session_ctx_t *srs, const char *modul
      * ABORT event will roll-back the changes.
      */
     if (event == SR_EV_DONE)
+    {
+        nc_config_unlock();
         return SR_ERR_OK;
+    }
 
     STAILQ_INIT(&changes.ports);
 
@@ -217,6 +222,9 @@ static int bbf_xpon_forwarder_change_cb(sr_session_ctx_t *srs, const char *modul
         strcpy(prev_keyname, keyname);
         prev_xpath = iter_xpath;
 
+        if (changes.hdr.being_deleted)
+            continue;
+
         /* leaf name appear in multiple places. Check xpath first */
         if ((port_xpath=strstr(iter_xpath, "ports/port")) != NULL)
         {
@@ -231,7 +239,7 @@ static int bbf_xpon_forwarder_change_cb(sr_session_ctx_t *srs, const char *modul
             }
             else if (!strcmp(leaf, "sub-interface"))
             {
-                xpon_vlan_subif *subif = NULL;
+                xpon_obj_hdr *subif = NULL;
                 if (port == NULL)
                 {
                     NC_LOG_ERR("unexpected leaf %s for unknown port\n", leaf);
@@ -241,7 +249,7 @@ static int bbf_xpon_forwarder_change_cb(sr_session_ctx_t *srs, const char *modul
                 if (sr_new_val)
                 {
                     const char *if_name = sr_new_val->data.string_val;
-                    err = xpon_vlan_subif_get_by_name(if_name, &subif, NULL);
+                    err = xpon_interface_get_populate(srs, if_name, XPON_OBJ_TYPE_VLAN_SUBIF, &subif);
                     if (err != BCM_ERR_OK)
                     {
                         NC_ERROR_REPLY(srs, iter_xpath, "forwarder port %s references %s %s which doesn't exist\n",
@@ -250,7 +258,7 @@ static int bbf_xpon_forwarder_change_cb(sr_session_ctx_t *srs, const char *modul
                         break;
                     }
                 }
-                port->subif = subif;
+                port->subif = (xpon_vlan_subif *)subif;
             }
         }
         else if ((port_xpath=strstr(iter_xpath, "port-groups/port")) != NULL)
@@ -261,7 +269,7 @@ static int bbf_xpon_forwarder_change_cb(sr_session_ctx_t *srs, const char *modul
         {
             if (!strcmp(leaf, "name"))
             {
-                obj->hdr.being_deleted = (sr_new_val == NULL);
+                changes.hdr.being_deleted = (sr_new_val == NULL);
             }
             else if (!strcmp(leaf, "forwarding-database"))
             {
@@ -317,6 +325,8 @@ static int bbf_xpon_forwarder_change_cb(sr_session_ctx_t *srs, const char *modul
 
     nc_sr_free_value_pair(&sr_old_val, &sr_new_val);
     sr_free_change_iter(sr_iter);
+
+    nc_config_unlock();
 
     return nc_bcmos_errno_to_sr_errno(err);
 }
@@ -389,6 +399,8 @@ static void forwarder_port_delete(xpon_forwarder *fwd, xpon_forwarder_port *port
     {
         xpon_apply_flow_delete(NULL, port->subif, fwd);
         port->subif->forwarder_port = NULL;
+        if (port->subif->hdr.created_by_forward_reference)
+            xpon_vlan_subif_delete(port->subif);
     }
     bcmos_free(port);
     if (STAILQ_EMPTY(&fwd->ports))
@@ -509,6 +521,8 @@ static int bbf_xpon_fwd_db_change_cb(sr_session_ctx_t *srs, const char *module_n
     char qualified_xpath[BCM_MAX_XPATH_LENGTH];
     bcmos_errno err = BCM_ERR_OK;
 
+    nc_config_lock();
+
     NC_LOG_INFO("xpath=%s event=%d\n", xpath, event);
 
     /* We only handle CHANGE and ABORT events.
@@ -518,7 +532,10 @@ static int bbf_xpon_fwd_db_change_cb(sr_session_ctx_t *srs, const char *module_n
      * ABORT event will roll-back the changes.
      */
     if (event == SR_EV_DONE)
+    {
+        nc_config_unlock();
         return SR_ERR_OK;
+    }
 
     snprintf(qualified_xpath, sizeof(qualified_xpath)-1, "%s//.", xpath);
     qualified_xpath[sizeof(qualified_xpath)-1] = 0;
@@ -603,6 +620,8 @@ static int bbf_xpon_fwd_db_change_cb(sr_session_ctx_t *srs, const char *module_n
     nc_sr_free_value_pair(&sr_old_val, &sr_new_val);
     sr_free_change_iter(sr_iter);
 
+    nc_config_unlock();
+
     return nc_bcmos_errno_to_sr_errno(err);
 }
 
@@ -685,6 +704,8 @@ static int bbf_xpon_fwd_split_horizon_prof_change_cb(sr_session_ctx_t *srs, cons
     bcmos_bool was_added = BCMOS_FALSE;
     bcmos_errno err = BCM_ERR_OK;
 
+    nc_config_lock();
+
     NC_LOG_INFO("xpath=%s event=%d\n", xpath, event);
 
     /* We only handle CHANGE and ABORT events.
@@ -694,7 +715,10 @@ static int bbf_xpon_fwd_split_horizon_prof_change_cb(sr_session_ctx_t *srs, cons
      * ABORT event will roll-back the changes.
      */
     if (event == SR_EV_DONE)
+    {
+        nc_config_unlock();
         return SR_ERR_OK;
+    }
 
     snprintf(qualified_xpath, sizeof(qualified_xpath)-1, "%s//.", xpath);
     qualified_xpath[sizeof(qualified_xpath)-1] = 0;
@@ -787,6 +811,8 @@ static int bbf_xpon_fwd_split_horizon_prof_change_cb(sr_session_ctx_t *srs, cons
 
     nc_sr_free_value_pair(&sr_old_val, &sr_new_val);
     sr_free_change_iter(sr_iter);
+
+    nc_config_unlock();
 
     return nc_bcmos_errno_to_sr_errno(err);
 }

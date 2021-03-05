@@ -1,11 +1,13 @@
 #!/bin/bash
 # Parameters:
 # - tool parameters
-#set -x
+# set -x
 
 fs_bin_dir=`dirname $0`
 tool_name=$fs_bin_dir/netopeer2-server
-sysrepo_dir=$fs_bin_dir/../sysrepo
+pushd $fs_bin_dir/../sysrepo
+sysrepo_dir=`pwd`
+popd
 lib_dir=$fs_bin_dir/../lib
 
 export LD_LIBRARY_PATH=$lib_dir:$LD_LIBRARY_PATH
@@ -38,6 +40,12 @@ if test ! -d /dev/shm; then
 fi
 if ! $PS | grep netconf_server | grep -v grep > /dev/null; then
     echo Cleaning up stale state
-    rm -fr /dev/shm/sr* $sysrepo_dir/sr_evpipe* /tmp/netopeer2-server.pid
+    unset SHM_PREFIX
+    if [ "$SYSREPO_SHM_PREFIX" != "" ]; then
+       SHM_PREFIX=${SYSREPO_SHM_PREFIX}
+    else
+       SHM_PREFIX=sr
+    fi
+    rm -fr /dev/shm/${SHM_PREFIX}_* /dev/shm/${SHM_PREFIX}sub_* $sysrepo_dir/sr_evpipe* /tmp/netopeer2-server.pid
 fi
 $GDB $tool_name $*

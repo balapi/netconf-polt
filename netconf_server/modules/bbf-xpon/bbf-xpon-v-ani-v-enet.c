@@ -1,22 +1,22 @@
 /*
  *  <:copyright-BRCM:2016-2020:Apache:standard
- *  
+ *
  *   Copyright (c) 2016-2020 Broadcom. All Rights Reserved
- *  
+ *
  *   The term “Broadcom” refers to Broadcom Inc. and/or its subsidiaries
- *  
+ *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
  *   You may obtain a copy of the License at
- *  
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *   Unless required by applicable law or agreed to in writing, software
  *   distributed under the License is distributed on an "AS IS" BASIS,
  *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
- *  
+ *
  *  :>
  *
  *****************************************************************************/
@@ -74,11 +74,14 @@ void xpon_v_ani_v_enet_delete(xpon_v_ani_v_enet *iface)
 {
     xpon_vlan_subif *subif, *subif_tmp;
     bcmos_mutex_lock(&config_lock);
+    xpon_unlink(&iface->linked_if);
     STAILQ_REMOVE_SAFE(&v_ani_v_enet_list, &iface->hdr, xpon_obj_hdr, next);
     STAILQ_FOREACH_SAFE(subif, &iface->subifs, next, subif_tmp)
     {
         xpon_vlan_subif_delete(subif);
     }
+    if (iface->v_ani && iface->v_ani->hdr.created_by_forward_reference)
+        xpon_v_ani_delete(iface->v_ani);
     xpon_object_delete(&iface->hdr);
     bcmos_mutex_unlock(&config_lock);
 }
@@ -97,6 +100,7 @@ static bcmos_errno xpon_v_ani_v_enet_apply(sr_session_ctx_t *srs, xpon_v_ani_v_e
     {
         /* Update stored configuration */
         XPON_PROP_COPY(changes, info, v_ani_v_enet, v_ani);
+        changes->v_ani = NULL;
     }
 
     bcmos_mutex_unlock(&config_lock);
@@ -128,6 +132,12 @@ bcmos_errno xpon_v_ani_v_enet_transaction(sr_session_ctx_t *srs, nc_transact *tr
     err = xpon_v_ani_v_enet_get_by_name(keyname, &info, &was_added);
     if (err != BCM_ERR_OK)
         return err;
+    /* If the interface has already been created by forward reference - stop here */
+    if (info->hdr.created_by_forward_reference)
+    {
+        info->hdr.created_by_forward_reference = BCMOS_FALSE;
+        return BCM_ERR_OK;
+    }
 
     /* Go over transaction elements and map to OLT */
     STAILQ_FOREACH(elem, &tr->elems, next)
@@ -145,11 +155,11 @@ bcmos_errno xpon_v_ani_v_enet_transaction(sr_session_ctx_t *srs, nc_transact *tr
         }
         else if (!strcmp(leaf, "lower-layer-interface"))
         {
-            xpon_v_ani *v_ani = NULL;
-            const char *v_ani_name = elem->new_val ? elem->new_val->data.string_val : elem->old_val->data.string_val;
+            xpon_obj_hdr *v_ani = NULL;
             if (elem->new_val != NULL)
             {
-                err = xpon_v_ani_get_by_name(v_ani_name, &v_ani, NULL);
+                const char *v_ani_name = elem->new_val->data.string_val;
+                err = xpon_interface_get_populate(srs, v_ani_name, XPON_OBJ_TYPE_V_ANI, &v_ani);
                 if (err != BCM_ERR_OK)
                 {
                     NC_ERROR_REPLY(srs, iter_xpath, "v-ani-v-enet %s references v-ani %s which doesn't exist\n",
@@ -158,7 +168,7 @@ bcmos_errno xpon_v_ani_v_enet_transaction(sr_session_ctx_t *srs, nc_transact *tr
                     break;
                 }
             }
-            XPON_PROP_SET(&changes, v_ani_v_enet, v_ani, v_ani);
+            XPON_PROP_SET(&changes, v_ani_v_enet, v_ani, (xpon_v_ani *)v_ani);
         }
     }
 
@@ -169,6 +179,9 @@ bcmos_errno xpon_v_ani_v_enet_transaction(sr_session_ctx_t *srs, nc_transact *tr
     /* Delete ONU record if just added && error, or being deleted */
     if ((err != BCM_ERR_OK && was_added) || changes.hdr.being_deleted)
         xpon_v_ani_v_enet_delete(info);
+
+    if (changes.v_ani && changes.v_ani->hdr.created_by_forward_reference)
+        xpon_v_ani_delete(changes.v_ani);
 
     if (changes.hdr.being_deleted)
         err = BCM_ERR_OK;

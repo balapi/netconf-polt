@@ -1,22 +1,22 @@
 /*
  *  <:copyright-BRCM:2016-2020:Apache:standard
- *  
+ *
  *   Copyright (c) 2016-2020 Broadcom. All Rights Reserved
- *  
+ *
  *   The term “Broadcom” refers to Broadcom Inc. and/or its subsidiaries
- *  
+ *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
  *   You may obtain a copy of the License at
- *  
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *   Unless required by applicable law or agreed to in writing, software
  *   distributed under the License is distributed on an "AS IS" BASIS,
  *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
- *  
+ *
  *  :>
  *
  *****************************************************************************/
@@ -69,6 +69,8 @@ void xpon_cpart_delete(xpon_channel_partition *cpart)
 {
     STAILQ_REMOVE_SAFE(&cpart_list, &cpart->hdr, xpon_obj_hdr, next);
     NC_LOG_INFO("channel-partition %s deleted\n", cpart->hdr.name);
+    if (cpart->channel_group_ref != NULL && cpart->channel_group_ref->hdr.created_by_forward_reference)
+        xpon_cgroup_delete(cpart->channel_group_ref);
     xpon_object_delete(&cpart->hdr);
 }
 
@@ -92,6 +94,12 @@ bcmos_errno xpon_cpart_transaction(sr_session_ctx_t *srs, nc_transact *tr)
     err = xpon_cpart_get_by_name(keyname, &cpart, &was_added);
     if (err != BCM_ERR_OK)
         return err;
+    /* If the channel partition has already been created by forward reference - stop here */
+    if (cpart->hdr.created_by_forward_reference)
+    {
+        cpart->hdr.created_by_forward_reference = BCMOS_FALSE;
+        return BCM_ERR_OK;
+    }
 
     /* Go over transaction elements and map to BAL */
     STAILQ_FOREACH(elem, &tr->elems, next)
@@ -115,11 +123,11 @@ bcmos_errno xpon_cpart_transaction(sr_session_ctx_t *srs, nc_transact *tr)
         }
         else if (!strcmp(leaf, "channel-group-ref"))
         {
-            xpon_channel_group *cgroup = NULL;
-            const char *cgroup_name = elem->new_val ? elem->new_val->data.string_val : elem->old_val->data.string_val;
+            xpon_obj_hdr *cgroup = NULL;
             if (elem->new_val != NULL)
             {
-                err = xpon_cgroup_get_by_name(cgroup_name, &cgroup, NULL);
+                const char *cgroup_name = elem->new_val->data.string_val;
+                err = xpon_interface_get_populate(srs, cgroup_name, XPON_OBJ_TYPE_CGROUP, &cgroup);
                 if (err != BCM_ERR_OK)
                 {
                     NC_ERROR_REPLY(srs, iter_xpath, "channel-pair %s references channel-group %s which doesn't exist\n",
@@ -128,17 +136,38 @@ bcmos_errno xpon_cpart_transaction(sr_session_ctx_t *srs, nc_transact *tr)
                     break;
                 }
             }
-            XPON_PROP_SET(&cpart_tmp, cpart, channel_group_ref, cgroup);
+            XPON_PROP_SET(&cpart_tmp, cpart, channel_group_ref, (xpon_channel_group *)cgroup);
+        }
+        else if (!strstr(iter_xpath, "/tm-root/"))
+        {
+            if (elem->new_val != NULL)
+            {
+                err = xpon_tm_root_attribute_populate(srs, &cpart->tm_root, elem->old_val, elem->new_val);
+                if (err == BCM_ERR_OK)
+                    XPON_PROP_SET_PRESENT(cpart, cpart, tm_root);
+            }
+            else
+            {
+                if (XPON_PROP_IS_SET(cpart, cpart, tm_root))
+                {
+                    xpon_tm_root_delete(srs, &cpart->tm_root);
+                    XPON_PROP_CLEAR(cpart, cpart, tm_root);
+                }
+            }
         }
     }
 
     if (err == BCM_ERR_OK)
     {
         XPON_PROP_COPY(&cpart_tmp, cpart, cpart, channel_group_ref);
+        cpart_tmp.channel_group_ref = NULL;
     }
 
     if ((err != BCM_ERR_OK && was_added) || cpart_tmp.hdr.being_deleted)
         xpon_cpart_delete(cpart);
+
+    if (cpart_tmp.channel_group_ref != NULL && cpart_tmp.channel_group_ref->hdr.created_by_forward_reference)
+        xpon_cgroup_delete(cpart_tmp.channel_group_ref);
 
     if (cpart_tmp.hdr.being_deleted)
         err = BCM_ERR_OK;

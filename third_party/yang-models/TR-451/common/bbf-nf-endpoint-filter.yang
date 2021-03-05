@@ -4,10 +4,10 @@ module bbf-nf-endpoint-filter {
   prefix bbf-nf-epf;
 
   import bbf-vomci-types {
-    prefix vomci-types;
+    prefix bbf-vomci-types;
   }
   import bbf-xpon-types {
-    prefix xpon-types;
+    prefix bbf-xpon-types;
   }
 
   organization
@@ -100,14 +100,14 @@ module bbf-nf-endpoint-filter {
       }
       case onu-vendor {
         leaf onu-vendor {
-          type vomci-types:onu-vendor-id;
+          type bbf-vomci-types:onu-vendor-id;
           description
             "ONU vendor as defined in the TC layer ONU-ID.";
         }
       }
       case onu-serial-number {
         leaf onu-serial-number {
-          type xpon-types:onu-serial-number;
+          type bbf-xpon-types:onu-serial-number;
           description
             "ONU serial number as defined in the TC layer
              ONU serial number.";

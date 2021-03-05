@@ -15,9 +15,17 @@ TOP_DIR             := $(shell pwd)
 BUILD_TOP_DIR       ?= ./build
 BOARD               ?= sim
 V                   ?= n
-NETCONF_SERVER      ?= y
-TR451_VOMCI_POLT    ?= y
-OPEN_SOURCE         ?= y
+
+ifneq (,$(wildcard ./netconf_server))
+    NETCONF_PRESENT := y
+    NETCONF_SERVER  ?= y
+    NETCONF_SERVER_OPT     := -DNETCONF_SERVER:BOOL=$(NETCONF_SERVER)
+endif
+ifneq (,$(wildcard ./onu_mgmt/tr451_vomci_polt))
+    TR451_VOMCI_POLT ?= y
+    TR451_VOMCI_POLT_OPT   := -DTR451_VOMCI_POLT:BOOL=$(TR451_VOMCI_POLT)
+endif
+OPEN_SOURCE         := y
 
 ifeq ("$V", "n")
     SILENT              := @
@@ -50,9 +58,9 @@ BCM_CMAKE_USER_VARS = $(patsubst %,-D%,$(filter-out BUILD_TOP_DIR=%,$(filter-out
 MAKE_PID = $(shell echo $$PPID)
 JOB_FLAG := $(filter -j%, $(subst -j, -j, $(shell ps T | grep "^\s*$(MAKE_PID).*$(MAKE)")))
 
-BCM_CMAKE_OPTIONS   = $(BCM_CMAKE_USER_VARS) \
-                    -DNETCONF_SERVER:BOOL=$(NETCONF_SERVER) \
-                    -DTR451_VOMCI_POLT:BOOL=$(TR451_VOMCI_POLT) \
+BCM_CMAKE_OPTIONS = $(BCM_CMAKE_USER_VARS) \
+                    $(NETCONF_SERVER_OPT) \
+                    $(TR451_VOMCI_POLT_OPT) \
                     -DOPEN_SOURCE=$(OPEN_SOURCE) \
                     -DBOARD:STRING=$(BOARD) \
                     -DCMAKE_VERBOSE_MAKEFILE:BOOL=$(CMAKE_VERBOSE) \
@@ -78,6 +86,10 @@ BCM_CLEAN_CMD      = test "$(ALL_$@_ARTIFACTS)" != ""  && \
                         fi; \
                         echo "done"; \
                      done || echo "Nothing to be done for '$@'"
+
+ifneq ("$NETCONF_PRESENT", "y")
+    INSTALL_INCLUDE_TARGET = github_install_include
+endif
 
 #====
 # Default build rule
@@ -123,7 +135,7 @@ PHONY += buildtree
 # of the artifact tree.
 #====
 host: cmake-host
-	$(SILENT)cd $(HOST_ARTIFACTS) && $(MAKE) $(BCM_MAKE_OPTIONS) install
+	$(SILENT)cd $(HOST_ARTIFACTS) && $(MAKE) $(BCM_MAKE_OPTIONS) install $(INSTALL_INCLUDE_TARGET)
 PHONY += host
 
 #====

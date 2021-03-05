@@ -96,7 +96,7 @@ static bcmos_errno _parse_ip_port(const char *s, uint32_t *ip, uint16_t *port)
 static void bcm_polt_shutdown(void)
 {
 #ifndef BCM_OPEN_SOURCE_SIM
-    /* bcmtr_exit(); */
+    bcmtr_exit();
 #endif
     bcmcli_session_close(current_session);
     bcmcli_token_destroy(NULL);

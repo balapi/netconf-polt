@@ -30,6 +30,7 @@
 #include <bcmos_hash_table.h>
 
 sr_subscription_ctx_t *sr_ctx;
+static sr_subscription_ctx_t *sr_ctx_intf;
 
 static const char* ietf_interfaces_features[] = {
     "arbitrary-names",
@@ -152,6 +153,7 @@ static bcmos_errno bbf_xpon_apply_transaction(sr_session_ctx_t *srs, nc_transact
             err = xpon_vlan_subif_transaction(srs, transact);
             break;
         default:
+            err = BCM_ERR_INTERNAL;
             break;
     }
     nc_transact_free(transact);
@@ -159,7 +161,7 @@ static bcmos_errno bbf_xpon_apply_transaction(sr_session_ctx_t *srs, nc_transact
 }
 
 /* Data store change indication callback */
-static int bbf_xpon_change_cb(sr_session_ctx_t *srs, const char *module_name,
+static int bbf_xpon_interface_change_cb(sr_session_ctx_t *srs, const char *module_name,
     const char *xpath, sr_event_t event, uint32_t request_id, void *private_ctx)
 {
     sr_change_iter_t *sr_iter = NULL;
@@ -167,13 +169,13 @@ static int bbf_xpon_change_cb(sr_session_ctx_t *srs, const char *module_name,
     sr_val_t *sr_old_val = NULL, *sr_new_val = NULL;
     char keyname[32];
     char prev_keyname[32] = "";
-    char qualified_xpath[BCM_MAX_XPATH_LENGTH];
     nc_transact transact;
-
     int sr_rc;
     bcmos_errno err = BCM_ERR_OK;
 
-    NC_LOG_INFO("xpath=%s event=%d\n", xpath, event);
+    nc_config_lock();
+
+    NC_LOG_INFO("module=%s xpath=%s event=%d\n", module_name, xpath, event);
 
     /* We only handle CHANGE and ABORT events.
      * Since there is no way to reserve resources in advance and no way to fail the APPLY event,
@@ -182,15 +184,14 @@ static int bbf_xpon_change_cb(sr_session_ctx_t *srs, const char *module_name,
      * ABORT event will roll-back the changes.
      */
     if (event == SR_EV_DONE)
+    {
+        nc_config_unlock();
         return SR_ERR_OK;
+    }
 
-    snprintf(qualified_xpath, sizeof(qualified_xpath)-1, "%s//.", xpath);
-    qualified_xpath[sizeof(qualified_xpath)-1] = 0;
-
-    /* Put aside transaction elements - per group */
     nc_transact_init(&transact, event);
 
-    for (sr_rc = sr_get_changes_iter(srs, qualified_xpath, &sr_iter);
+    for (sr_rc = sr_get_changes_iter(srs, BBF_XPON_INTERFACE_PATH_BASE "//.", &sr_iter);
         (err == BCM_ERR_OK) && (sr_rc == SR_ERR_OK) &&
             (sr_rc = sr_get_change_next(srs, sr_iter, &sr_oper, &sr_old_val, &sr_new_val)) == SR_ERR_OK;
         nc_sr_free_value_pair(&sr_old_val, &sr_new_val))
@@ -256,26 +257,156 @@ static int bbf_xpon_change_cb(sr_session_ctx_t *srs, const char *module_name,
     nc_sr_free_value_pair(&sr_old_val, &sr_new_val);
     sr_free_change_iter(sr_iter);
 
+    nc_config_unlock();
+
     return nc_bcmos_errno_to_sr_errno(err);
+}
+
+/* Get interface from the local DB. If not found, try to create and populate info from operational data */
+bcmos_errno xpon_interface_get_populate(sr_session_ctx_t *srs, const char *name,
+    xpon_obj_type expected_obj_type, xpon_obj_hdr **p_obj)
+{
+    bcmos_errno err;
+
+    *p_obj = NULL;
+    err = xpon_object_get(name, p_obj);
+
+    if (err != BCM_ERR_OK)
+    {
+        sr_val_t *values = NULL;
+        size_t value_cnt = 0;
+        int i;
+        int sr_rc;
+        char query_xpath[256];
+        nc_transact transact;
+
+        /* Try to create & populate object from the operational data */
+        snprintf(query_xpath, sizeof(query_xpath)-1,
+            BBF_XPON_INTERFACE_PATH_BASE "/interface[name='%s']//.", name);
+        sr_rc = sr_get_items(srs, query_xpath, 0, SR_OPER_DEFAULT, &values, &value_cnt);
+        if (sr_rc)
+        {
+            NC_LOG_ERR("sr_get_items(%s) -> %s\n", query_xpath, sr_strerror(sr_rc));
+            return BCM_ERR_PARM;
+        }
+
+        NC_LOG_DBG("Populating %s from operational data\n", query_xpath);
+
+        /* Create amd populate transaction */
+        nc_transact_init(&transact, SR_EV_CHANGE);
+        transact.do_not_free_values = BCMOS_TRUE;
+        err = BCM_ERR_OK;
+
+        for (i = 0; i < value_cnt && err == BCM_ERR_OK; i++)
+        {
+            char leafbuf[BCM_MAX_LEAF_LENGTH];
+            const char *leaf;
+            sr_val_t *sr_old_val = NULL;
+            sr_val_t *sr_new_val = &values[i];
+
+            NC_LOG_DBG("value=%s. Leaf type %d\n",
+                values[i].xpath, values[i].type);
+
+            if (values[i].type == SR_LIST_T || values[i].type == SR_CONTAINER_T)
+            {
+                /* no semantic meaning (for now) */
+                continue;
+            }
+
+            /* Special handling of interface type */
+            leaf = nc_xpath_leaf_get(values[i].xpath, leafbuf, sizeof(leafbuf));
+            if (transact.plugin_elem_type == NC_TRANSACT_PLUGIN_ELEM_TYPE_INVALID &&
+                values[i].data.identityref_val != NULL && leaf != NULL && !strcmp(leaf, "type"))
+            {
+                transact.plugin_elem_type = xpon_iftype_to_obj_type(values[i].data.identityref_val);
+            }
+            else
+            {
+                /* code */
+                err = nc_transact_add(&transact, &sr_old_val, &sr_new_val);
+            }
+        }
+        if (transact.plugin_elem_type != NC_TRANSACT_PLUGIN_ELEM_TYPE_INVALID)
+        {
+            if (expected_obj_type != XPON_OBJ_TYPE_ANY &&
+                expected_obj_type != transact.plugin_elem_type)
+            {
+                NC_LOG_ERR("interface %s is of unexpected type. Expected %s got %s\n",
+                    name, xpon_obj_type_to_str(expected_obj_type),
+                    xpon_obj_type_to_str(transact.plugin_elem_type));
+                return BCM_ERR_NOENT;
+            }
+            err = bbf_xpon_apply_transaction(srs, &transact, name);
+            if (err == BCM_ERR_OK)
+            {
+                err = xpon_object_get(name, p_obj);
+                if (*p_obj != NULL)
+                    (*p_obj)->created_by_forward_reference = BCMOS_TRUE;
+            }
+        }
+        nc_transact_free(&transact);
+        sr_free_values(values, value_cnt);
+    }
+    return err;
+}
+
+/* Delete any interface */
+void xpon_interface_delete(xpon_obj_hdr *obj)
+{
+    switch(obj->obj_type)
+    {
+        case XPON_OBJ_TYPE_CGROUP:
+            xpon_cgroup_delete((xpon_channel_group *)obj);
+            break;
+        case XPON_OBJ_TYPE_CPART:
+            xpon_cpart_delete((xpon_channel_partition *)obj);
+            break;
+        case XPON_OBJ_TYPE_CPAIR:
+            xpon_cpair_delete((xpon_channel_pair *)obj);
+            break;
+        case XPON_OBJ_TYPE_CTERM:
+            xpon_cterm_delete((xpon_channel_termination *)obj);
+            break;
+        case XPON_OBJ_TYPE_V_ANI:
+            xpon_v_ani_delete((xpon_v_ani *)obj);
+            break;
+        case XPON_OBJ_TYPE_ANI:
+            xpon_ani_delete((xpon_ani *)obj);
+            break;
+        case XPON_OBJ_TYPE_V_ANI_V_ENET:
+            xpon_v_ani_v_enet_delete((xpon_v_ani_v_enet *)obj);
+            break;
+        case XPON_OBJ_TYPE_ANI_V_ENET:
+            xpon_ani_v_enet_delete((xpon_ani_v_enet *)obj);
+            break;
+        case XPON_OBJ_TYPE_ENET:
+            xpon_enet_delete((xpon_enet *)obj);
+            break;
+        case XPON_OBJ_TYPE_VLAN_SUBIF:
+            xpon_vlan_subif_delete((xpon_vlan_subif *)obj);
+            break;
+        default:
+            break;
+    }
 }
 
 /* Subscribe to configuration change events */
 static bcmos_errno bbf_xpon_unsubscribe(sr_session_ctx_t *srs)
 {
     int sr_rc = SR_ERR_OK;
-    if (sr_ctx != NULL)
+    if (sr_ctx_intf != NULL)
     {
-        sr_rc = sr_unsubscribe(sr_ctx);
+        sr_rc = sr_unsubscribe(sr_ctx_intf);
         if (SR_ERR_OK == sr_rc)
         {
             NC_LOG_INFO("Unsubscribed from %s subtree change indications\n", BBF_XPON_INTERFACE_PATH_BASE);
-            sr_ctx = NULL;
         }
         else
         {
             NC_LOG_ERR("Failed to unsubscribe from %s subtree changes (%s).\n",
                 BBF_XPON_INTERFACE_PATH_BASE, sr_strerror(sr_rc));
         }
+        sr_ctx_intf = NULL;
     }
     return (sr_rc == SR_ERR_OK) ? BCM_ERR_OK : BCM_ERR_INTERNAL;
 }
@@ -292,9 +423,9 @@ static bcmos_errno bbf_xpon_subscribe(sr_session_ctx_t *srs)
 #endif
 
     /* subscribe to events */
-    sr_rc = sr_module_change_subscribe(srs, IETF_INTERFACES_MODULE_NAME, BBF_XPON_INTERFACE_PATH_BASE,
-            bbf_xpon_change_cb, NULL, 0, BCM_SR_MODULE_CHANGE_SUBSCR_FLAGS,
-            &sr_ctx);
+    sr_rc = sr_module_change_subscribe(srs, IETF_INTERFACES_MODULE_NAME, NULL,
+            bbf_xpon_interface_change_cb, NULL, 0, BCM_SR_MODULE_CHANGE_SUBSCR_FLAGS,
+            &sr_ctx_intf);
     if (SR_ERR_OK == sr_rc)
     {
         NC_LOG_INFO("Subscribed to %s subtree changes.\n", BBF_XPON_INTERFACE_PATH_BASE);
@@ -464,6 +595,7 @@ bcmos_errno bbf_xpon_module_init(sr_session_ctx_t *srs, struct ly_ctx *ly_ctx)
     const struct lys_module *bbf_hardware_mod;
     const struct lys_module *onu_states_mod;
     const struct lys_module *dhcpr_mod;
+    const struct lys_module *bbf_interface_pon_ref_mod;
     int i;
 
     do  {
@@ -544,11 +676,21 @@ bcmos_errno bbf_xpon_module_init(sr_session_ctx_t *srs, struct ly_ctx *ly_ctx)
         if (bbf_hardware_mod == NULL)
         {
             bbf_hardware_mod = ly_ctx_load_module(ly_ctx, BBF_HARDWARE_MODULE_NAME, NULL);
-            if (bbf_hardware_mod == NULL)
-            {
-                NC_LOG_ERR(BBF_HARDWARE_MODULE_NAME ": can't find the schema in sysrepo\n");
-                break;
-            }
+        }
+
+        /* make sure that bbf-interface-pon-reference module is loaded */
+        bbf_interface_pon_ref_mod = ly_ctx_get_module(ly_ctx, BBF_INTERFACE_PON_REFERENCE, NULL, 1);
+        if (bbf_interface_pon_ref_mod == NULL)
+        {
+            bbf_interface_pon_ref_mod = ly_ctx_load_module(ly_ctx, BBF_INTERFACE_PON_REFERENCE, NULL);
+        }
+
+        /* AT least one of bbf-hardware.yang or bbf-interface-pon-refference.yang must be loaded */
+        if (bbf_hardware_mod == NULL && bbf_interface_pon_ref_mod == NULL)
+        {
+            NC_LOG_ERR("can't find schemas %s and %s in sysrepo. At least one of them must be loaded.\n",
+                BBF_HARDWARE_MODULE_NAME, BBF_INTERFACE_PON_REFERENCE);
+            break;
         }
 
         /* make sure that bbf-xpon-onu-states module is loaded */
@@ -631,16 +773,19 @@ bcmos_errno bbf_xpon_module_init(sr_session_ctx_t *srs, struct ly_ctx *ly_ctx)
         if (ietf_hardware_features[i])
             break;
 
-        for (i = 0; bbf_hardware_features[i]; i++)
+        if (bbf_hardware_mod != NULL)
         {
-            if (lys_features_enable(bbf_hardware_mod, bbf_hardware_features[i]))
+            for (i = 0; bbf_hardware_features[i]; i++)
             {
-                NC_LOG_ERR("%s: can't enable feature %s\n", BBF_HARDWARE_MODULE_NAME, bbf_hardware_features[i]);
-                break;
+                if (lys_features_enable(bbf_hardware_mod, bbf_hardware_features[i]))
+                {
+                    NC_LOG_ERR("%s: can't enable feature %s\n", BBF_HARDWARE_MODULE_NAME, bbf_hardware_features[i]);
+                    break;
+                }
             }
+            if (bbf_hardware_features[i])
+                break;
         }
-        if (bbf_hardware_features[i])
-            break;
 
 #if 0
         /* Reset stored configuration if requested */

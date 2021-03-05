@@ -828,8 +828,10 @@ static bcmos_errno interface_add_to_access_control(dhcp_relay_interface *iface, 
     if (err != BCM_ERR_OK)
     {
         if (create_acl)
-            bcmolt_ind_unsubscribe(netconf_agent_olt_id(), &rx_cfg);
-
+        {
+            bcmos_errno unsub_err = bcmolt_ind_unsubscribe(netconf_agent_olt_id(), &rx_cfg);
+            BCMOS_TRACE_IF_ERROR(unsub_err);
+        }
         if (created)
         {
             bcmolt_access_control_cfg acl_cfg;
@@ -859,7 +861,8 @@ static bcmos_errno interface_remove_from_access_control(dhcp_relay_interface *if
             .subgroup = BCMOLT_ACCESS_CONTROL_AUTO_SUBGROUP_RECEIVE_ETH_PACKET
         };
         /* Unsubscribe from receive_eth_packet indication */
-        bcmolt_ind_unsubscribe(netconf_agent_olt_id(), &rx_cfg);
+        err = bcmolt_ind_unsubscribe(netconf_agent_olt_id(), &rx_cfg);
+        BCMOS_TRACE_IF_ERROR(err);
 
         /* Delete an intercept ACL */
         bcmolt_access_control_cfg acl_cfg;

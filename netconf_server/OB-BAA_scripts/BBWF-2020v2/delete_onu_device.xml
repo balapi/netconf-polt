@@ -1,0 +1,34 @@
+<rpc xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0" message-id="100" >
+    <edit-config>
+        <target>
+            <running/>
+        </target>
+        <config>
+            <network-manager xmlns="urn:bbf:yang:obbaa:network-manager">
+                <managed-devices>
+                    <device xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0" xc:operation="delete">
+                        <name>Broadcom_ont1</name>
+                        <device-management>
+                          <type>ONU</type>
+                          <interface-version>1.0</interface-version>
+                          <model>standard</model>
+                          <vendor>BBF</vendor>
+                            <device-connection>
+                                <connection-model>mediated-session</connection-model>
+                                <mediated-protocol>vomci</mediated-protocol>
+                            </device-connection>
+                            <onu-config-info xmlns="urn:bbf:yang:obbaa:onu-management">
+                              <serial-number>BRCM00000001</serial-number>
+                              <expected-attachment-point>
+                                  <olt-name>Broadcom_OLT</olt-name>
+                                  <channel-partition>CG_1.CPart_1</channel-partition>
+                                  <onu-id>1</onu-id>
+                              </expected-attachment-point>
+                            </onu-config-info>
+                        </device-management>
+                    </device>
+                </managed-devices>
+            </network-manager>
+        </config>
+    </edit-config>
+</rpc>

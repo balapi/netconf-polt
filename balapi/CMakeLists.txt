@@ -1,56 +1,34 @@
-# Common API
+# BAL API
 # This version of CMakeLists.txt pull balapi from github and enables integration
 # with an application that uses a BAL SDK build system and need to be integrated
 # with BAL API
 
 # BAL API version. Must match of of the versions released in github
-bcm_make_normal_option(BAL_API_VERSION STRING "BAL API Version" "3.6.3.3")
+bcm_make_normal_option(BAL_API_VERSION STRING "BAL API Version" "3.8.5.5")
 
-include(third_party)
-
-set(_UNPACKED_DIR_NAME bal-api-${BAL_API_VERSION}-master)
-bcm_3rdparty_module_name(bal_api_pre_loaded ${BAL_API_VERSION})
-bcm_3rdparty_download_wget("https://github.com/balapi/bal-api-${BAL_API_VERSION}/archive" "master.zip" ${_UNPACKED_DIR_NAME})
-bcm_3rdparty_build_dummy()
-bcm_3rdparty_export()
-
-set(_UNPACKED_DIR_NAME ${CMAKE_CURRENT_BINARY_DIR}/${_UNPACKED_DIR_NAME})
-set(_BAL_API_STUBS ${_UNPACKED_DIR_NAME}/stubs/bcmolt_api_stubs.c
-                   ${_UNPACKED_DIR_NAME}/stubs/bcm_system_stubs.c)
-if(BAL_API_EXTERNAL_OS_ABSTRACTION)
-    set(_REMOVE_OS_ABSTRACTION_CMD COMMAND rm -f ${_UNPACKED_DIR_NAME}/include/bcmos_*.h)
+set(_SUBDIR_LIST bal_api_subdir_list.txt)
+if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${_SUBDIR_LIST})
+    set(_UNPACKED_DIR_NAME bal-sdk-bal_sdk-${BAL_API_VERSION})
+    set(_BAL_API_DOMAIN https://github.com/balapi/bal-sdk/archive)
+    set(_BAL_API_ARCHIVE bal_sdk-${BAL_API_VERSION}.tar.gz)
+    if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${_BAL_API_ARCHIVE})
+        execute_process(
+            COMMAND wget --no-check-certificate ${_BAL_API_DOMAIN}/${_BAL_API_ARCHIVE}
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+    endif()
+    execute_process(
+        COMMAND sh -c "rm -fr ${_UNPACKED_DIR_NAME} &&
+            tar -xzf ${_BAL_API_ARCHIVE} &&
+            grep bcm_add_subdirectory ${_UNPACKED_DIR_NAME}/CMakeLists.txt |
+            sed -e 's@bcm_add_subdirectory(@bcm_add_subdirectory(${_UNPACKED_DIR_NAME}/@' > ${_SUBDIR_LIST}"
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 endif()
-add_custom_target(bal_api_loaded
-    ${_REMOVE_OS_ABSTRACTION_CMD}
-    DEPENDS bal_api_pre_loaded)
-add_custom_command(OUTPUT ${_BAL_API_STUBS}
-                   DEPENDS bal_api_loaded)
 
-bcm_module_name(balapi)
-bcm_module_header_paths(PUBLIC ${_UNPACKED_DIR_NAME}/include
-        ${_UNPACKED_DIR_NAME}/include/object_model)
-bcm_module_srcs(${_BAL_API_STUBS})
-if(BAL_API_EXTERNAL_OS_ABSTRACTION)
-    bcm_module_dependencies(PUBLIC os)
-endif()
-bcm_create_shared_lib_target()
+# Include all subdirectories in the bal_api package directly, bypassing its own CMakeLists.txt
+include(${_SUBDIR_LIST})
 
-bcm_module_name(host_api)
-bcm_module_dependencies(PUBLIC balapi)
-bcm_create_lib_target()
-
-bcm_module_name(metadata)
-bcm_module_dependencies(PUBLIC balapi)
-bcm_create_lib_target()
-
-bcm_module_name(api)
-bcm_module_dependencies(PUBLIC metadata)
-bcm_create_lib_target()
-
-bcm_module_name(system_type_funcs)
-bcm_module_dependencies(PUBLIC balapi)
-bcm_create_lib_target()
-
-bcm_module_name(system_types)
-bcm_module_dependencies(PUBLIC system_type_funcs)
-bcm_create_lib_target()
+# Create build/fs/include directory with copies of .h files
+add_custom_target(github_install_include
+        COMMAND mkdir -p ${BUILD_TOP}/fs/include/bal_api
+        COMMAND find ${CMAKE_CURRENT_SOURCE_DIR} -path ${BUILD_TOP} -prune -o -name '*.h' -type f -exec cp -f \\{\\} ${BUILD_TOP}/fs/include/bal_api/ \\\;
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})

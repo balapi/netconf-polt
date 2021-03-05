@@ -1,0 +1,56 @@
+<!-- ani<->vani linktable -->
+<link-table xmlns="urn:bbf:yang:bbf-link-table">
+    <link-table xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0">
+        <from-interface>ontAni_ont1</from-interface>
+        <to-interface>vAni_ont1</to-interface>
+    </link-table>
+    <link-table xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0">
+        <from-interface>enet_uni_ont1_1_1</from-interface>
+        <to-interface>venet_uni_ont1_1_1</to-interface>
+    </link-table>
+</link-table>
+
+<!-- olt-side l2fwd forwarder -->
+<forwarding xmlns="urn:bbf:yang:bbf-l2-forwarding">
+    <forwarders>
+        <forwarder xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0">
+            <name>ont1-ipv4</name>
+            <ports>
+                <port>
+                    <name>fwd_user_port_ont1</name>
+                    <sub-interface>ont1_vlan_user-ipv4</sub-interface>
+                </port>
+                <port>
+                    <name>fwd_net_port_ont1</name>
+                    <sub-interface>ont1_vlan_network-ipv4</sub-interface>
+                </port>
+            </ports>
+        </forwarder>
+        <forwarder xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0">
+            <name>ont1-pppoe</name>
+            <ports>
+                <port>
+                    <name>fwd_user_port_ont1</name>
+                    <sub-interface>ont1_vlan_user-pppoe</sub-interface>
+                </port>
+                <port>
+                    <name>fwd_net_port_ont1</name>
+                    <sub-interface>ont1_vlan_network-pppoe</sub-interface>
+                </port>
+            </ports>
+        </forwarder>
+        <forwarder xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0">
+            <name>ont1-ipv6</name>
+            <ports>
+                <port>
+                    <name>fwd_user_port_ont1</name>
+                    <sub-interface>ont1_vlan_user-ipv6</sub-interface>
+                </port>
+                <port>
+                    <name>fwd_net_port_ont1</name>
+                    <sub-interface>ont1_vlan_network-ipv6</sub-interface>
+                </port>
+            </ports>
+        </forwarder>
+    </forwarders>
+</forwarding>

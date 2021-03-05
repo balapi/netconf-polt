@@ -16,4 +16,12 @@ if(NETCONF_SERVER)
     bcm_add_subdirectory(modules)
     install(PROGRAMS ${CMAKE_CURRENT_SOURCE_DIR}/start_netconf_server.sh DESTINATION fs
 		PERMISSIONS OWNER_READ OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+
+    bcm_release_install(${CMAKE_INSTALL_PREFIX}/fs/lib RELEASE ${BCM_HOST_IMAGES_RELEASE}/netconf_server)
+    bcm_release_install(${CMAKE_INSTALL_PREFIX}/fs/bin RELEASE ${BCM_HOST_IMAGES_RELEASE}/netconf_server)
+    bcm_release_install(${CMAKE_INSTALL_PREFIX}/fs/sysrepo RELEASE ${BCM_HOST_IMAGES_RELEASE}/netconf_server)
+    bcm_release_install(${CMAKE_INSTALL_PREFIX}/fs/ssl RELEASE ${BCM_HOST_IMAGES_RELEASE}/netconf_server)
+    bcm_release_install(${CMAKE_INSTALL_PREFIX}/fs/start_netconf_server.sh RELEASE ${BCM_HOST_IMAGES_RELEASE}/netconf_server)
+    bcm_release_install(${CMAKE_INSTALL_PREFIX}/fs/bcmolt_netconf_server RELEASE ${BCM_HOST_IMAGES_RELEASE}/netconf_server)
+    bcm_release_install(${CMAKE_CURRENT_SOURCE_DIR}/doc RELEASE ${BCM_HOST_IMAGES_RELEASE}/netconf_server)
 endif()

@@ -1,5 +1,0 @@
- <if:interfaces xmlns:if="urn:ietf:params:xml:ns:yang:ietf-interfaces">
-    <if:interface xmlns:nc="urn:ietf:params:xml:ns:netconf:base:1.0" nc:operation="delete">
-       <if:name>network1.201.301</if:name>
-    </if:interface>
-</if:interfaces>

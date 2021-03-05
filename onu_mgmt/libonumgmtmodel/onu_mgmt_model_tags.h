@@ -18,10 +18,10 @@ typedef enum
 /* The following config modes are enabled for this build (based on tags). */
 
 /** Get all tags that are currently active for a given flow based on system state. */
-bcmonu_mgmt_tag bcmonu_mgmt_flow_get_active_tags(const bcmonu_mgmt_flow_key *key);
+bcmonu_mgmt_tag bcmonu_mgmt_flow_get_active_tags(bcmonu_mgmt_oltid olt, const bcmonu_mgmt_flow_key *key);
 
 /** Get all tags that are currently active for a given onu based on system state. */
-bcmonu_mgmt_tag bcmonu_mgmt_onu_get_active_tags(const bcmonu_mgmt_onu_key *key);
+bcmonu_mgmt_tag bcmonu_mgmt_onu_get_active_tags(bcmonu_mgmt_oltid olt, const bcmonu_mgmt_onu_key *key);
 
 
 

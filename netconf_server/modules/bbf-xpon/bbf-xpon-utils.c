@@ -1,22 +1,22 @@
 /*
  *  <:copyright-BRCM:2016-2020:Apache:standard
- *  
+ *
  *   Copyright (c) 2016-2020 Broadcom. All Rights Reserved
- *  
+ *
  *   The term “Broadcom” refers to Broadcom Inc. and/or its subsidiaries
- *  
+ *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
  *   You may obtain a copy of the License at
- *  
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *   Unless required by applicable law or agreed to in writing, software
  *   distributed under the License is distributed on an "AS IS" BASIS,
  *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
- *  
+ *
  *  :>
  *
  *****************************************************************************/
@@ -108,6 +108,40 @@ xpon_obj_type xpon_iftype_to_obj_type(const char *iftype)
     else
         obj_type = XPON_OBJ_TYPE_INVALID;
     return obj_type;
+}
+
+const char *xpon_obj_type_to_str(xpon_obj_type obj_type)
+{
+    static const char *obj_type_name[] = {
+        [XPON_OBJ_TYPE_ENET]                    = "ENET",
+        [XPON_OBJ_TYPE_CGROUP]                  = "CGROUP",
+        [XPON_OBJ_TYPE_CPART]                   = "CPART",
+        [XPON_OBJ_TYPE_CPAIR]                   = "CPAIR",
+        [XPON_OBJ_TYPE_CTERM]                   = "CTERM",
+        [XPON_OBJ_TYPE_V_ANI]                   = "V-ANI",
+        [XPON_OBJ_TYPE_ANI]                     = "ANI",
+        [XPON_OBJ_TYPE_V_ANI_V_ENET]            = "V-ANI-V-ENET",
+        [XPON_OBJ_TYPE_ANI_V_ENET]              = "ANI_V_ENET",
+        [XPON_OBJ_TYPE_VLAN_SUBIF]              = "VLAN-SUBIF",
+        [XPON_OBJ_TYPE_TCONT]                   = "TCONT",
+        [XPON_OBJ_TYPE_GEM]                     = "GEM",
+        [XPON_OBJ_TYPE_WAVELENGTH_PROFILE]      = "WAVELENGTH-PROFILE",
+        [XPON_OBJ_TYPE_TRAFFIC_DESCR_PROFILE]   = "TRAFFIC_DESCR_PROFILE",
+        [XPON_OBJ_TYPE_QOS_CLASSIFIER]          = "QOS_CLASSIFIER",
+        [XPON_OBJ_TYPE_QOS_POLICY]              = "QOS_POLICY",
+        [XPON_OBJ_TYPE_QOS_POLICY_PROFILE]      = "QOS_POLICY_PROFILE",
+        [XPON_OBJ_TYPE_FORWARDER_PORT]          = "FORWARDER_PORT",
+        [XPON_OBJ_TYPE_FORWARDER]               = "FORWARDER",
+        [XPON_OBJ_TYPE_FWD_SPLIT_HORIZON_PROFILE] = "FWD_SPLIT_HORIZON_PROFILE",
+        [XPON_OBJ_TYPE_FWD_DB]                  = "FWD_DB",
+        [XPON_OBJ_TYPE_HARDWARE]                = "HARDWARE",
+        [XPON_OBJ_TYPE_DHCPR_PROFILE]           = "DHCP-PROFILE",
+    };
+    static const char *obj_type_invalid = "INVALID";
+    if (obj_type >= XPON_OBJ_TYPE__FIRST && obj_type <= XPON_OBJ_TYPE__LAST)
+        return obj_type_name[obj_type];
+    else
+        return obj_type_invalid;
 }
 
 bbf_interface_usage xpon_map_iface_usage(const char *usage_str)
@@ -229,21 +263,89 @@ bcmos_errno xpon_object_get_or_add(const char *name, xpon_obj_type obj_type, uin
     return err;
 }
 
-/* merge */
+/* merge match criteria */
+bcmos_errno xpon_merge_match(bbf_match_criteria *match, const bbf_match_criteria *with_match)
+{
+    int i;
+
+    /* Merge common tags */
+    for (i = 0; i < match->vlan_tag_match.num_tags; i++)
+    {
+        bbf_dot1q_tag *tag = &match->vlan_tag_match.tags[i];
+        const bbf_dot1q_tag *with_tag = &with_match->vlan_tag_match.tags[i];
+
+        if (i >= with_match->vlan_tag_match.num_tags)
+            break;
+        if (with_match->vlan_tag_match.tag_match_types[i] == BBF_VLAN_TAG_MATCH_TYPE_ALL)
+            continue;
+        if (BBF_DOT1Q_TAG_PROP_IS_SET(with_tag, vlan_id))
+        {
+            /* Make sure that match and with_match are compatible */
+            if (BBF_DOT1Q_TAG_PROP_IS_SET(tag, vlan_id) && tag->vlan_id != with_tag->vlan_id)
+                goto error;
+            BBF_DOT1Q_TAG_PROP_SET(tag, vlan_id, with_tag->vlan_id);
+        }
+        if (BBF_DOT1Q_TAG_PROP_IS_SET(with_tag, pbit))
+        {
+            /* Make sure that match and with_match are compatible */
+            if (BBF_DOT1Q_TAG_PROP_IS_SET(tag, pbit) && tag->pbit != with_tag->pbit)
+                goto error;
+            BBF_DOT1Q_TAG_PROP_SET(tag, pbit, with_tag->pbit);
+        }
+        if (BBF_DOT1Q_TAG_PROP_IS_SET(with_tag, dei))
+        {
+            BBF_DOT1Q_TAG_PROP_SET(tag, dei, with_tag->dei);
+        }
+    }
+
+    /* Copy the renaming tags */
+    for ( ;  i < with_match->vlan_tag_match.num_tags; i++)
+    {
+        match->vlan_tag_match.tags[i] = with_match->vlan_tag_match.tags[i];
+        match->vlan_tag_match.tag_match_types[i] = with_match->vlan_tag_match.tag_match_types[i];
+        ++match->vlan_tag_match.num_tags;
+    }
+
+    return BCM_ERR_OK;
+
+error:
+    NC_LOG_ERR("Internal error. Can't merge incompatible match criteria\n");
+    return BCM_ERR_INTERNAL;
+}
+
+/* merge VLAN actions */
 bcmos_errno xpon_merge_actions(bbf_flexible_rewrite *actions, const bbf_flexible_rewrite *with_actions)
 {
+    bcmos_errno err = BCM_ERR_OK;
     actions->num_pop_tags += with_actions->num_pop_tags;
     if (with_actions->num_push_tags)
     {
-        int i;
-        if (actions->num_push_tags + with_actions->num_push_tags > 2)
-            return BCM_ERR_PARM;
-        for (i = 0; i < with_actions->num_push_tags; i++)
+        for (int i = 0; i < with_actions->num_push_tags; i++)
         {
-            actions->push_tags[++actions->num_push_tags] = with_actions->push_tags[i];
+            const bbf_dot1q_tag *with_tag = &with_actions->push_tags[i];
+            if (BBF_DOT1Q_TAG_PROP_IS_SET(with_tag, tag_type))
+            {
+                /* Really adding a tag */
+                if (actions->num_push_tags >= 2)
+                {
+                    err = BCM_ERR_PARM;
+                    break;
+                }
+                actions->push_tags[actions->num_push_tags++] = with_actions->push_tags[i];
+            }
+            else
+            {
+                /* Merge push tag */
+                if (BBF_DOT1Q_TAG_PROP_IS_SET(with_tag, vlan_id))
+                    BBF_DOT1Q_TAG_PROP_SET(&actions->push_tags[i], vlan_id, with_tag->vlan_id);
+                if (BBF_DOT1Q_TAG_PROP_IS_SET(with_tag, pbit))
+                    BBF_DOT1Q_TAG_PROP_SET(&actions->push_tags[i], pbit, with_tag->pbit);
+                if (BBF_DOT1Q_TAG_PROP_IS_SET(with_tag, dei))
+                    BBF_DOT1Q_TAG_PROP_SET(&actions->push_tags[i], dei, with_tag->dei);
+            }
         }
     }
-    return BCM_ERR_OK;
+    return err;
 }
 
 /* Compare actions */
@@ -292,16 +394,25 @@ static void xpon_pop_tags_from_match(bbf_match_criteria *match, uint8_t num_pop_
 static void xpon_push_tags_to_match(bbf_match_criteria *match, uint8_t num_push_tags, const bbf_dot1q_tag *tags)
 {
     int i;
-    if (!num_push_tags)
-        return;
     if (num_push_tags + match->vlan_tag_match.num_tags > 2)
         num_push_tags = 2 - match->vlan_tag_match.num_tags;
+    if (!num_push_tags)
+        return;
+    /* We push OUTER tag, so need to shift all existing tags */
+    if (match->vlan_tag_match.num_tags)
+    {
+        for (i = match->vlan_tag_match.num_tags - 1; i >= 0; i--)
+        {
+            match->vlan_tag_match.tags[i + num_push_tags] = match->vlan_tag_match.tags[i];
+            match->vlan_tag_match.tag_match_types[i + num_push_tags] = match->vlan_tag_match.tag_match_types[i];
+        }
+    }
     for (i = 0; i < num_push_tags; i++)
     {
-        match->vlan_tag_match.tags[match->vlan_tag_match.num_tags + i] = tags[i];
-        match->vlan_tag_match.tag_match_types[match->vlan_tag_match.num_tags + i] = BBF_VLAN_TAG_MATCH_TYPE_VLAN_TAGGED;
-        ++match->vlan_tag_match.num_tags;
+        match->vlan_tag_match.tags[i] = tags[i];
+        match->vlan_tag_match.tag_match_types[i] = BBF_VLAN_TAG_MATCH_TYPE_VLAN_TAGGED;
     }
+    match->vlan_tag_match.num_tags += num_push_tags;
 }
 
 /* apply actions to match */
@@ -425,12 +536,35 @@ bcmos_errno xpon_add_flexible_match(sr_session_ctx_t *srs, bbf_match_criteria *m
             }
             else if (!strcmp(leaf, "pbit") || !strcmp(leaf, "dei"))
             {
-                if (!(val->type == SR_ENUM_T && !strcmp(val->data.enum_val, "any")))
+                if (val->type == SR_ENUM_T)
                 {
-                    NC_ERROR_REPLY(srs, xpath, "classification by %s is not supported\n",
-                        leaf);
-                    err = BCM_ERR_NOT_SUPPORTED;
+                    if (strcmp(val->data.enum_val, "any"))
+                    {
+                        NC_ERROR_REPLY(srs, xpath, "classification by %s=%s is not supported\n",
+                            leaf, val->data.enum_val);
+                        err = BCM_ERR_NOT_SUPPORTED;
+                    }
                     break;
+                }
+                else if (val->type == SR_STRING_T)
+                {
+                    char *p_end = NULL;
+                    long num_val;
+
+                    num_val = strtol(val->data.string_val, &p_end, 0);
+                    if (p_end != NULL && *p_end)
+                    {
+                        NC_ERROR_REPLY(srs, xpath, "classification by %s=%s is not supported\n",
+                            leaf, val->data.string_val);
+                        err = BCM_ERR_NOT_SUPPORTED;
+                    }
+                    if (num_val > 7)
+                    {
+                        NC_ERROR_REPLY(srs, xpath, "classification by %s=%s: pbit is out of range\n",
+                            leaf, val->data.string_val);
+                        err = BCM_ERR_PARM;
+                    }
+                    BBF_DOT1Q_TAG_PROP_SET(tag, pbit, num_val);
                 }
             }
             if (match->vlan_tag_match.num_tags < tag_index + 1)
@@ -438,20 +572,60 @@ bcmos_errno xpon_add_flexible_match(sr_session_ctx_t *srs, bbf_match_criteria *m
         }
         else if (strstr(xpath, "ethernet-frame-type") != NULL)
         {
-            if (!(val->type == SR_ENUM_T && !strcmp(val->data.enum_val, "any")))
+            if (val->type == SR_ENUM_T)
             {
-                NC_ERROR_REPLY(srs, xpath, "classification by ethernet-frame-type is not supported\n");
-                err = BCM_ERR_NOT_SUPPORTED;
-                break;
+                if (!strcmp(val->data.enum_val, "pppoe"))
+                    match->protocol_match.match_type |= BBF_PROTOCOL_MATCH_PPPOE_DATA | BBF_PROTOCOL_MATCH_PPPOE_DISCOVERY;
+                else if (!strcmp(val->data.enum_val, "ipv4"))
+                    match->protocol_match.match_type |= BBF_PROTOCOL_MATCH_IPV4;
+                else if (!strcmp(val->data.enum_val, "ipv6"))
+                    match->protocol_match.match_type |= BBF_PROTOCOL_MATCH_IPV6;
+                else if (strcmp(val->data.enum_val, "any"))
+                {
+                    NC_ERROR_REPLY(srs, xpath, "classification by ethernet-frame-type '%s' is not supported\n",
+                        val->data.enum_val);
+                    err = BCM_ERR_NOT_SUPPORTED;
+                    break;
+                }
+            }
+            else if (val->type == SR_UINT16_T)
+            {
+                match->protocol_match.match_type |= BBF_PROTOCOL_MATCH_SPECIFIC;
+                match->protocol_match.ether_type = val->data.uint16_val;
             }
         }
         else if (strstr(xpath, "protocol-match") != NULL)
         {
-            if (!(val->type == SR_ENUM_T && !strcmp(val->data.enum_val, "any")))
+            if (val->type == SR_ENUM_T)
             {
-                NC_ERROR_REPLY(srs, xpath, "classification by protocol-match is not supported\n");
+                if (!strcmp(val->data.enum_val, "arp"))
+                    match->protocol_match.match_type |= BBF_PROTOCOL_MATCH_ARP;
+                else if (!strcmp(val->data.enum_val, "igmp"))
+                    match->protocol_match.match_type |= BBF_PROTOCOL_MATCH_IGMP;
+                else if (!strcmp(val->data.enum_val, "mld"))
+                    match->protocol_match.match_type |= BBF_PROTOCOL_MATCH_MLD;
+                else if (!strcmp(val->data.enum_val, "dhcpv4"))
+                    match->protocol_match.match_type |= BBF_PROTOCOL_MATCH_DHCPV4;
+                else if (!strcmp(val->data.enum_val, "dhcpv6"))
+                    match->protocol_match.match_type |= BBF_PROTOCOL_MATCH_DHCPV6;
+                else if (!strcmp(val->data.enum_val, "pppoe-discovery"))
+                    match->protocol_match.match_type |= BBF_PROTOCOL_MATCH_PPPOE_DISCOVERY;
+                else if (!strcmp(val->data.enum_val, "dot1x"))
+                    match->protocol_match.match_type |= BBF_PROTOCOL_MATCH_DOT1X;
+                else if (!strcmp(val->data.enum_val, "lacp"))
+                    match->protocol_match.match_type |= BBF_PROTOCOL_MATCH_LACP;
+                else if (strcmp(val->data.enum_val, "any-protocol"))
+                {
+                    NC_ERROR_REPLY(srs, xpath, "classification by protocol-match '%s' is not supported\n",
+                        val->data.enum_val);
+                    err = BCM_ERR_NOT_SUPPORTED;
+                    break;
+                }
+            }
+            if ((match->protocol_match.match_type & (match->protocol_match.match_type - 1)) != 0)
+            {
+                NC_ERROR_REPLY(srs, xpath, "Matching by multiple protocols and/or ethernet-frame-types is not supported\n");
                 err = BCM_ERR_NOT_SUPPORTED;
-                break;
             }
         }
     } while (0);

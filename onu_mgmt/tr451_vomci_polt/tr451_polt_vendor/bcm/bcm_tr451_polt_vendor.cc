@@ -112,8 +112,7 @@ bcmos_errno bcm_tr451_vendor_onu_added(bcmolt_interface pon_ni, bcmolt_onu_id on
     bcmos_errno err = tr451_prepare_onu_info(pon_ni, onu_id, serial, &onu_info);
     if (err != BCM_ERR_OK)
         return err;
-    onu_info.present = BCMOS_TRUE;
-    onu_info.active = BCMOS_TRUE;
+    onu_info.presence_flags = XPON_ONU_PRESENCE_FLAG_ONU;
     vendor_event_cfg.tr451_onu_state_change_cb(vendor_event_cfg.user_handle, &onu_info);
     return BCM_ERR_OK;
 }
@@ -125,6 +124,7 @@ bcmos_errno bcm_tr451_vendor_onu_removed(bcmolt_interface pon_ni, bcmolt_onu_id 
     bcmos_errno err = tr451_prepare_onu_info(pon_ni, onu_id, nullptr, &onu_info);
     if (err != BCM_ERR_OK)
         return err;
+    onu_info.presence_flags = XPON_ONU_PRESENCE_FLAG_V_ANI;
     vendor_event_cfg.tr451_onu_state_change_cb(vendor_event_cfg.user_handle, &onu_info);
     return BCM_ERR_OK;
 }

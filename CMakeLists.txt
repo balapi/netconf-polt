@@ -43,12 +43,7 @@ include(third_party)               # Macros for downloading & building third-par
 #====
 # Add the top level subdirectories we need to add
 #====
-bcm_add_subdirectory(os_abstraction)
-bcm_add_subdirectory(config)
-bcm_add_subdirectory(utils)
 bcm_add_subdirectory(daemon)
-bcm_add_subdirectory(cli)
-bcm_add_subdirectory(dev_log)
 bcm_add_subdirectory(third_party)
 bcm_add_subdirectory(onu_mgmt)
 bcm_add_subdirectory(netconf_server)

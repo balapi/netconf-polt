@@ -1,22 +1,22 @@
 /*
  *  <:copyright-BRCM:2016-2020:Apache:standard
- *  
+ *
  *   Copyright (c) 2016-2020 Broadcom. All Rights Reserved
- *  
+ *
  *   The term “Broadcom” refers to Broadcom Inc. and/or its subsidiaries
- *  
+ *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
  *   You may obtain a copy of the License at
- *  
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *   Unless required by applicable law or agreed to in writing, software
  *   distributed under the License is distributed on an "AS IS" BASIS,
  *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
- *  
+ *
  *  :>
  *
  *****************************************************************************/
@@ -414,7 +414,8 @@ static void bcm_omci_mib_upload_next_rsp(bcm_omci_me_hdr *me_hdr, uint8_t *decod
     switch (check_me_reassembly_and_notify)
     {
         case COPY_STORED_ME_SEGMENT:
-            bcm_omci_me_reassembly_copy_me_segment (me_mib_upload, me_reassembly_context, curr_me_segment_result);
+            BUG_ON(me_reassembly_context == NULL);
+            bcm_omci_me_reassembly_copy_me_segment(me_mib_upload, me_reassembly_context, curr_me_segment_result);
             /* trigger mib upload next req from here, since we are not calling svc layer */
             if (BCM_OMCI_RESULT_IND_MORE == curr_me_segment_result)
             {
@@ -423,6 +424,7 @@ static void bcm_omci_mib_upload_next_rsp(bcm_omci_me_hdr *me_hdr, uint8_t *decod
             break;
 
         case COPY_STORED_ME_SEGMENT_AND_NOTIFY_STORED_ME:
+            BUG_ON(me_reassembly_context == NULL || stored_me_segments == NULL);
             bcm_omci_me_reassembly_copy_me_segment (me_mib_upload, me_reassembly_context, curr_me_segment_result);
             if (stored_me_segments->rsp.result == BCM_OMCI_RESULT_CMD_PROC_SUCCESS)
                  stored_me_segments->rsp.result = curr_me_segment_result;
@@ -432,6 +434,7 @@ static void bcm_omci_mib_upload_next_rsp(bcm_omci_me_hdr *me_hdr, uint8_t *decod
 
         case NOTIFY_STORED_ME_AND_SET_NEW_ME_SEGMENT:
             /* notify omci svc layer / application callback */
+            BUG_ON(stored_me_segments == NULL);
             if (stored_me_segments->rsp.result == BCM_OMCI_RESULT_CMD_PROC_SUCCESS)
                  stored_me_segments->rsp.result = stored_me_segments_result;
             omci_init_parms.mib_upload_response_cb(stored_me_segments, &data);
@@ -459,6 +462,7 @@ static void bcm_omci_mib_upload_next_rsp(bcm_omci_me_hdr *me_hdr, uint8_t *decod
 
         case NOTIFY_STORED_ME_AND_NOTIFY_NEW_ME:
             /* notify svc layer of the stored ME */
+            BUG_ON(stored_me_segments == NULL);
             if (stored_me_segments->rsp.result == BCM_OMCI_RESULT_CMD_PROC_SUCCESS)
                  stored_me_segments->rsp.result = stored_me_segments_result;
             omci_init_parms.mib_upload_response_cb(stored_me_segments, &data);
@@ -788,5 +792,3 @@ void bcm_omci_stack_util_dump_raw_buf(const bcm_omci_me_key *me_key, const uint8
     return;
 }
 #endif
-
-

@@ -1,0 +1,585 @@
+<hardware xmlns="urn:ietf:params:xml:ns:yang:ietf-hardware">
+    <!-- onu-side chassis -->
+    <component xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0">
+        <name>ont1</name>
+        <class xmlns:ianahw="urn:ietf:params:xml:ns:yang:iana-hardware">ianahw:chassis</class>
+        <admin-state>unlocked</admin-state>
+        <parent-rel-pos>1</parent-rel-pos>
+    </component>
+
+    <!-- onu-side board -->
+    <component xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0">
+        <name>ontCard_ont1_1</name>
+        <class xmlns:bbf-hwt="urn:bbf:yang:bbf-hardware-types">bbf-hwt:board</class>
+        <admin-state>unlocked</admin-state>
+        <parent>ont1</parent>
+        <parent-rel-pos>1</parent-rel-pos>
+    </component>
+
+    <!-- onu-side cage -->
+    <component xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0">
+        <name>ontCage_ont1</name>
+        <class xmlns:bbf-hwt="urn:bbf:yang:bbf-hardware-types">bbf-hwt:cage</class>
+        <parent>ontCard_ont1_1</parent>
+        <parent-rel-pos>1</parent-rel-pos>
+    </component>
+
+    <!-- onu-side sfp -->
+    <component xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0">
+        <name>ontSfp_ont1</name>
+        <class xmlns:bbf-hwt="urn:bbf:yang:bbf-hardware-types">bbf-hwt:transceiver</class>
+        <parent>ontCage_ont1</parent>
+        <parent-rel-pos>1</parent-rel-pos>
+    </component>
+
+    <!-- onu-side aniport sfp port-->
+    <component xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0">
+        <name>ontAniPort_ont1</name>
+        <class xmlns:bbf-hwt="urn:bbf:yang:bbf-hardware-types">bbf-hwt:transceiver-link</class>
+        <parent>ontSfp_ont1</parent>
+        <parent-rel-pos>1</parent-rel-pos>
+    </component>
+
+    <!-- onu-side uni hardware -->
+    <component xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0">
+        <name>ontUni_ont1_1_1</name>
+        <class xmlns:bbf-hwt="urn:bbf:yang:bbf-hardware-types">bbf-hwt:transceiver-link</class>
+        <parent>ontCard_ont1_1</parent>
+        <parent-rel-pos>1</parent-rel-pos>
+    </component>
+</hardware>
+
+<interfaces xmlns="urn:ietf:params:xml:ns:yang:ietf-interfaces">
+    <!-- OLT Uplink Sub Interface network : IPv4, ARP -->
+    <interface xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0">
+        <name>ont1_vlan_network-ipv4</name>
+        <type xmlns:bbfift="urn:bbf:yang:bbf-if-type">bbfift:vlan-sub-interface</type>
+        <subif-lower-layer xmlns="urn:bbf:yang:bbf-sub-interfaces">
+            <interface>uplink_port_intf</interface>
+        </subif-lower-layer>
+        <interface-usage xmlns="urn:bbf:yang:bbf-interface-usage">
+            <interface-usage>network-port</interface-usage>
+        </interface-usage>
+        <enabled>true</enabled>
+        <inline-frame-processing xmlns="urn:bbf:yang:bbf-sub-interfaces">
+            <ingress-rule>
+                <rule>
+                    <name>rule_1</name>
+                    <priority>100</priority>
+                    <flexible-match>
+                        <match-criteria xmlns="urn:bbf:yang:bbf-sub-interface-tagging">
+                            <tag>
+                                <index>0</index>
+                                <dot1q-tag>
+                                    <tag-type xmlns:bbf-dot1qt="urn:bbf:yang:bbf-dot1q-types">bbf-dot1qt:c-vlan</tag-type>
+                                    <vlan-id>101</vlan-id>
+                                    <pbit>any</pbit>
+                                    <dei>any</dei>
+                                </dot1q-tag>
+                            </tag>
+                        </match-criteria>
+                    </flexible-match>
+                </rule>
+            </ingress-rule>
+        </inline-frame-processing>
+    </interface>
+
+    <!-- OLT Uplink Sub Interface network : PPPOE -->
+    <interface xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0">
+        <name>ont1_vlan_network-pppoe</name>
+        <type xmlns:bbfift="urn:bbf:yang:bbf-if-type">bbfift:vlan-sub-interface</type>
+        <subif-lower-layer xmlns="urn:bbf:yang:bbf-sub-interfaces">
+            <interface>uplink_port_intf</interface>
+        </subif-lower-layer>
+        <interface-usage xmlns="urn:bbf:yang:bbf-interface-usage">
+            <interface-usage>network-port</interface-usage>
+        </interface-usage>
+        <enabled>true</enabled>
+        <inline-frame-processing xmlns="urn:bbf:yang:bbf-sub-interfaces">
+            <ingress-rule>
+                <rule>
+                    <name>rule_1</name>
+                    <priority>100</priority>
+                    <flexible-match>
+                        <match-criteria xmlns="urn:bbf:yang:bbf-sub-interface-tagging">
+                            <tag>
+                                <index>0</index>
+                                <dot1q-tag>
+                                    <tag-type xmlns:bbf-dot1qt="urn:bbf:yang:bbf-dot1q-types">bbf-dot1qt:c-vlan</tag-type>
+                                    <vlan-id>201</vlan-id>
+                                    <pbit>any</pbit>
+                                    <dei>any</dei>
+                                </dot1q-tag>
+                            </tag>
+                        </match-criteria>
+                    </flexible-match>
+                </rule>
+            </ingress-rule>
+        </inline-frame-processing>
+    </interface>
+
+    <!-- OLT Uplink Sub Interface network : ipv6 -->
+    <interface xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0">
+        <name>ont1_vlan_network-ipv6</name>
+        <type xmlns:bbfift="urn:bbf:yang:bbf-if-type">bbfift:vlan-sub-interface</type>
+        <subif-lower-layer xmlns="urn:bbf:yang:bbf-sub-interfaces">
+            <interface>uplink_port_intf</interface>
+        </subif-lower-layer>
+        <interface-usage xmlns="urn:bbf:yang:bbf-interface-usage">
+            <interface-usage>network-port</interface-usage>
+        </interface-usage>
+        <enabled>true</enabled>
+        <inline-frame-processing xmlns="urn:bbf:yang:bbf-sub-interfaces">
+            <ingress-rule>
+                <rule>
+                    <name>rule_1</name>
+                    <priority>100</priority>
+                    <flexible-match>
+                        <match-criteria xmlns="urn:bbf:yang:bbf-sub-interface-tagging">
+                            <tag>
+                                <index>0</index>
+                                <dot1q-tag>
+                                    <tag-type xmlns:bbf-dot1qt="urn:bbf:yang:bbf-dot1q-types">bbf-dot1qt:c-vlan</tag-type>
+                                    <vlan-id>301</vlan-id>
+                                    <pbit>any</pbit>
+                                    <dei>any</dei>
+                                </dot1q-tag>
+                            </tag>
+                        </match-criteria>
+                    </flexible-match>
+                </rule>
+            </ingress-rule>
+        </inline-frame-processing>
+    </interface>
+
+    <!-- olt-side vani -->
+    <interface xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0">
+        <name>vAni_ont1</name>
+            <enabled>true</enabled>
+            <type xmlns:bbf-xponift="urn:bbf:yang:bbf-xpon-if-type">bbf-xponift:v-ani</type>
+            <v-ani xmlns="urn:bbf:yang:bbf-xponvani">
+                <channel-partition>CG_1.CPart_1</channel-partition>
+                <onu-id>1</onu-id>
+                <expected-serial-number>BRCM12345678</expected-serial-number>
+                <preferred-channel-pair>CG_1.CPart_1.CPair_gpon</preferred-channel-pair>
+            </v-ani>
+    </interface>
+
+    <!-- olt-side venet -->
+    <interface xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0">
+        <name>venet_uni_ont1_1_1</name>
+            <type xmlns:bbf-xponift="urn:bbf:yang:bbf-xpon-if-type">bbf-xponift:olt-v-enet</type>
+            <enabled>true</enabled>
+            <olt-v-enet xmlns="urn:bbf:yang:bbf-xponvani">
+                <lower-layer-interface>vAni_ont1</lower-layer-interface>
+            </olt-v-enet>
+    </interface>
+
+    <!-- OLT-ONT (VENET) VLAN Sub Interface : IPv4/ARP -->
+    <interface xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0">
+        <name>ont1_vlan_user-ipv4</name>
+        <type xmlns:bbfift="urn:bbf:yang:bbf-if-type">bbfift:vlan-sub-interface</type>
+        <subif-lower-layer xmlns="urn:bbf:yang:bbf-sub-interfaces">
+            <interface>venet_uni_ont1_1_1</interface>
+        </subif-lower-layer>
+        <interface-usage xmlns="urn:bbf:yang:bbf-interface-usage">
+            <interface-usage>user-port</interface-usage>
+        </interface-usage>
+        <enabled>true</enabled>
+        <inline-frame-processing xmlns="urn:bbf:yang:bbf-sub-interfaces">
+            <ingress-rule>
+                <rule>
+                    <name>rule_1</name>
+                    <priority>100</priority>
+                    <flexible-match>
+                        <match-criteria xmlns="urn:bbf:yang:bbf-sub-interface-tagging">
+                            <tag>
+                                <index>0</index>
+                                <dot1q-tag>
+                                    <tag-type xmlns:bbf-dot1qt="urn:bbf:yang:bbf-dot1q-types">bbf-dot1qt:c-vlan</tag-type>
+                                    <vlan-id>101</vlan-id>
+                                    <pbit>any</pbit>
+                                    <dei>any</dei>
+                                </dot1q-tag>
+                            </tag>
+                        </match-criteria>
+                    </flexible-match>
+                    <ingress-rewrite>
+                        <pop-tags xmlns="urn:bbf:yang:bbf-sub-interface-tagging">1</pop-tags>
+                        <push-tag xmlns="urn:bbf:yang:bbf-sub-interface-tagging">
+                            <index>0</index>
+                            <dot1q-tag>
+                                <tag-type xmlns:bbf-dot1qt="urn:bbf:yang:bbf-dot1q-types">bbf-dot1qt:c-vlan</tag-type>
+                                <vlan-id>101</vlan-id>
+                                <write-pbit>4</write-pbit>
+                                <write-dei-0/>
+                            </dot1q-tag>
+                        </push-tag>
+                    </ingress-rewrite>
+                </rule>
+            </ingress-rule>
+            <egress-rewrite>
+                <pop-tags xmlns="urn:bbf:yang:bbf-sub-interface-tagging">1</pop-tags>
+                <push-tag xmlns="urn:bbf:yang:bbf-sub-interface-tagging">
+                    <index>0</index>
+                    <dot1q-tag>
+                        <tag-type xmlns:bbf-dot1qt="urn:bbf:yang:bbf-dot1q-types">bbf-dot1qt:c-vlan</tag-type>
+                        <vlan-id>101</vlan-id>
+                        <write-pbit>4</write-pbit>
+                        <write-dei-0/>
+                    </dot1q-tag>
+                </push-tag>
+            </egress-rewrite>
+        </inline-frame-processing>
+
+        <!-- olt-side vlan sub-interface  qos -->
+        <ingress-qos-policy-profile xmlns="urn:bbf:yang:bbf-qos-policies">PP_IPV4</ingress-qos-policy-profile>
+        <egress-tm-objects xmlns="urn:bbf:yang:bbf-qos-enhanced-scheduling">
+            <root-if-name>CG_1.CPart_1</root-if-name>
+            <scheduler-node-name>NODE_DEF</scheduler-node-name>
+        </egress-tm-objects>
+    </interface>
+
+    <!-- OLT-ONT (VENET) VLAN Sub Interface : PPPOE -->
+    <interface xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0">
+        <name>ont1_vlan_user-pppoe</name>
+        <type xmlns:bbfift="urn:bbf:yang:bbf-if-type">bbfift:vlan-sub-interface</type>
+        <subif-lower-layer xmlns="urn:bbf:yang:bbf-sub-interfaces">
+            <interface>venet_uni_ont1_1_1</interface>
+        </subif-lower-layer>
+        <interface-usage xmlns="urn:bbf:yang:bbf-interface-usage">
+            <interface-usage>user-port</interface-usage>
+        </interface-usage>
+        <enabled>true</enabled>
+        <inline-frame-processing xmlns="urn:bbf:yang:bbf-sub-interfaces">
+            <ingress-rule>
+                <rule>
+                    <name>rule_1</name>
+                    <priority>100</priority>
+                    <flexible-match>
+                        <match-criteria xmlns="urn:bbf:yang:bbf-sub-interface-tagging">
+                            <tag>
+                                <index>0</index>
+                                <dot1q-tag>
+                                    <tag-type xmlns:bbf-dot1qt="urn:bbf:yang:bbf-dot1q-types">bbf-dot1qt:c-vlan</tag-type>
+                                    <vlan-id>201</vlan-id>
+                                    <pbit>any</pbit>
+                                    <dei>any</dei>
+                                </dot1q-tag>
+                            </tag>
+                        </match-criteria>
+                    </flexible-match>
+                </rule>
+            </ingress-rule>
+        </inline-frame-processing>
+
+        <!-- olt-side vlan sub-interface  qos -->
+        <ingress-qos-policy-profile xmlns="urn:bbf:yang:bbf-qos-policies">PP_PPPOE</ingress-qos-policy-profile>
+        <egress-tm-objects xmlns="urn:bbf:yang:bbf-qos-enhanced-scheduling">
+            <root-if-name>CG_1.CPart_1</root-if-name>
+            <scheduler-node-name>NODE_DEF</scheduler-node-name>
+        </egress-tm-objects>
+    </interface>
+
+    <!-- OLT-ONT (VENET) VLAN Sub Interface : IPv6 -->
+    <interface xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0">
+        <name>ont1_vlan_user-ipv6</name>
+        <type xmlns:bbfift="urn:bbf:yang:bbf-if-type">bbfift:vlan-sub-interface</type>
+        <subif-lower-layer xmlns="urn:bbf:yang:bbf-sub-interfaces">
+            <interface>venet_uni_ont1_1_1</interface>
+        </subif-lower-layer>
+        <interface-usage xmlns="urn:bbf:yang:bbf-interface-usage">
+            <interface-usage>user-port</interface-usage>
+        </interface-usage>
+        <enabled>true</enabled>
+        <inline-frame-processing xmlns="urn:bbf:yang:bbf-sub-interfaces">
+            <ingress-rule>
+                <rule>
+                    <name>rule_1</name>
+                    <priority>100</priority>
+                    <flexible-match>
+                        <match-criteria xmlns="urn:bbf:yang:bbf-sub-interface-tagging">
+                            <tag>
+                                <index>0</index>
+                                <dot1q-tag>
+                                    <tag-type xmlns:bbf-dot1qt="urn:bbf:yang:bbf-dot1q-types">bbf-dot1qt:c-vlan</tag-type>
+                                    <vlan-id>301</vlan-id>
+                                    <pbit>any</pbit>
+                                    <dei>any</dei>
+                                </dot1q-tag>
+                            </tag>
+                        </match-criteria>
+                    </flexible-match>
+                    <ingress-rewrite>
+                        <pop-tags xmlns="urn:bbf:yang:bbf-sub-interface-tagging">1</pop-tags>
+                        <push-tag xmlns="urn:bbf:yang:bbf-sub-interface-tagging">
+                            <index>0</index>
+                            <dot1q-tag>
+                                <tag-type xmlns:bbf-dot1qt="urn:bbf:yang:bbf-dot1q-types">bbf-dot1qt:c-vlan</tag-type>
+                                <vlan-id>301</vlan-id>
+                                <write-pbit>4</write-pbit>
+                                <write-dei-0/>
+                            </dot1q-tag>
+                        </push-tag>
+                    </ingress-rewrite>
+                </rule>
+            </ingress-rule>
+            <egress-rewrite>
+                <pop-tags xmlns="urn:bbf:yang:bbf-sub-interface-tagging">1</pop-tags>
+                <push-tag xmlns="urn:bbf:yang:bbf-sub-interface-tagging">
+                    <index>0</index>
+                    <dot1q-tag>
+                        <tag-type xmlns:bbf-dot1qt="urn:bbf:yang:bbf-dot1q-types">bbf-dot1qt:c-vlan</tag-type>
+                        <vlan-id>301</vlan-id>
+                        <write-pbit>4</write-pbit>
+                        <write-dei-0/>
+                    </dot1q-tag>
+                </push-tag>
+            </egress-rewrite>
+        </inline-frame-processing>
+
+        <!-- olt-side vlan sub-interface  qos -->
+        <ingress-qos-policy-profile xmlns="urn:bbf:yang:bbf-qos-policies">PP_IPV6</ingress-qos-policy-profile>
+        <egress-tm-objects xmlns="urn:bbf:yang:bbf-qos-enhanced-scheduling">
+            <root-if-name>CG_1.CPart_1</root-if-name>
+            <scheduler-node-name>NODE_DEF</scheduler-node-name>
+        </egress-tm-objects>
+    </interface>
+
+    <!-- onu-side ani -->
+    <interface xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0">
+        <name>ontAni_ont1</name>
+            <type xmlns:bbf-xponift="urn:bbf:yang:bbf-xpon-if-type">bbf-xponift:ani</type>
+            <enabled>true</enabled>
+            <port-layer-if xmlns="urn:bbf:yang:bbf-interface-port-reference">ontAniPort_ont1</port-layer-if>
+            <ani xmlns="urn:bbf:yang:bbf-xponani">
+                <management-gemport-aes-indicator>false</management-gemport-aes-indicator>
+                <upstream-fec>true</upstream-fec>
+                <onu-id>1</onu-id>
+            </ani>
+    </interface>
+
+    <!-- onu-side uni interface -->
+    <interface xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0">
+        <name>enet_uni_ont1_1_1</name>
+        <type xmlns:ianaift="urn:ietf:params:xml:ns:yang:iana-if-type">ianaift:ethernetCsmacd</type>
+        <enabled>true</enabled>
+        <port-layer-if xmlns="urn:bbf:yang:bbf-interface-port-reference">ontUni_ont1_1_1</port-layer-if>
+    </interface>
+
+    <!-- onu-side sub-interface: IPv4, ARP  -->
+    <interface xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0">
+        <name>enet_vlan_ont1-ipv4</name>
+        <type xmlns:bbfift="urn:bbf:yang:bbf-if-type">bbfift:vlan-sub-interface</type>
+        <enabled>true</enabled>
+        <subif-lower-layer xmlns="urn:bbf:yang:bbf-sub-interfaces">
+            <interface>enet_uni_ont1_1_1</interface>
+        </subif-lower-layer>
+        <inline-frame-processing xmlns="urn:bbf:yang:bbf-sub-interfaces">
+            <ingress-rule>
+                <rule>
+                    <name>rule_1</name>
+                    <priority>100</priority>
+                    <flexible-match>
+                        <match-criteria xmlns="urn:bbf:yang:bbf-sub-interface-tagging">
+                            <untagged/>
+                            <ethernet-frame-type>ipv4</ethernet-frame-type>
+                        </match-criteria>
+                    </flexible-match>
+                    <ingress-rewrite>
+                        <pop-tags xmlns="urn:bbf:yang:bbf-sub-interface-tagging">0</pop-tags>
+                        <push-tag xmlns="urn:bbf:yang:bbf-sub-interface-tagging">
+                            <index>0</index>
+                            <dot1q-tag>
+                                <tag-type xmlns:bbf-dot1qt="urn:bbf:yang:bbf-dot1q-types">bbf-dot1qt:c-vlan</tag-type>
+                                <vlan-id>101</vlan-id>
+                                <write-pbit>4</write-pbit>
+                                <write-dei-0/>
+                            </dot1q-tag>
+                        </push-tag>
+                    </ingress-rewrite>
+                </rule>
+                <rule>
+                    <name>rule_2</name>
+                    <priority>101</priority>
+                    <flexible-match>
+                        <match-criteria xmlns="urn:bbf:yang:bbf-sub-interface-tagging">
+                            <untagged/>
+                            <ethernet-frame-type>2054</ethernet-frame-type> <!-- ARP (0x806) -->
+                            <!--protocol xmlns="urn:bbf:yang:bbf-frame-classification">arp</protocol-->
+                        </match-criteria>
+                    </flexible-match>
+                    <ingress-rewrite>
+                        <pop-tags xmlns="urn:bbf:yang:bbf-sub-interface-tagging">0</pop-tags>
+                        <push-tag xmlns="urn:bbf:yang:bbf-sub-interface-tagging">
+                            <index>0</index>
+                            <dot1q-tag>
+                                <tag-type xmlns:bbf-dot1qt="urn:bbf:yang:bbf-dot1q-types">bbf-dot1qt:c-vlan</tag-type>
+                                <vlan-id>101</vlan-id>
+                                <write-pbit>4</write-pbit>
+                                <write-dei-0/>
+                            </dot1q-tag>
+                        </push-tag>
+                    </ingress-rewrite>
+                </rule>
+            </ingress-rule>
+            <egress-rewrite>
+                <pop-tags xmlns="urn:bbf:yang:bbf-sub-interface-tagging">1</pop-tags>
+            </egress-rewrite>
+        </inline-frame-processing>
+        <!-- onu-side  sub-interface Qos -->
+        <ingress-qos-policy-profile xmlns="urn:bbf:yang:bbf-qos-policies">PP_IPV4</ingress-qos-policy-profile>
+    </interface>
+
+    <!-- onu-side sub-interface: PPPOE  -->
+    <interface xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0">
+        <name>enet_vlan_ont1-pppoe</name>
+        <type xmlns:bbfift="urn:bbf:yang:bbf-if-type">bbfift:vlan-sub-interface</type>
+        <enabled>true</enabled>
+        <subif-lower-layer xmlns="urn:bbf:yang:bbf-sub-interfaces">
+            <interface>enet_uni_ont1_1_1</interface>
+        </subif-lower-layer>
+        <inline-frame-processing xmlns="urn:bbf:yang:bbf-sub-interfaces">
+            <ingress-rule>
+                <rule>
+                    <name>rule_1</name>
+                    <priority>100</priority>
+                    <flexible-match>
+                        <match-criteria xmlns="urn:bbf:yang:bbf-sub-interface-tagging">
+                            <untagged/>
+                            <ethernet-frame-type>34915</ethernet-frame-type> <!-- PPPoE (0x8863) -->
+                        </match-criteria>
+                    </flexible-match>
+                    <ingress-rewrite>
+                        <pop-tags xmlns="urn:bbf:yang:bbf-sub-interface-tagging">0</pop-tags>
+                        <push-tag xmlns="urn:bbf:yang:bbf-sub-interface-tagging">
+                            <index>0</index>
+                            <dot1q-tag>
+                                <tag-type xmlns:bbf-dot1qt="urn:bbf:yang:bbf-dot1q-types">bbf-dot1qt:c-vlan</tag-type>
+                                <vlan-id>201</vlan-id>
+                                <write-pbit>0</write-pbit>
+                                <write-dei-0/>
+                            </dot1q-tag>
+                        </push-tag>
+                    </ingress-rewrite>
+                </rule>
+                <rule>
+                    <name>rule_2</name>
+                    <priority>101</priority>
+                    <flexible-match>
+                        <match-criteria xmlns="urn:bbf:yang:bbf-sub-interface-tagging">
+                            <untagged/>
+                            <ethernet-frame-type>34916</ethernet-frame-type> <!-- PPPoE (0x8864) -->
+                        </match-criteria>
+                    </flexible-match>
+                    <ingress-rewrite>
+                        <pop-tags xmlns="urn:bbf:yang:bbf-sub-interface-tagging">0</pop-tags>
+                        <push-tag xmlns="urn:bbf:yang:bbf-sub-interface-tagging">
+                            <index>0</index>
+                            <dot1q-tag>
+                                <tag-type xmlns:bbf-dot1qt="urn:bbf:yang:bbf-dot1q-types">bbf-dot1qt:c-vlan</tag-type>
+                                <vlan-id>201</vlan-id>
+                                <write-pbit>0</write-pbit>
+                                <write-dei-0/>
+                            </dot1q-tag>
+                        </push-tag>
+                    </ingress-rewrite>
+                </rule>
+            </ingress-rule>
+            <egress-rewrite>
+                <pop-tags xmlns="urn:bbf:yang:bbf-sub-interface-tagging">1</pop-tags>
+            </egress-rewrite>
+        </inline-frame-processing>
+        <!-- onu-side  sub-interface Qos -->
+        <ingress-qos-policy-profile xmlns="urn:bbf:yang:bbf-qos-policies">PP_PPPOE</ingress-qos-policy-profile>
+    </interface>
+
+    <!-- onu-side sub-interface  -->
+    <interface xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0">
+        <name>enet_vlan_ont1-ipv6</name>
+        <type xmlns:bbfift="urn:bbf:yang:bbf-if-type">bbfift:vlan-sub-interface</type>
+        <enabled>true</enabled>
+        <subif-lower-layer xmlns="urn:bbf:yang:bbf-sub-interfaces">
+            <interface>enet_uni_ont1_1_1</interface>
+        </subif-lower-layer>
+        <inline-frame-processing xmlns="urn:bbf:yang:bbf-sub-interfaces">
+            <ingress-rule>
+                <rule>
+                    <name>rule_1</name>
+                    <priority>100</priority>
+                    <flexible-match>
+                        <match-criteria xmlns="urn:bbf:yang:bbf-sub-interface-tagging">
+                            <untagged/>
+                            <ethernet-frame-type>ipv6</ethernet-frame-type>
+                        </match-criteria>
+                    </flexible-match>
+                    <ingress-rewrite>
+                        <pop-tags xmlns="urn:bbf:yang:bbf-sub-interface-tagging">0</pop-tags>
+                        <push-tag xmlns="urn:bbf:yang:bbf-sub-interface-tagging">
+                            <index>0</index>
+                            <dot1q-tag>
+                                <tag-type xmlns:bbf-dot1qt="urn:bbf:yang:bbf-dot1q-types">bbf-dot1qt:c-vlan</tag-type>
+                                <vlan-id>301</vlan-id>
+                                <write-pbit>4</write-pbit>
+                                <write-dei-0/>
+                            </dot1q-tag>
+                        </push-tag>
+                    </ingress-rewrite>
+                </rule>
+            </ingress-rule>
+            <egress-rewrite>
+                <pop-tags xmlns="urn:bbf:yang:bbf-sub-interface-tagging">1</pop-tags>
+            </egress-rewrite>
+        </inline-frame-processing>
+        <!-- onu-side  sub-interface Qos -->
+        <ingress-qos-policy-profile xmlns="urn:bbf:yang:bbf-qos-policies">PP_IPV6</ingress-qos-policy-profile>
+    </interface>
+
+</interfaces>
+
+<!-- olt-side tcont and gemport-->
+<xpongemtcont xmlns="urn:bbf:yang:bbf-xpongemtcont">
+    <tconts>
+        <tcont xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0">
+            <name>tcont_ont1_ipv4</name>
+            <alloc-id>1024</alloc-id>
+            <interface-reference>vAni_ont1</interface-reference>
+            <traffic-descriptor-profile-ref>TDP_IPV4</traffic-descriptor-profile-ref>
+        </tcont>
+        <tcont xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0">
+            <name>tcont_ont1_pppoe</name>
+            <alloc-id>1025</alloc-id>
+            <interface-reference>vAni_ont1</interface-reference>
+            <traffic-descriptor-profile-ref>TDP_PPPOE</traffic-descriptor-profile-ref>
+        </tcont>
+        <tcont xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0">
+            <name>tcont_ont1_ipv6</name>
+            <alloc-id>1026</alloc-id>
+            <interface-reference>vAni_ont1</interface-reference>
+            <traffic-descriptor-profile-ref>TDP_IPV6</traffic-descriptor-profile-ref>
+        </tcont>
+    </tconts>
+    <gemports>
+        <gemport xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0">
+            <name>gem_ont1_ipv4</name>
+            <interface>venet_uni_ont1_1_1</interface>
+            <tcont-ref>tcont_ont1_ipv4</tcont-ref>
+            <traffic-class>0</traffic-class>
+            <gemport-id>1024</gemport-id>
+        </gemport>
+        <gemport xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0">
+            <name>gem_ont1_pppoe</name>
+            <interface>venet_uni_ont1_1_1</interface>
+            <tcont-ref>tcont_ont1_pppoe</tcont-ref>
+            <traffic-class>1</traffic-class>
+            <gemport-id>1025</gemport-id>
+        </gemport>
+        <gemport xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0">
+            <name>gem_ont1_ipv6</name>
+            <interface>venet_uni_ont1_1_1</interface>
+            <tcont-ref>tcont_ont1_ipv6</tcont-ref>
+            <traffic-class>2</traffic-class>
+            <gemport-id>1026</gemport-id>
+        </gemport>
+    </gemports>
+</xpongemtcont>

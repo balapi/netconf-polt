@@ -1,0 +1,74 @@
+<forwarding xmlns="urn:bbf:yang:bbf-l2-forwarding">
+  <forwarders>
+    <forwarder xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0" xc:operation="remove">
+      <name>ont1_600_10</name>
+    </forwarder>
+  </forwarders>
+</forwarding>
+
+<link-table xmlns="urn:bbf:yang:bbf-link-table">
+  <link-table xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0" xc:operation="remove">
+    <from-interface>ontAni_ont1</from-interface>
+  </link-table>
+  <link-table xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0" xc:operation="remove">
+    <from-interface>enet_uni_ont1_1_1</from-interface>
+  </link-table>
+</link-table>
+
+<interfaces xmlns="urn:ietf:params:xml:ns:yang:ietf-interfaces">
+  <interface xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0" xc:operation="remove">
+    <name>ont1_olt_uplink_vlan_network</name>
+  </interface>
+  <interface xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0" xc:operation="remove">
+    <name>vAni_ont1</name>
+  </interface>
+  <interface xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0" xc:operation="remove">
+    <name>venet_uni_ont1_1_1</name>
+  </interface>
+  <interface xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0" xc:operation="remove">
+    <name>ont1_venet_vlan_user</name>
+  </interface>
+  <interface xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0" xc:operation="remove">
+    <name>ontAni_ont1</name>
+  </interface>
+  <interface xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0" xc:operation="remove">
+    <name>enet_uni_ont1_1_1</name>
+  </interface>
+  <interface xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0" xc:operation="remove">
+    <name>enet_vlan_ont1</name>
+  </interface>
+</interfaces>
+
+<xpongemtcont xmlns="urn:bbf:yang:bbf-xpongemtcont">
+  <gemports>
+    <gemport xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0" xc:operation="remove">
+      <name>gem_ont1</name>
+    </gemport>
+  </gemports>
+  <tconts>
+    <tcont xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0" xc:operation="remove">
+      <name>tcont_ont1</name>
+    </tcont>
+  </tconts>
+</xpongemtcont>
+
+<hardware xmlns="urn:ietf:params:xml:ns:yang:ietf-hardware">
+  <component xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0" xc:operation="remove">
+    <name>ont1</name>
+  </component>
+  <component xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0" xc:operation="remove">
+    <name>ontCard_ont1_1</name>
+  </component>
+  <component xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0" xc:operation="remove">
+    <name>ontCage_ont1</name>
+  </component>
+  <component xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0" xc:operation="remove">
+    <name>ontSfp_ont1</name>
+  </component>
+  <component xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0" xc:operation="remove">
+    <name>ontAniPort_ont1</name>
+  </component>
+  <component xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0" xc:operation="remove">
+    <name>ontUni_ont1_1_1</name>
+  </component>
+</hardware>

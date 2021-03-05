@@ -114,7 +114,7 @@ module bbf-grpc-client {
     }
     // container channel
     container connection-backoff {
-      if-feature "connection-backoff-supported";
+      if-feature "bbf-grpc:connection-backoff-supported";
       description
         "The connection backoff directs how a client
          reconnects to a remote endpoint, after discovering

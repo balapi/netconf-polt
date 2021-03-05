@@ -9,27 +9,35 @@ set(YANG_MODEL_PACKAGE_VERSION "2.0")
 bcm_3rdparty_module_name(yang-models ${YANG_MODEL_PACKAGE_VERSION})
 bcm_3rdparty_add_dependencies(sysrepo)
 
-set(_TR_385_VERSION 3.1)
+set(_TR_385_VERSION issue2 CACHE STRING "TR-385 standard version")
 if(BCM_CONFIG_HOST MATCHES "x86")
     set(_SYSREPOCTL ${CMAKE_BINARY_DIR}/fs/bin/sysrepoctl)
 else()
     set(_SYSREPOCTL ${CMAKE_BINARY_DIR}/../host-sim/fs/bin/sysrepoctl)
 endif()
 set(_SYSREPOTOOL_WRAPPER ${CMAKE_BINARY_DIR}/fs/bin/sysrepotool.sh)
+if(SYSREPO_SHM_PREFIX AND NOT "${SYSREPO_SHM_PREFIX}" STREQUAL "none")
+    set(ENV{SYSREPO_SHM_PREFIX} ${SYSREPO_SHM_PREFIX})
+endif()
 
 bcm_make_normal_option(USE_OBBAA_YANG_MODELS bool "Use models from OB-BAA bundle" y)
 
 unset(_DIRS)
 if (USE_OBBAA_YANG_MODELS)
-    set(_OB_BAA_MODEL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/OB-BAA-standard-olt-adapter/yang)
+    if("${_TR_385_VERSION}" STREQUAL "issue2")
+        set(_OBBAA_VERSION 4.1)
+    else()
+        set(_OBBAA_VERSION 4.0)
+    endif()
+
+    set(_OB_BAA_MODEL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/OB-BAA-standard-olt-adapter/${_OBBAA_VERSION}/yang)
     list(APPEND _DIRS ${_OB_BAA_MODEL_DIR})
     set(_IETF_IANA_DIR ${_OB_BAA_MODEL_DIR})
     set(_TR_385_DIR ${_OB_BAA_MODEL_DIR})
-    set(_TR_385_COMMON_DIR ${_TR_385_DIR})
-    set(_TR_385_EQUIPMENT_DIR ${_TR_385_DIR})
-    set(_TR_385_NETWORKING_DIR ${_TR_385_DIR})
-    set(_TR_385_INTERFACE_DIR ${_TR_385_DIR})
-    set(TR385_ISSUE2 n CACHE BOOL "TR-385 Issue 2" FORCE)
+    set(_TR_385_COMMON_DIR ${_OB_BAA_MODEL_DIR})
+    set(_TR_385_EQUIPMENT_DIR ${_OB_BAA_MODEL_DIR})
+    set(_TR_385_NETWORKING_DIR ${_OB_BAA_MODEL_DIR})
+    set(_TR_385_INTERFACE_DIR ${_OB_BAA_MODEL_DIR})
 else()
     file(GLOB_RECURSE _DIRS_AND_FILES LIST_DIRECTORIES true ${CMAKE_CURRENT_SOURCE_DIR}/*)
     foreach(_DIR ${_DIRS_AND_FILES})
@@ -39,11 +47,13 @@ else()
     endforeach(_DIR)
     set(_IETF_IANA_DIR ${CMAKE_CURRENT_SOURCE_DIR}/IETF_IANA)
     set(_TR_385_DIR ${CMAKE_CURRENT_SOURCE_DIR}/BBF/TR-385/${_TR_385_VERSION}/standard)
-    set(TR385_ISSUE2 y CACHE BOOL "TR-385 Issue 2" FORCE)
     set(_TR_385_COMMON_DIR ${_TR_385_DIR}/common)
     set(_TR_385_EQUIPMENT_DIR ${_TR_385_DIR}/equipment)
     set(_TR_385_NETWORKING_DIR ${_TR_385_DIR}/networking)
     set(_TR_385_INTERFACE_DIR ${_TR_385_DIR}/interface)
+endif()
+if("${_TR_385_VERSION}" STREQUAL "issue2")
+    set(TR385_ISSUE2 y CACHE BOOL "TR-385 Issue 2" FORCE)
 endif()
 set(_TR_451_DIR ${CMAKE_CURRENT_SOURCE_DIR}/TR-451)
 
@@ -62,8 +72,6 @@ if (USE_OBBAA_YANG_MODELS)
         ${_IETF_IANA_DIR}/ietf-netconf-acm.yang
         ${_TR_385_EQUIPMENT_DIR}/bbf-hardware-types.yang
         ${_TR_385_EQUIPMENT_DIR}/bbf-hardware-extension.yang
-        ${_TR_385_EQUIPMENT_DIR}/bbf-hardware.yang
-        ${_TR_385_EQUIPMENT_DIR}/bbf-hardware-transceivers.yang
         ${_TR_385_INTERFACE_DIR}/bbf-sub-interfaces.yang
         ${_TR_385_INTERFACE_DIR}/bbf-sub-interface-tagging.yang
         ${_TR_385_NETWORKING_DIR}/bbf-qos-policing-types.yang
@@ -78,6 +86,7 @@ if (USE_OBBAA_YANG_MODELS)
         ${_TR_385_NETWORKING_DIR}/bbf-qos-policing.yang
         ${_TR_385_NETWORKING_DIR}/bbf-qos-types.yang
         ${_TR_385_NETWORKING_DIR}/bbf-qos-rate-control.yang
+        ${_TR_385_NETWORKING_DIR}/bbf-interface-port-reference.yang
         ${_TR_385_NETWORKING_DIR}/bbf-l2-forwarding.yang
         ${_TR_385_COMMON_DIR}/bbf-yang-types.yang
         ${_TR_385_COMMON_DIR}/bbf-dot1q-types.yang
@@ -91,7 +100,6 @@ if (USE_OBBAA_YANG_MODELS)
         ${_TR_385_INTERFACE_DIR}/bbf-link-table.yang
         ${_TR_385_INTERFACE_DIR}/bbf-xpongemtcont.yang
         ${_TR_385_INTERFACE_DIR}/bbf-xpon-onu-types.yang
-        ${_TR_385_INTERFACE_DIR}/bbf-xpon-onu-states.yang
         ${_TR_385_INTERFACE_DIR}/bbf-interface-usage.yang
         ${_TR_385_INTERFACE_DIR}/bbf-ghn.yang
         ${_TR_385_INTERFACE_DIR}/bbf-ghs.yang
@@ -145,21 +153,34 @@ else()
         ${_TR_385_INTERFACE_DIR}/bbf-link-table.yang
         ${_TR_385_INTERFACE_DIR}/bbf-xpongemtcont.yang
         ${_TR_385_INTERFACE_DIR}/bbf-xpon-onu-types.yang
-        ${_TR_385_INTERFACE_DIR}/bbf-xpon-onu-state.yang
         ${_TR_385_INTERFACE_DIR}/bbf-interface-usage.yang)
 
     set(ietf-hardware-features entity-mib hardware-state)
+    set(bbf-hardware-features additional-hardware-configuration model-name-configuration interface-hardware-reference hardware-component-reset)
 
 endif()
+
+if(TR385_ISSUE2)
+    list(APPEND _IMPORT_MODELS
+        ${_TR_385_EQUIPMENT_DIR}/bbf-hardware-transceivers-xpon.yang
+        ${_TR_385_INTERFACE_DIR}/bbf-xpon-onu-state.yang
+        ${_TR_385_INTERFACE_DIR}/bbf-xpon-defects.yang
+        ${_TR_385_INTERFACE_DIR}/bbf-xpon-performance-management.yang
+        ${_TR_385_INTERFACE_DIR}/bbf-xpon-power-management.yang)
+else()
+    list(APPEND _IMPORT_MODELS
+        ${_TR_385_INTERFACE_DIR}/bbf-xpon-onu-states.yang)
+endif()
+
 set(ietf-interfaces-features arbitrary-names pre-provisioning if-mib)
 set(ietf-hardware-features hardware-state)
 set(bbf-xpongemtcont-features configurable-gemport-id configurable-alloc-id)
 set(bbf-xponvani-features configurable-v-ani-onu-id configurable-v-ani-management-gem-port-id)
 set(bbf-xponani-features configurable-ani-onu-id configurable-ani-management-gem-port-id)
+set(bbf-xpon-features pon-pools)
 set(bbf-sub-interfaces-features tag-rewrites)
 set(bbf-sub-interface-tagging-features write-pbit-value-in-vlan-tag copy-vlan-id-from-tag-index)
 set(bbf-l2-forwarding-features forwarding-databases shared-forwarding-databases mac-learning split-horizon-profiles)
-set(bbf-hardware-features additional-hardware-configuration model-name-configuration interface-hardware-reference hardware-component-reset)
 
 # Import WT-451 models
 list(APPEND _IMPORT_MODELS
@@ -171,6 +192,7 @@ list(APPEND _IMPORT_MODELS
     ${_TR_451_DIR}/common/bbf-nf-endpoint-filter.yang
     ${_TR_451_DIR}/common/bbf-nf-server.yang
     ${_TR_451_DIR}/polt/bbf-polt-vomci.yang)
+set(ietf-tcp-client-features local-binding-supported)
 set(bbf-polt-vomci-features nf-client-supported nf-server-supported)
 list(APPEND _DIRS ${_TR_451_DIR}/standard ${_TR_451_DIR}/common ${_TR_451_DIR}/types)
 

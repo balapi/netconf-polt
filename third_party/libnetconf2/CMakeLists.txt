@@ -6,7 +6,7 @@ bcm_make_debug_option(NETCONF_TOOLS_FROM_DEVEL BOOL "Take netopeer2, sysrepo, li
 if(NETCONF_TOOLS_FROM_DEVEL)
     set(_VERSION "devel")
 else()
-    set(_VERSION "1.1.26")
+    set(_VERSION "1.1.36")
 endif()
 bcm_3rdparty_module_name(libnetconf2 ${_VERSION})
 

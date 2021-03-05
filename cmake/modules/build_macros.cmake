@@ -105,6 +105,10 @@ endif()
 bcm_create_global_compile_definition(BCM_OS ${OS})
 bcm_make_normal_option(IGNORE_STRIP BOOL "Ignore the STRIP directive on targets and install the target with symbols" n)
 
+# The release build will set this to 'n' to not pollute the install directory
+# We don't need this to be a 'make' option, but we want it in the cache.
+set(BCM_INSTALL_STRIP_SYMBOLS y CACHE BOOL "Whether to install stipped symbols or not")
+
 # Define the extension to use for header-only libraries we build internally
 set(_HEADER_ONLY_EXT    HDRONLY)
 set(_KERNEL_EXT         kernel)
@@ -230,32 +234,41 @@ endmacro(_bcm_add_module_system_libraries)
 #======
 macro(_bcm_add_module_cflags TARGET_NAME)
     if(NOT DEFINED _MOD_SRCS)
-        if(DEFINED _MOD_PUBLIC_CFLAGS)
+        if(_MOD_PUBLIC_CFLAGS)
             target_compile_options(${TARGET_NAME} INTERFACE ${_MOD_PUBLIC_CFLAGS})
             bcm_stringify_flags(_MY_LINKER_FLAGS ${_MOD_PUBLIC_CFLAGS})
             set_target_properties(${TARGET_NAME} PROPERTIES LINK_FLAGS "${_MY_LINKER_FLAGS}")
         endif()
     else ()
         if(NOT "${DISABLE_EXTRA_WARNINGS}")
-            if(DEFINED BCM_EXTRA_C_WARNINGS)
+            if(BCM_EXTRA_C_WARNINGS)
                 bcm_stringify_flags(BCM_WARNING_FLAGS ${BCM_EXTRA_C_WARNINGS})
                 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${BCM_WARNING_FLAGS}")
                 bcm_string_remove_duplicates(CMAKE_C_FLAGS ${CMAKE_C_FLAGS})
             endif()
-            if(DEFINED BCM_EXTRA_CXX_WARNINGS)
+            if(BCM_EXTRA_CXX_WARNINGS)
                 bcm_stringify_flags(BCM_WARNING_FLAGS ${BCM_EXTRA_CXX_WARNINGS})
                 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${BCM_WARNING_FLAGS}")
                 bcm_string_remove_duplicates(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
             endif()
         endif()
-        if(DEFINED _MOD_PUBLIC_CFLAGS)
+        if(_MOD_PUBLIC_CFLAGS)
             target_compile_options(${TARGET_NAME} PUBLIC ${_MOD_PUBLIC_CFLAGS})
             bcm_stringify_flags(_MY_LINKER_FLAGS ${_MOD_PUBLIC_CFLAGS})
             set_target_properties(${TARGET_NAME} PROPERTIES LINK_FLAGS "${_MY_LINKER_FLAGS}")
         endif()
-        if(DEFINED _MOD_PRIVATE_CFLAGS)
-            target_compile_options(${TARGET_NAME} PRIVATE ${_MOD_PRIVATE_CFLAGS})
-            bcm_stringify_flags(_MY_LINKER_FLAGS ${_MOD_PRIVATE_CFLAGS})
+        if(_MOD_PRIVATE_CFLAGS)
+            # For private flags, we only apply them to C and CXX files
+            unset(_C_SOURCE_FILES)
+            foreach(_SRC ${_MOD_SRCS})
+                get_source_file_property(_SRC_LANG ${_SRC} LANGUAGE)
+                if("${_SRC_LANG}" STREQUAL "C" OR "${_SRC_LANG}" STREQUAL "CXX")
+                    list(APPEND _C_SOURCE_FILES ${_SRC})
+                 endif()
+            endforeach(_SRC)
+
+            bcm_stringify_flags(_MY_FLAGS ${_MOD_PRIVATE_CFLAGS})
+            set_source_files_properties(${_C_SOURCE_FILES} PROPERTIES COMPILE_FLAGS "${_MY_FLAGS}")
             set_target_properties(${TARGET_NAME} PROPERTIES LINK_FLAGS "${_MY_LINKER_FLAGS}")
         endif()
     endif()
@@ -382,7 +395,7 @@ macro(_bcm_strip_symbols TARGET)
                            COMMAND ${BCM_OBJCOPY} --add-gnu-debuglink=${_STRIP_OUTPUT_DIR}/${TARGET}.debug_symbols
                                    ${_STRIP_OUTPUT_DIR}/$<TARGET_FILE_NAME:${TARGET}>
                            COMMAND tar -czf ${_STRIP_OUTPUT_DIR}/${TARGET}.debug_symbols.tar.gz
-                                   ${_STRIP_OUTPUT_DIR}/${TARGET}.debug_symbols
+                                   -C ${_STRIP_OUTPUT_DIR} ${TARGET}.debug_symbols
                            COMMENT "Stripping symbols from ${TARGET}")
     endif()
 endmacro(_bcm_strip_symbols)
@@ -397,8 +410,10 @@ endmacro(_bcm_strip_symbols)
 macro(_bcm_strip_install TARGET INSTALL_DIR)
     set(_STRIP_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/strip)
     if("${SUBSYSTEM}" STREQUAL "host")
-        install(FILES ${CMAKE_CURRENT_BINARY_DIR}/strip/$<TARGET_FILE_NAME:${TARGET}> DESTINATION ${_INSTALL_DIR})
-        install(FILES ${CMAKE_CURRENT_BINARY_DIR}/strip/${TARGET}.debug_symbols.tar.gz DESTINATION symbols)
+        install(FILES ${CMAKE_CURRENT_BINARY_DIR}/strip/$<TARGET_FILE_NAME:${TARGET}> DESTINATION ${INSTALL_DIR})
+        if(BCM_INSTALL_STRIP_SYMBOLS)
+            install(FILES ${CMAKE_CURRENT_BINARY_DIR}/strip/${TARGET}.debug_symbols.tar.gz DESTINATION ${INSTALL_DIR})
+        endif(BCM_INSTALL_STRIP_SYMBOLS)
     endif()
 endmacro(_bcm_strip_install)
 
@@ -543,10 +558,10 @@ endmacro(_bcm_module_globals_clear)
 # are set for _MOD_NAME, but an optional alternative target can be given. The alternate is used when adding
 # the kernel module targets for libraries.
 #
-# @param ARGV0          [in] Optional alternate target, default is the _MOD_NAME global
+# @param ARGN           [in] Optional alternate target, default is the _MOD_NAME global
 #======
 macro(_bcm_module_add_target_specifics)
-    set(_OPTIONAL_MOD_NAME ${ARGV0})
+    set(_OPTIONAL_MOD_NAME ${ARGN})
 
     if(DEFINED _OPTIONAL_MOD_NAME)
         set(_TARGET_NAME ${_OPTIONAL_MOD_NAME})
@@ -625,6 +640,7 @@ endfunction(_bcm_add_to_global_cache_var)
 #======
 macro(bcm_module_name MOD_NAME)
     set(_MOD_NAME ${MOD_NAME})
+    set(${_MOD_NAME}_EXISTS y CACHE BOOL "${_MOD_NAME} Exists" FORCE)
     set(${_MOD_NAME}_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR} CACHE FILEPATH "${_MOD_NAME} Source Directory" FORCE)
     set(${_MOD_NAME}_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR} CACHE FILEPATH "${_MOD_NAME} Build Directory" FORCE)
     set(${_MOD_NAME}_PUBLIC_DEPS ${_MOD_PUBLIC_DEPS} CACHE STRING "${_MOD_NAME} Public Dependencies" FORCE)
@@ -1328,11 +1344,15 @@ macro(bcm_create_linux_module_target)
     _bcm_create_linux_common(_KMODULE_SOURCE_CACHE_FILE MODULE ${_KERNEL_TARGET})
 
     # Create the link command we will use. The link command needs to be a string, so we first create a list,
-    # then convert to string.
+    # then convert to string. Note that we only include the CROSS_COMPILE if it is set.
+    if(CROSS_COMPILE)
+        set(_KMODULE_CROSS_COMPILE "-c ${CROSS_COMPILE}")
+    endif(CROSS_COMPILE)
+
     bcm_stringify_flags(_KMODULE_LINK_CMD
-                        ${_KMODULE_LINK_SCRIPT} ${KERNELDIR} ${KERNEL_ARCH} ${CROSS_COMPILE}
-                        ${_MOD_NAME} ${CMAKE_CURRENT_BINARY_DIR} ${_KMODULE_SOURCE_CACHE_FILE}
-                        ${CMAKE_VERBOSE_MAKEFILE})
+                        ${_KMODULE_LINK_SCRIPT} -l ${KERNELDIR} -a ${KERNEL_ARCH} ${_KMODULE_CROSS_COMPILE}
+                        -m ${_MOD_NAME} -b ${CMAKE_CURRENT_BINARY_DIR} -f ${_KMODULE_SOURCE_CACHE_FILE}
+                        -v ${CMAKE_VERBOSE_MAKEFILE})
 
     set_property(TARGET ${_KERNEL_TARGET} PROPERTY RULE_LAUNCH_LINK ${_KMODULE_LINK_CMD})
 

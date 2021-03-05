@@ -1,22 +1,22 @@
 /*
  *  <:copyright-BRCM:2016-2020:Apache:standard
- *  
+ *
  *   Copyright (c) 2016-2020 Broadcom. All Rights Reserved
- *  
+ *
  *   The term “Broadcom” refers to Broadcom Inc. and/or its subsidiaries
- *  
+ *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
  *   You may obtain a copy of the License at
- *  
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *   Unless required by applicable law or agreed to in writing, software
  *   distributed under the License is distributed on an "AS IS" BASIS,
  *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
- *  
+ *
  *  :>
  *
  *****************************************************************************/
@@ -78,6 +78,8 @@ void xpon_enet_delete(xpon_enet *enet)
         xpon_vlan_subif_delete(subif);
     }
     xpon_unlink(&enet->linked_if);
+    if (enet->lower_layer && enet->lower_layer->created_by_forward_reference)
+        xpon_interface_delete(enet->lower_layer);
     STAILQ_REMOVE_SAFE(&enet_list, &enet->hdr, xpon_obj_hdr, next);
     NC_LOG_INFO("enet %s deleted\n", enet->hdr.name);
     xpon_object_delete(&enet->hdr);
@@ -103,6 +105,12 @@ bcmos_errno xpon_enet_transaction(sr_session_ctx_t *srs, nc_transact *tr)
     err = xpon_enet_get_by_name(keyname, &enet, &was_added);
     if (err != BCM_ERR_OK)
         return err;
+    /* If the interface has already been created by forward reference - stop here */
+    if (enet->hdr.created_by_forward_reference)
+    {
+        enet->hdr.created_by_forward_reference = BCMOS_FALSE;
+        return BCM_ERR_OK;
+    }
 
     /* Go over transaction elements and map to BAL */
     STAILQ_FOREACH(elem, &tr->elems, next)
@@ -130,8 +138,8 @@ bcmos_errno xpon_enet_transaction(sr_session_ctx_t *srs, nc_transact *tr)
             if (elem->new_val != NULL)
             {
                 const char *if_name = val->data.string_val;
-                err = xpon_object_get(if_name, &hdr);
-                if (err != BCM_ERR_OK && (elem->new_val != NULL))
+                err = xpon_interface_get_populate(srs, if_name, XPON_OBJ_TYPE_ANY, &hdr);
+                if (err != BCM_ERR_OK)
                 {
                     NC_ERROR_REPLY(srs, iter_xpath, "enet %s references lower-layer-interface %s which doesn't exist\n",
                         keyname, if_name);
@@ -151,11 +159,15 @@ bcmos_errno xpon_enet_transaction(sr_session_ctx_t *srs, nc_transact *tr)
     {
         /* Copy properties as more are added */
         XPON_PROP_COPY(&changes, enet, enet, lower_layer);
+        changes.lower_layer = NULL;
         XPON_PROP_COPY(&changes, enet, enet, usage);
     }
 
     if ((err != BCM_ERR_OK && was_added) || changes.hdr.being_deleted)
         xpon_enet_delete(enet);
+
+    if (changes.lower_layer && changes.lower_layer->created_by_forward_reference)
+        xpon_interface_delete(changes.lower_layer);
 
     if (changes.hdr.being_deleted)
         err = BCM_ERR_OK;

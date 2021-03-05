@@ -154,6 +154,10 @@ bcmos_errno BcmPoltClient::Hello(const Endpoint *entry)
     HelloVomciRequest hello_request;
     HelloVomciResponse hello_response;
     Status status;
+
+    OltHello *olt = new OltHello();
+    olt->set_olt_name(polt_name);
+    hello_request.set_allocated_olt(olt);
     status = hello_stub_->HelloVomci(&context, hello_request, &hello_response);
     if (!status.ok())
     {

@@ -1,27 +1,3 @@
-<!-- olt-side  uplink hardware -->
-<hardware xmlns="urn:ietf:params:xml:ns:yang:ietf-hardware">
-    <component>
-        <name>uplink_port</name>
-        <class xmlns:bbf-hwt="urn:bbf:yang:bbf-hardware-types">bbf-hwt:transceiver-link</class>
-    </component>
-
-   <!-- olt-side  sfp -->
-    <component>
-        <name>SFP2</name>
-        <parent-rel-pos>1</parent-rel-pos>
-        <expected-model-name xmlns="urn:bbf:yang:bbf-hardware">3FE66606AD01</expected-model-name>
-        <class xmlns:bbf-hwt="urn:bbf:yang:bbf-hardware-types">bbf-hwt:transceiver</class>
-   </component>
-
-   <!-- olt-side  port -->
-   <component>
-      <name>PORT2</name>
-      <parent>SFP2</parent>
-      <parent-rel-pos>2</parent-rel-pos>
-      <class xmlns:bbf-hwt="urn:bbf:yang:bbf-hardware-types">bbf-hwt:transceiver-link</class>
-   </component>
-</hardware>
-
 <bbf-xpon:xpon xmlns:bbf-xpon="urn:bbf:yang:bbf-xpon">
    <bbf-xpon:wavelength-profiles>
       <bbf-xpon:wavelength-profile>
@@ -35,41 +11,56 @@
 <if:interfaces xmlns:if="urn:ietf:params:xml:ns:yang:ietf-interfaces">
    <if:interface>
       <if:name>channelgroup.1</if:name>
-      <if:type xmlns:bbf-xponift="urn:bbf:yang:bbf-xpon-if-type">bbf-xponift:channel-group</if:type>
-      <bbf-xpon:channel-group xmlns:bbf-xpon="urn:bbf:yang:bbf-xpon">
-      </bbf-xpon:channel-group>
+      <if:type xmlns:bbf-xponift="urn:bbf:yang:bbf-xpon-if-type">bbf-xponift:channel-group</type>
+      <if:enabled>true</enabled>
+      <channel-group xmlns="urn:bbf:yang:bbf-xpon">
+         <polling-period>100</polling-period>
+         <raman-mitigation>raman-none</raman-mitigation>
+         <system-id>00000</system-id>
+         <pon-pools>
+            <pon-pool>
+               <name>pool1</name>
+               <channel-termination-ref>channeltermination.1</channel-termination-ref>
+            </pon-pool>
+         </pon-pools>
+      </channel-group>
    </if:interface>
    <if:interface>
       <if:name>channelpartition.1</if:name>
-      <if:type xmlns:bbf-xponift="urn:bbf:yang:bbf-xpon-if-type">bbf-xponift:channel-partition</if:type>
-      <bbf-xpon:channel-partition xmlns:bbf-xpon="urn:bbf:yang:bbf-xpon">
-         <bbf-xpon:channel-group-ref>channelgroup.1</bbf-xpon:channel-group-ref>
-         <bbf-xpon:channel-partition-index>0</bbf-xpon:channel-partition-index>
-         <bbf-xpon:closest-onu-distance>0</bbf-xpon:closest-onu-distance>
-         <bbf-xpon:maximum-differential-xpon-distance>20</bbf-xpon:maximum-differential-xpon-distance>
-         <bbf-xpon:authentication-method>serial-number</bbf-xpon:authentication-method>
-      </bbf-xpon:channel-partition>
+      <if:type xmlns:bbf-xponift="urn:bbf:yang:bbf-xpon-if-type">bbf-xponift:channel-partition</type>
+      <if:enabled>true</enabled>
+      <channel-partition xmlns="urn:bbf:yang:bbf-xpon">
+         <channel-group-ref>channelgroup.1</channel-group-ref>
+         <channel-partition-index>0</channel-partition-index>
+         <closest-onu-distance>0</closest-onu-distance>
+         <maximum-differential-xpon-distance>20</maximum-differential-xpon-distance>
+         <authentication-method>serial-number</authentication-method>
+      </channel-partition>
    </if:interface>
    <if:interface>
       <if:name>channelpair.1</if:name>
-      <if:type xmlns:bbf-xponift="urn:bbf:yang:bbf-xpon-if-type">bbf-xponift:channel-pair</if:type>
-      <bbf-xpon:channel-pair xmlns:bbf-xpon="urn:bbf:yang:bbf-xpon">
-         <bbf-xpon:channel-partition-ref>channelpartition.1</bbf-xpon:channel-partition-ref>
-         <bbf-xpon:channel-group-ref>channelgroup.1</bbf-xpon:channel-group-ref>
-         <bbf-xpon:wavelength-prof-ref>wavelengthprofile.A</bbf-xpon:wavelength-prof-ref>
-         <bbf-xpon:channel-pair-type xmlns:bbf-xpon-types="urn:bbf:yang:bbf-xpon-types">bbf-xpon-types:xgs</bbf-xpon:channel-pair-type>
-      </bbf-xpon:channel-pair>
+      <if:type xmlns:bbf-xponift="urn:bbf:yang:bbf-xpon-if-type">bbf-xponift:channel-pair</type>
+      <if:enabled>true</enabled>
+      <channel-pair xmlns="urn:bbf:yang:bbf-xpon">
+         <channel-partition-ref>channelpartition.1</channel-partition-ref>
+         <channel-group-ref>channelgroup.1</channel-group-ref>
+         <wavelength-prof-ref>wavelengthprofile.A</wavelength-prof-ref>
+         <channel-pair-type xmlns:bbf-xpon-types="urn:bbf:yang:bbf-xpon-types">bbf-xpon-types:xgs</channel-pair-type>
+      </channel-pair>
       </if:interface>
       <if:interface>
          <if:name>channeltermination.1</if:name>
-         <if:type xmlns:bbf-xponift="urn:bbf:yang:bbf-xpon-if-type">bbf-xponift:channel-termination</if:type>
-         <bbf-xpon:channel-termination xmlns:bbf-xpon="urn:bbf:yang:bbf-xpon">
-            <bbf-xpon:channel-pair-ref>channelpair.1</bbf-xpon:channel-pair-ref>
-            <bbf-xpon:channel-termination-type xmlns:bbf-xpon-types="urn:bbf:yang:bbf-xpon-types">bbf-xpon-types:xgs</bbf-xpon:channel-termination-type>
-            <bbf-xpon:xgs-pon-id>0</bbf-xpon:xgs-pon-id>
-            <bbf-xpon:location xmlns:bbf-xpon-types="urn:bbf:yang:bbf-xpon-types">bbf-xpon-types:inside-olt</bbf-xpon:location>
-         </bbf-xpon:channel-termination>
-         <port-layer-if xmlns="urn:bbf:yang:bbf-hardware">PORT2</port-layer-if>
+         <if:type xmlns:bbf-xponift="urn:bbf:yang:bbf-xpon-if-type">bbf-xponift:channel-termination</type>
+         <if:enabled>true</enabled>
+         <channel-termination xmlns="urn:bbf:yang:bbf-xpon" xmlns:bbf-xpon-onu-s="urn:bbf:yang:bbf-xpon-onu-state" xmlns:bbf-xpon-onu-types="urn:bbf:yang:bbf-xpon-onu-types">
+            <channel-pair-ref>channelpair.1</channel-pair-ref>
+            <channel-termination-type xmlns:bbf-xpon-types="urn:bbf:yang:bbf-xpon-types">bbf-xpon-types:xgs</channel-termination-type>
+            <xgs-pon-id>0</xgs-pon-id>
+            <location xmlns:bbf-xpon-types="urn:bbf:yang:bbf-xpon-types">bbf-xpon-types:inside-olt</location>
+            <bbf-xpon-onu-s:notifiable-onu-presence-states>bbf-xpon-onu-types:onu-present-and-on-intended-channel-termination</notifiable-onu-presence-states>
+            <bbf-xpon-onu-s:notifiable-onu-presence-states>bbf-xpon-onu-types:onu-present-and-v-ani-known-and-o5-failed</notifiable-onu-presence-states>
+         </channel-termination>
+         <port-layer-if xmlns="urn:bbf:yang:bbf-interface-port-reference">PORT2</port-layer-if>
       </if:interface>
    <if:interface>
       <if:name>uplink.1</if:name>
@@ -77,3 +68,26 @@
    </if:interface>
 </if:interfaces>
 
+<!-- olt-side hardware -->
+<hardware xmlns="urn:ietf:params:xml:ns:yang:ietf-hardware">
+    <component>
+        <name>uplink_port</name>
+        <class xmlns:bbf-hwt="urn:bbf:yang:bbf-hardware-types">bbf-hwt:transceiver-link</class>
+    </component>
+
+   <!-- olt-side  sfp -->
+    <component>
+        <name>SFP2</name>
+        <parent-rel-pos>1</parent-rel-pos>
+        <!--expected-model-name xmlns="urn:bbf:yang:bbf-hardware">3FE66606AD01</expected-model-name-->
+        <class xmlns:bbf-hwt="urn:bbf:yang:bbf-hardware-types">bbf-hwt:transceiver</class>
+   </component>
+
+   <!-- olt-side  port -->
+   <component>
+      <name>PORT2</name>
+      <parent>SFP2</parent>
+      <parent-rel-pos>2</parent-rel-pos>
+      <class xmlns:bbf-hwt="urn:bbf:yang:bbf-hardware-types">bbf-hwt:transceiver-link</class>
+   </component>
+</hardware>

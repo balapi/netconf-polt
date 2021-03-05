@@ -182,33 +182,46 @@ endmacro(bcm_stringify_flags)
 
 #======
 # This function will create a target from the given output files and then apply that as a dependency to the
-# master target. The individual targets are named with an increasing index.
+# master target. The individual targets are named with an increasing index. To avoid issues with parallel builds
+# we make each new target dependent on the previous one. That way one codegen has to complete before the next.
 #
 # @param MASTER_TARGET  [in] Master target relying on the given files
 # @param ARGN           [in] Files that we want to add as a dependency
 #======
 function(bcm_add_output_file_dependency MASTER_TARGET)
     set(_MY_FILES ${ARGN})
-    set(_MY_INDEX _BCM_${MASTER_TARGET}_INDEX)
 
-    # Initialize the index if not yet present
-    if(NOT ${_MY_INDEX})
-        set(${_MY_INDEX} 1)
-    endif()
-
-    # Add the target that contains these files. We do this because files can not be added to a target with
-    # 'add_dependencies'. Only targets can be added that way.
-    add_custom_target(${MASTER_TARGET}_${${_MY_INDEX}} DEPENDS ${_MY_FILES})
-
-    # Add  the main target (the given one) if it doesn't exist, then add the dependency on the above target.
-    if(NOT TARGET ${MASTER_TARGET})
+    # If this is the first time in the master target is not present. Use this to reset the index count
+    if(TARGET ${MASTER_TARGET})
+        set(_MY_INDEX ${_BCM_${MASTER_TARGET}_INDEX})
+        set(_LAST_TARGET ${MASTER_TARGET}_${_MY_INDEX})
+        math(EXPR _MY_INDEX ${_MY_INDEX}+1)
+    else()
+        set(_MY_INDEX 1)
+        set(_LAST_TARGET ${MASTER_TARGET})
         add_custom_target(${MASTER_TARGET})
     endif()
 
-    add_dependencies(${MASTER_TARGET} ${MASTER_TARGET}_${${_MY_INDEX}})
+    set(_THIS_TARGET ${MASTER_TARGET}_${_MY_INDEX})
+
+    # Add the target that contains these files. We do this because files can not be added to a target with
+    # 'add_dependencies'. Only targets can be added that way.
+    add_custom_target(${_THIS_TARGET} DEPENDS ${_MY_FILES})
+    add_dependencies(${_LAST_TARGET} ${_THIS_TARGET})
 
     # Update the index and write to the cache.
-    math(EXPR ${_MY_INDEX} ${${_MY_INDEX}}+1)
-    set(${_MY_INDEX} ${${_MY_INDEX}} CACHE INTERNAL "Count for ${MASTER_TARGET} dependencies" FORCE)
+    set(_BCM_${MASTER_TARGET}_INDEX ${_MY_INDEX} CACHE INTERNAL "Count for ${MASTER_TARGET} dependencies" FORCE)
 endfunction(bcm_add_output_file_dependency)
+
+#======
+# Macro to remove language flags for a module. This allows overrides of flags for a particular module.
+#
+# @param LANG           [in] Language for the flags (e.g. C, CXX)
+# @param ARGN           [in] List of flags to remove (Can be regular expressions)
+#======
+macro(bcm_module_remove_flags LANG)
+    foreach(_FLAG ${ARGN})
+        string(REGEX REPLACE ${_FLAG} "" CMAKE_${LANG}_FLAGS ${CMAKE_${LANG}_FLAGS})
+    endforeach(_FLAG)
+endmacro(bcm_module_remove_flags)
 
