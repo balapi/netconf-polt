@@ -27,6 +27,7 @@ if(NETCONF_SERVER)
         bbf-hardware.c
         bbf-xpon-apply-flow-config.c
         dhcp-relay-utils.c
-        bbf-l2-dhcpv4-relay.c)
+        bbf-l2-dhcpv4-relay.c
+        bbf-xpon-tm-mgmt.c)
     bcm_create_lib_target()
 endif()

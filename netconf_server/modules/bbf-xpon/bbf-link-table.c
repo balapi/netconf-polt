@@ -1,22 +1,22 @@
 /*
  *  <:copyright-BRCM:2016-2020:Apache:standard
- *  
+ *
  *   Copyright (c) 2016-2020 Broadcom. All Rights Reserved
- *  
+ *
  *   The term “Broadcom” refers to Broadcom Inc. and/or its subsidiaries
- *  
+ *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
  *   You may obtain a copy of the License at
- *  
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *   Unless required by applicable law or agreed to in writing, software
  *   distributed under the License is distributed on an "AS IS" BASIS,
  *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
- *  
+ *
  *  :>
  *
  *****************************************************************************/
@@ -175,6 +175,8 @@ static int _link_change_cb(sr_session_ctx_t *srs, const char *module_name,
     int sr_rc;
     bcmos_errno err = BCM_ERR_OK;
 
+    nc_config_lock();
+
     NC_LOG_INFO("xpath=%s event=%d\n", xpath, event);
 
     /* We only handle CHANGE and ABORT events.
@@ -184,7 +186,10 @@ static int _link_change_cb(sr_session_ctx_t *srs, const char *module_name,
      * ABORT event will roll-back the changes.
      */
     if (event == SR_EV_DONE)
+    {
+        nc_config_unlock();
         return SR_ERR_OK;
+    }
 
     snprintf(qualified_xpath, sizeof(qualified_xpath)-1, "%s//.", xpath);
     qualified_xpath[sizeof(qualified_xpath)-1] = 0;
@@ -234,22 +239,23 @@ static int _link_change_cb(sr_session_ctx_t *srs, const char *module_name,
             {
                 err = _link_apply(srs, prev_xpath, from_if, to_if, being_deleted);
                 if (err != BCM_ERR_OK)
-                {
-                    from_if = NULL;
-                    to_if = NULL;
                     break;
-                }
+
                 from_if = NULL;
                 to_if = NULL;
             }
-            err = xpon_object_get(keyname, &from_if);
-            if (err != BCM_ERR_OK)
+            strcpy(prev_keyname, keyname);
+
+            if (!strcmp(leaf, "from-interface") && sr_new_val != NULL)
             {
-                NC_ERROR_REPLY(srs, iter_xpath, "link-table: can't find from-interface %s\n", keyname);
-                break;
+                err = xpon_interface_get_populate(srs, keyname, XPON_OBJ_TYPE_ANY, &from_if);
+                if (err != BCM_ERR_OK)
+                {
+                    NC_ERROR_REPLY(srs, iter_xpath, "link-table: can't find from-interface %s\n", keyname);
+                    break;
+                }
             }
         }
-        strcpy(prev_keyname, keyname);
         prev_xpath = xpath;
 
         /* handle attributes */
@@ -258,9 +264,9 @@ static int _link_change_cb(sr_session_ctx_t *srs, const char *module_name,
         {
             being_deleted = (sr_new_val == NULL);
         }
-        if (!strcmp(leaf, "to-interface") && sr_new_val != NULL)
+        if (!strcmp(leaf, "to-interface") && sr_new_val != NULL && !being_deleted)
         {
-            err = xpon_object_get(sr_new_val->data.string_val, &to_if);
+            err = xpon_interface_get_populate(srs, sr_new_val->data.string_val, XPON_OBJ_TYPE_ANY, &to_if);
             if (err != BCM_ERR_OK)
             {
                 NC_ERROR_REPLY(srs, iter_xpath, "link-table: can't find to-interface %s\n", keyname);
@@ -273,8 +279,19 @@ static int _link_change_cb(sr_session_ctx_t *srs, const char *module_name,
         err = _link_apply(srs, prev_xpath, from_if, to_if, being_deleted);
     }
 
+    /* Cleanup forward references in case of error */
+    if (err != BCM_ERR_OK)
+    {
+        if (from_if != NULL && from_if->created_by_forward_reference)
+            xpon_interface_delete(from_if);
+        if (to_if != NULL && to_if->created_by_forward_reference)
+            xpon_interface_delete(to_if);
+    }
+
     nc_sr_free_value_pair(&sr_old_val, &sr_new_val);
     sr_free_change_iter(sr_iter);
+
+    nc_config_unlock();
 
     return nc_bcmos_errno_to_sr_errno(err);
 }

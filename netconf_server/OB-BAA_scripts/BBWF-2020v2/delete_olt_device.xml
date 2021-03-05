@@ -1,0 +1,33 @@
+<rpc xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" message-id="1527307907659">
+   <edit-config>
+      <target>
+         <running />
+      </target>
+      <config>
+         <network-manager xmlns="urn:bbf:yang:obbaa:network-manager">
+            <managed-devices>
+               <device xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0" xc:operation="delete">
+                  <name>Broadcom_OLT</name>
+                  <device-management>
+                     <type>OLT</type>
+                     <interface-version>1.0</interface-version>
+                     <vendor>BBF</vendor>
+                     <model>standard</model>
+                     <device-connection>
+                        <connection-model>direct</connection-model>
+                        <password-auth>
+                           <authentication>
+                              <address>192.168.0.25</address>
+                              <management-port>10830</management-port>
+                              <user-name>root</user-name>
+                              <password>root</password>
+                           </authentication>
+                        </password-auth>
+                     </device-connection>
+                  </device-management>
+               </device>
+            </managed-devices>
+         </network-manager>
+      </config>
+   </edit-config>
+</rpc>

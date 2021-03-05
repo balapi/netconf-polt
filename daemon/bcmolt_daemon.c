@@ -24,6 +24,7 @@
 #include <sys/stat.h>
 #include <sys/file.h>
 #include <bcmolt_daemon.h>
+#include <bcmolt_utils.h>
 
 #define DAEMON_FILE_NAME_LENGTH 64
 
@@ -132,9 +133,7 @@ static void daemon_signal_handler(int signal_number)
             daemon_parms.restart_cb();
             break;
         }
-#if __GNUC__ > 6
-        __attribute__((fallthrough));
-#endif
+        BCMOLT_FALL_THROUGH;
 
     default:
         printf("%s daemon: Caught unexpected signal %d. Signal ignored\n", daemon_parms.name, signal_number);
@@ -245,6 +244,11 @@ bcmos_errno bcmolt_daemon_start(const bcmolt_daemon_parms *parms)
         /* Associate stdin, stdout, stderr with a pipe */
         /* stdin */
         fd = open(in_file_name, O_RDONLY | O_NONBLOCK);
+        if (fd == -1)
+        {
+            BCMOS_TRACE_ERR("cannot open input file '%s', errno=%d\n", in_file_name, errno);
+            exit(EXIT_FAILURE);
+        }
         if (fd != STDIN_FILENO)
         {
             dup2(fd, STDIN_FILENO);
@@ -252,6 +256,11 @@ bcmos_errno bcmolt_daemon_start(const bcmolt_daemon_parms *parms)
         }
         /* stdout. must be open as RDWR, because non-blocking open as WRONLY will fail (see fifo(7)) */
         fd = open(out_file_name, O_RDWR | O_NONBLOCK);
+        if (fd == -1)
+        {
+            BCMOS_TRACE_ERR("cannot open output file '%s', errno=%d\n", out_file_name, errno);
+            exit(EXIT_FAILURE);
+        }
         if (fd != STDOUT_FILENO)
         {
             dup2(fd, STDOUT_FILENO);
@@ -262,7 +271,11 @@ bcmos_errno bcmolt_daemon_start(const bcmolt_daemon_parms *parms)
 
         /* Make STDIN blocking */
         flags = fcntl(STDIN_FILENO, F_GETFL, 0);
-        fcntl(STDIN_FILENO, F_SETFL, flags & ~O_NONBLOCK);
+        if (fcntl(STDIN_FILENO, F_SETFL, flags & ~O_NONBLOCK) == -1)
+        {
+            BCMOS_TRACE_ERR("fnctl returned error, errno=%d\n", errno);
+            exit(EXIT_FAILURE);
+        }
 
         /* Force STDOUT flush following output to CLI FIFO */
         bcmos_print_redirect(BCMOS_PRINT_REDIRECT_MODE_REDIRECT, daemon_print_redirect_cb, NULL);

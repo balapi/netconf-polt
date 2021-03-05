@@ -1,22 +1,22 @@
 /*
  *  <:copyright-BRCM:2016-2020:Apache:standard
- *  
+ *
  *   Copyright (c) 2016-2020 Broadcom. All Rights Reserved
- *  
+ *
  *   The term “Broadcom” refers to Broadcom Inc. and/or its subsidiaries
- *  
+ *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
  *   You may obtain a copy of the License at
- *  
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *   Unless required by applicable law or agreed to in writing, software
  *   distributed under the License is distributed on an "AS IS" BASIS,
  *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
- *  
+ *
  *  :>
  *
  *****************************************************************************/
@@ -27,6 +27,72 @@
 #include "bbf-xpon-internal.h"
 
 static xpon_obj_list wavelen_prof_list;
+
+/* Populate wavelength profile attribute */
+
+static bcmos_errno bbf_xpon_wavelen_prof_attribute_populate(sr_session_ctx_t *srs, xpon_wavelength_profile *prof,
+    sr_val_t *sr_old_val, sr_val_t *sr_new_val)
+{
+    const char *iter_xpath;
+    char leafbuf[BCM_MAX_LEAF_LENGTH];
+    const char *leaf;
+    bcmos_errno err = BCM_ERR_OK;
+
+    NC_LOG_DBG("old_val=%s new_val=%s type=%d\n",
+        sr_old_val ? sr_old_val->xpath : "none",
+        sr_new_val ? sr_new_val->xpath : "none",
+        sr_old_val ? sr_old_val->type : sr_new_val->type);
+
+    if ((sr_old_val && (sr_old_val->type == SR_LIST_T)) ||
+        (sr_new_val && (sr_new_val->type == SR_LIST_T)) ||
+        (sr_old_val && (sr_old_val->type == SR_CONTAINER_T)) ||
+        (sr_new_val && (sr_new_val->type == SR_CONTAINER_T)))
+    {
+        /* no semantic meaning */
+        return BCM_ERR_OK;
+    }
+
+    iter_xpath = sr_new_val ? sr_new_val->xpath : sr_old_val->xpath;
+    leaf = nc_xpath_leaf_get(iter_xpath, leafbuf, sizeof(leafbuf));
+    if (leaf == NULL)
+    {
+        /* no semantic meaning */
+        return BCM_ERR_OK;
+    }
+
+    /* handle attributes */
+    if (!strcmp(leaf, "name"))
+    {
+        prof->hdr.being_deleted = (sr_new_val == NULL);
+    }
+    else if (!strcmp(leaf, "upstream-channel-id"))
+    {
+        if (sr_new_val)
+            XPON_PROP_SET(prof, wavelen_profile, us_channel_id, sr_new_val->data.uint8_val);
+        else
+            XPON_PROP_CLEAR(prof, wavelen_profile, us_channel_id);
+    }
+    else if (!strcmp(leaf, "downstream-channel-id"))
+    {
+        if (sr_new_val)
+            XPON_PROP_SET(prof, wavelen_profile, ds_channel_id, sr_new_val->data.uint8_val);
+        else
+            XPON_PROP_CLEAR(prof, wavelen_profile, ds_channel_id);
+    }
+    else if (!strcmp(leaf, "downstream-wavelength"))
+    {
+        if (sr_new_val)
+            XPON_PROP_SET(prof, wavelen_profile, ds_wavelength, sr_new_val->data.uint32_val);
+        else
+            XPON_PROP_CLEAR(prof, wavelen_profile, ds_wavelength);
+    }
+    else
+    {
+        NC_LOG_INFO("wavelength-profile: attribute %s is not supported. Ignored\n", iter_xpath);
+    }
+
+    return err;
+}
 
 /* Wavelength profile change callback */
 
@@ -43,6 +109,9 @@ static int bbf_xpon_wavelen_prof_change_cb(sr_session_ctx_t *srs, const char *mo
     int sr_rc;
     char qualified_xpath[BCM_MAX_XPATH_LENGTH];
     bcmos_errno err = BCM_ERR_OK;
+    bcmos_bool skip = BCMOS_FALSE;
+
+    nc_config_lock();
 
     NC_LOG_INFO("xpath=%s event=%d\n", xpath, event);
 
@@ -53,7 +122,10 @@ static int bbf_xpon_wavelen_prof_change_cb(sr_session_ctx_t *srs, const char *mo
      * ABORT event will roll-back the changes.
      */
     if (event == SR_EV_DONE)
+    {
+        nc_config_unlock();
         return SR_ERR_OK;
+    }
 
     snprintf(qualified_xpath, sizeof(qualified_xpath)-1, "%s//.", xpath);
     qualified_xpath[sizeof(qualified_xpath)-1] = 0;
@@ -65,31 +137,12 @@ static int bbf_xpon_wavelen_prof_change_cb(sr_session_ctx_t *srs, const char *mo
         nc_sr_free_value_pair(&sr_old_val, &sr_new_val))
     {
         const char *iter_xpath;
-        char leafbuf[BCM_MAX_LEAF_LENGTH];
-        const char *leaf;
-        sr_val_t *val;
 
-        if ((sr_old_val && ((sr_old_val->type == SR_LIST_T) && (sr_oper != SR_OP_MOVED))) ||
-            (sr_new_val && ((sr_new_val->type == SR_LIST_T) && (sr_oper != SR_OP_MOVED))) ||
-            (sr_old_val && (sr_old_val->type == SR_CONTAINER_T)) ||
-            (sr_new_val && (sr_new_val->type == SR_CONTAINER_T)))
-        {
-            /* no semantic meaning */
-            continue;
-        }
-        NC_LOG_DBG("old_val=%s new_val=%s\n",
-            sr_old_val ? sr_old_val->xpath : "none",
-            sr_new_val ? sr_new_val->xpath : "none");
-
-        val = sr_new_val ? sr_new_val : sr_old_val;
+        sr_val_t *val = sr_new_val ? sr_new_val : sr_old_val;
         if (val == NULL)
             continue;
+
         iter_xpath = val->xpath;
-
-        leaf = nc_xpath_leaf_get(iter_xpath, leafbuf, sizeof(leafbuf));
-        if (leaf == NULL)
-            continue;
-
         if (nc_xpath_key_get(iter_xpath, "name", keyname, sizeof(keyname)) != BCM_ERR_OK ||
             ! *keyname)
         {
@@ -108,46 +161,30 @@ static int bbf_xpon_wavelen_prof_change_cb(sr_session_ctx_t *srs, const char *mo
             err = xpon_wavelen_prof_get_by_name(keyname, &prof, &is_added);
             if (err != BCM_ERR_OK)
                 break;
+            skip = prof->hdr.created_by_forward_reference;
+            prof->hdr.created_by_forward_reference = BCMOS_FALSE;
         }
         strcpy(prev_keyname, keyname);
 
-        /* handle attributes */
-        /* Go over supported leafs */
-
-        if (!strcmp(leaf, "name"))
+        /* Populate attribute based on the changed value */
+        if (!skip)
         {
-            prof->hdr.being_deleted = (sr_new_val == NULL);
-        }
-        else if (!strcmp(leaf, "upstream-channel-id"))
-        {
-            if (sr_new_val)
-                XPON_PROP_SET(prof, wavelen_profile, us_channel_id, sr_new_val->data.uint8_val);
-            else
-                XPON_PROP_CLEAR(prof, wavelen_profile, us_channel_id);
-        }
-        else if (!strcmp(leaf, "downstream-channel-id"))
-        {
-            if (sr_new_val)
-                XPON_PROP_SET(prof, wavelen_profile, ds_channel_id, sr_new_val->data.uint8_val);
-            else
-                XPON_PROP_CLEAR(prof, wavelen_profile, ds_channel_id);
-        }
-        else if (!strcmp(leaf, "downstream-wavelength"))
-        {
-            if (sr_new_val)
-                XPON_PROP_SET(prof, wavelen_profile, ds_wavelength, sr_new_val->data.uint32_val);
-            else
-                XPON_PROP_CLEAR(prof, wavelen_profile, ds_wavelength);
+            err = bbf_xpon_wavelen_prof_attribute_populate(srs, prof, sr_old_val, sr_new_val);
         }
     }
 
-    if (prof != NULL && prof->hdr.being_deleted)
+    if (prof != NULL)
     {
-        xpon_wavelen_prof_delete(prof);
+        if (prof->hdr.being_deleted)
+            xpon_wavelen_prof_delete(prof);
+        else
+            prof->hdr.created_by_forward_reference = BCMOS_FALSE;
     }
 
     nc_sr_free_value_pair(&sr_old_val, &sr_new_val);
     sr_free_change_iter(sr_iter);
+
+    nc_config_unlock();
 
     return nc_bcmos_errno_to_sr_errno(err);
 }
@@ -180,6 +217,54 @@ bcmos_errno xpon_wavelen_prof_start(sr_session_ctx_t *srs)
 
 void xpon_wavelen_prof_exit(sr_session_ctx_t *srs)
 {
+}
+
+/* Find or add hardware-component object. Populate from sysrepo session if added */
+bcmos_errno xpon_wavelen_prof_get_populate(sr_session_ctx_t *srs, const char *name, xpon_wavelength_profile **p_prof)
+{
+    bcmos_bool is_added = BCMOS_FALSE;
+    bcmos_errno err;
+    char query_xpath[256];
+    sr_val_t *values = NULL;
+    size_t value_cnt = 0;
+    int i;
+    int sr_rc;
+
+    err = xpon_wavelen_prof_get_by_name(name, p_prof, &is_added);
+    if (err != BCM_ERR_OK)
+        return err;
+    if (is_added)
+    {
+        snprintf(query_xpath, sizeof(query_xpath)-1,
+            BBF_XPON_WAVELEN_PROFILE_PATH_BASE "[name='%s']//.", (*p_prof)->hdr.name);
+        sr_rc = sr_get_items(srs, query_xpath, 0, SR_OPER_DEFAULT, &values, &value_cnt);
+        if (sr_rc)
+        {
+            NC_LOG_ERR("sr_get_items(%s) -> %s\n", query_xpath, sr_strerror(sr_rc));
+            xpon_wavelen_prof_delete(*p_prof);
+            *p_prof = NULL;
+            return BCM_ERR_PARM;
+        }
+        NC_LOG_DBG("Populating wavelength-profile from xpath '%s'. values %u\n",
+            query_xpath, (unsigned)value_cnt);
+
+        for (i = 0; i < value_cnt && err == BCM_ERR_OK; i++)
+        {
+            err = bbf_xpon_wavelen_prof_attribute_populate(srs, *p_prof, NULL, &values[i]);
+        }
+        sr_free_values(values, value_cnt);
+
+        if (err == BCM_ERR_OK)
+        {
+            (*p_prof)->hdr.created_by_forward_reference = BCMOS_TRUE;
+        }
+        else
+        {
+            xpon_wavelen_prof_delete(*p_prof);
+            *p_prof = NULL;
+        }
+    }
+    return err;
 }
 
 /* Get wavelength profile object by name, add a new one if

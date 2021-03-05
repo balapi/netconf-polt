@@ -84,6 +84,8 @@ bcmos_errno xpon_vlan_subif_get_by_name(const char *name, xpon_vlan_subif **p_vl
 void xpon_vlan_subif_delete(xpon_vlan_subif *vlan_subif)
 {
     bbf_subif_ingress_rule *ingress, *ingress_tmp;
+    if (vlan_subif->forwarder_port != NULL)
+        vlan_subif->forwarder_port->subif = NULL;
     STAILQ_REMOVE_SAFE(&vlan_subif_list, &vlan_subif->hdr, xpon_obj_hdr, next);
     if (vlan_subif->subif_lower_layer != NULL)
     {
@@ -93,6 +95,13 @@ void xpon_vlan_subif_delete(xpon_vlan_subif *vlan_subif)
     {
         xpon_vlan_subif_ingress_rule_delete(vlan_subif, ingress);
     }
+    if (vlan_subif->subif_lower_layer && vlan_subif->subif_lower_layer->created_by_forward_reference)
+        xpon_interface_delete(vlan_subif->subif_lower_layer);
+    if (vlan_subif->qos_policy_profile != NULL && vlan_subif->qos_policy_profile->hdr.created_by_forward_reference)
+        xpon_qos_policy_profile_delete(vlan_subif->qos_policy_profile);
+    if (vlan_subif->dhcpr.profile != NULL && vlan_subif->dhcpr.profile->hdr.created_by_forward_reference)
+        xpon_dhcpr_prof_delete(vlan_subif->dhcpr.profile);
+
     NC_LOG_INFO("vlan_subif %s deleted\n", vlan_subif->hdr.name);
     xpon_object_delete(&vlan_subif->hdr);
 }
@@ -126,7 +135,10 @@ bcmos_errno xpon_vlan_subif_ingress_rule_get(xpon_vlan_subif *subif, const char 
         return BCM_ERR_NOMEM;
     rule->name = (char *)(rule + 1);
     strcpy((char *)(long)rule->name, name);
-    rule->flow_id = BCM_FLOW_ID_INVALID;
+    for(int i = 0; i < BCM_SIZEOFARRAY(rule->flows); i++)
+    {
+        rule->flows[i].flow_id = BCM_FLOW_ID_INVALID;
+    }
     rule->group_id = BCM_GROUP_ID_INVALID;
     STAILQ_INSERT_TAIL(&subif->ingress, rule, next);
     *is_added = BCMOS_TRUE;
@@ -213,7 +225,9 @@ static bcmos_errno xpon_vlan_subif_apply(sr_session_ctx_t *srs, xpon_vlan_subif 
        to simplify propagation to ONU management */
     XPON_PROP_COPY(changes, info, vlan_subif, egress_rewrite);
     XPON_PROP_COPY(changes, info, vlan_subif, subif_lower_layer);
+    changes->subif_lower_layer = NULL;
     XPON_PROP_COPY(changes, info, vlan_subif, qos_policy_profile);
+    changes->qos_policy_profile = NULL;
     XPON_PROP_COPY(changes, info, vlan_subif, usage);
     if (XPON_PROP_IS_SET(changes, vlan_subif, ingress))
         vlan_subif_ingress_rule_copy(changes, info);
@@ -228,6 +242,7 @@ static bcmos_errno xpon_vlan_subif_apply(sr_session_ctx_t *srs, xpon_vlan_subif 
         subif_add_to_lower_list(info->subif_lower_layer, info);
     }
     XPON_PROP_COPY(changes, info, vlan_subif, dhcpr);
+    changes->dhcpr.profile = NULL;
 
     /* Try to create ONU flows */
     if (!info->is_olt_subif && info->subif_lower_layer != NULL)
@@ -409,7 +424,7 @@ bcmos_errno xpon_vlan_subif_transaction(sr_session_ctx_t *srs, nc_transact *tr)
         }
         else if ((rewrite_xpath = strstr(iter_xpath, "inline-frame-processing/egress-rewrite")) != NULL)
         {
-            err = _xpon_vlan_rewrite(srs, &vlan_subif->egress_rewrite, val, rewrite_xpath);
+            err = _xpon_vlan_rewrite(srs, &changes.egress_rewrite, val, rewrite_xpath);
             if (err != BCM_ERR_OK)
                 break;
             XPON_PROP_SET_PRESENT(&changes, vlan_subif, egress_rewrite);
@@ -423,15 +438,16 @@ bcmos_errno xpon_vlan_subif_transaction(sr_session_ctx_t *srs, nc_transact *tr)
             xpon_obj_hdr *hdr = NULL;
             if (elem->new_val != NULL)
             {
-                const char *if_name = val->data.string_val;
+                const char *if_name = elem->new_val->data.string_val;
 
-                err = xpon_object_get(if_name, &hdr);
-                if (err != BCM_ERR_OK && (elem->new_val != NULL))
+                err = xpon_interface_get_populate(srs, if_name, XPON_OBJ_TYPE_ANY, &hdr);
+                if (err != BCM_ERR_OK)
                 {
                     NC_ERROR_REPLY(srs, iter_xpath, "vlan-subif %s references subif-lower-layer interface %s which doesn't exist\n",
                         keyname, if_name);
                     break;
                 }
+                XPON_PROP_SET(&changes, vlan_subif, subif_lower_layer, hdr);
                 /* We only support vlan-subif s on enet anf v-ani-v-enet interfaces */
                 if (hdr->obj_type != XPON_OBJ_TYPE_V_ANI_V_ENET &&
                     hdr->obj_type != XPON_OBJ_TYPE_ENET)
@@ -440,7 +456,6 @@ bcmos_errno xpon_vlan_subif_transaction(sr_session_ctx_t *srs, nc_transact *tr)
                         keyname, if_name);
                     break;
                 }
-                XPON_PROP_SET(&changes, vlan_subif, subif_lower_layer, hdr);
                 if (hdr->obj_type == XPON_OBJ_TYPE_V_ANI_V_ENET)
                 {
                     changes.is_olt_subif = BCMOS_TRUE;
@@ -468,7 +483,7 @@ bcmos_errno xpon_vlan_subif_transaction(sr_session_ctx_t *srs, nc_transact *tr)
             xpon_qos_policy_profile *prof = NULL;
             if (elem->new_val != NULL && val->data.string_val != NULL)
             {
-                err = xpon_qos_policy_profile_get_by_name(val->data.string_val, &prof, NULL);
+                err = xpon_qos_policy_profile_get_populate(srs, val->data.string_val, &prof);
                 if (err != BCM_ERR_OK)
                     break;
             }
@@ -486,7 +501,7 @@ bcmos_errno xpon_vlan_subif_transaction(sr_session_ctx_t *srs, nc_transact *tr)
                 xpon_dhcpr_profile *prof = NULL;
                 if (elem->new_val != NULL && val->data.string_val != NULL)
                 {
-                    err = xpon_dhcpr_prof_get_by_name(val->data.string_val, &prof, NULL);
+                    err = xpon_dhcpr_prof_get_populate(srs, val->data.string_val, &prof);
                     if (err != BCM_ERR_OK)
                     {
                         NC_ERROR_REPLY(srs, iter_xpath, "subif %s references l2-dhcpv4-relay profile %s which doesn't exist\n",
@@ -508,6 +523,14 @@ bcmos_errno xpon_vlan_subif_transaction(sr_session_ctx_t *srs, nc_transact *tr)
     if (err != BCM_ERR_OK && (was_added || changes.hdr.being_deleted))
         xpon_vlan_subif_delete(vlan_subif);
 
+    /* Clear forward references if any */
+    if (changes.subif_lower_layer != NULL && changes.subif_lower_layer->created_by_forward_reference)
+        xpon_interface_delete(changes.subif_lower_layer);
+    if (changes.qos_policy_profile != NULL && changes.qos_policy_profile->hdr.created_by_forward_reference)
+        xpon_qos_policy_profile_delete(changes.qos_policy_profile);
+    if (changes.dhcpr.profile != NULL && changes.dhcpr.profile->hdr.created_by_forward_reference)
+        xpon_dhcpr_prof_delete(changes.dhcpr.profile);
+
     if (changes.hdr.being_deleted)
         err = BCM_ERR_OK;
 
@@ -520,28 +543,24 @@ bcmos_errno xpon_vlan_subif_transaction(sr_session_ctx_t *srs, nc_transact *tr)
    (from_rule & from_ingress_action) & from_egress_action MATCHES
     (to_rule & to_ingress_action) & to_egress_action
  */
-bbf_subif_ingress_rule *xpon_vlan_subif_ingress_rule_get_match(const xpon_vlan_subif *from_subif,
-    const bbf_subif_ingress_rule *from_rule, xpon_vlan_subif *to_subif)
+bbf_subif_ingress_rule *xpon_vlan_subif_ingress_rule_get_match(const bbf_subif_ingress_rule *from_rule,
+    xpon_vlan_subif *to_subif)
 {
     bbf_subif_ingress_rule *to_rule, *to_rule_tmp;
 
     /* We need to go over to_subif's rules and find those with egress matching
        egress of from_rule
     */
-    bbf_match_criteria from_match = from_rule->match;
+    bbf_match_criteria from_match_plus_actions = from_rule->match;
     /* calculate egress packet match */
-    xpon_apply_actions_to_match(&from_match, &from_rule->rewrite);
-    xpon_apply_actions_to_match(&from_match, &from_subif->egress_rewrite);
+    xpon_apply_actions_to_match(&from_match_plus_actions, &from_rule->rewrite);
+    xpon_apply_actions_to_match(&from_match_plus_actions, &to_subif->egress_rewrite);
 
     /* No go over ONU sub-interfaces */
     STAILQ_FOREACH_SAFE(to_rule, &to_subif->ingress, next, to_rule_tmp)
     {
-        bbf_match_criteria to_match = to_rule->match;
-        /* calculate egress packet match */
-        xpon_apply_actions_to_match(&to_match, &to_rule->rewrite);
-        xpon_apply_actions_to_match(&to_match, &to_subif->egress_rewrite);
         /* check match */
-        if (xpon_is_match(&from_match, &to_match))
+        if (xpon_is_match(&from_match_plus_actions, &to_rule->match))
         {
             break;
         }
@@ -550,36 +569,63 @@ bbf_subif_ingress_rule *xpon_vlan_subif_ingress_rule_get_match(const xpon_vlan_s
     return to_rule;
 }
 
-/* Go over subifs on an interface and find subif and rule matching
+/* Go over subifs on an interface and find the next subif and rule matching
     "from_subif" and "from_rule" */
-bcmos_errno xpon_vlan_subif_subif_rule_get_match(const xpon_vlan_subif *from_subif,
-    const bbf_subif_ingress_rule *from_rule, xpon_obj_hdr *to_if,
-    xpon_vlan_subif **to_subif, bbf_subif_ingress_rule **to_rule)
+bcmos_errno xpon_vlan_subif_subif_rule_get_next_match(const bbf_subif_ingress_rule *from_rule,
+    xpon_obj_hdr *to_if, xpon_vlan_subif **p_to_subif, bbf_subif_ingress_rule **p_to_rule)
 {
-    xpon_subif_list *onu_subifs;
-    xpon_vlan_subif *onu_subif, *onu_subif_tmp;
-    bbf_subif_ingress_rule *onu_rule = NULL;
+    xpon_subif_list *to_subifs;
+    xpon_vlan_subif *to_subif = *p_to_subif;
+    bbf_subif_ingress_rule *to_rule = *p_to_rule;
 
     if (to_if->obj_type == XPON_OBJ_TYPE_ANI_V_ENET)
-        onu_subifs = &(((xpon_ani_v_enet *)to_if)->subifs);
+        to_subifs = &(((xpon_ani_v_enet *)to_if)->subifs);
     else if (to_if->obj_type == XPON_OBJ_TYPE_ENET)
-        onu_subifs = &(((xpon_enet *)to_if)->subifs);
+        to_subifs = &(((xpon_enet *)to_if)->subifs);
     else
     {
         NC_LOG_ERR("Unexpected object %s\n", to_if->name);
         return BCM_ERR_PARM;
     }
 
-    /* No go over ONU sub-interfaces */
-    STAILQ_FOREACH_SAFE(onu_subif, onu_subifs, next, onu_subif_tmp)
+    /* No go over the 'to' sub-interfaces */
+    if (to_subif == NULL)
     {
-        onu_rule = xpon_vlan_subif_ingress_rule_get_match(from_subif, from_rule, onu_subif);
-        if (onu_rule != NULL)
-            break;
+        to_subif = STAILQ_FIRST(to_subifs);
+        to_rule = NULL;
     }
-    if (onu_subif == NULL)
+    while (to_subif != NULL)
+    {
+        if (to_rule == NULL)
+        {
+            to_rule = STAILQ_FIRST(&to_subif->ingress);
+        }
+        else
+        {
+            to_rule = STAILQ_NEXT(to_rule, next);
+        }
+        while (to_rule != NULL)
+        {
+            bbf_match_criteria to_match_plus_actions = to_rule->match;
+            xpon_apply_actions_to_match(&to_match_plus_actions, &to_rule->rewrite);
+
+            /* check match */
+            if (xpon_is_match(&to_match_plus_actions, &from_rule->match))
+            {
+                break;
+            }
+            to_rule = STAILQ_NEXT(to_rule, next);
+        }
+        if (to_rule != NULL)
+            break;
+        to_subif = STAILQ_NEXT(to_subif, next);
+        to_rule = NULL;
+    }
+    *p_to_subif = to_subif;
+    *p_to_rule = to_rule;
+
+    if (to_subif == NULL || to_rule == NULL)
         return BCM_ERR_NOENT;
-    *to_subif = onu_subif;
-    *to_rule = onu_rule;
+
     return BCM_ERR_OK;
 }

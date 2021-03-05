@@ -33,12 +33,14 @@
 #include <bcmolt_netconf_module_utils.h>
 #include <bcmolt_netconf_notifications.h>
 
+extern bcmos_bool xpon_cterm_is_onu_state_notifiable(const char *cterm_name, const char *state);
+
 /* change onu state change event
    serial_number_string is 4 ASCII characters vendor id followed by 8 hex numbers
    representing 4-byte vendor-specific id
 */
 bcmos_errno bcmolt_xpon_v_ani_state_change(const char *cterm_name, uint16_t onu_id,
-    const uint8_t *serial_number, bcmos_bool is_v_ani_present, bcmos_bool is_onu_present)
+    const uint8_t *serial_number, xpon_onu_presence_flags presence_flags)
 {
 #ifdef TR385_ISSUE2
     sr_session_ctx_t *session = bcm_netconf_session_get();
@@ -52,8 +54,52 @@ bcmos_errno bcmolt_xpon_v_ani_state_change(const char *cterm_name, uint16_t onu_
     char notif_xpath[200];
     int sr_rc = SR_ERR_INVAL_ARG;
 
+    /* Don't send notification if ONU was discovered, but not yet activated and v-ani is present.
+       In this case NETCONF server will attempt to activate the ONU, so this discovery state is transitional.
+    */
+    if (presence_flags == (XPON_ONU_PRESENCE_FLAG_V_ANI | XPON_ONU_PRESENCE_FLAG_ONU) &&
+        (onu_id != XPON_ONU_ID_UNDEFINED))
+    {
+        NC_LOG_INFO("Transient discovery state for ONU %s:%u. NOT sending a state-change notification\n",
+            cterm_name, onu_id);
+        return BCM_ERR_OK;
+    }
+
     do
     {
+        if ((presence_flags & XPON_ONU_PRESENCE_FLAG_ONU) != 0)
+        {
+            if ((presence_flags & XPON_ONU_PRESENCE_FLAG_V_ANI) != 0)
+            {
+                presence_state = ((presence_flags & XPON_ONU_PRESENCE_FLAG_ONU_IN_O5) != 0) ?
+                    "bbf-xpon-onu-types:onu-present-and-on-intended-channel-termination" :
+                    ((onu_id != XPON_ONU_ID_UNDEFINED) ?
+                       "bbf-xpon-onu-types:onu-present-and-v-ani-known-and-o5-failed" :
+                       "bbf-xpon-onu-types:onu-present-and-v-ani-known-and-o5-failed-no-onu-id");
+
+            }
+            else
+            {
+                presence_state = ((presence_flags & XPON_ONU_PRESENCE_FLAG_ONU_ACTIVATION_FAILED) != 0) ?
+                    "bbf-xpon-onu-types:onu-present-and-no-v-ani-known-and-o5-failed-undefined" :
+                    "bbf-xpon-onu-types:onu-present-and-no-v-ani-known-and-o5-failed-no-onu-id";
+            }
+        }
+        else
+        {
+            presence_state = ((presence_flags & XPON_ONU_PRESENCE_FLAG_V_ANI) != 0) ?
+                "bbf-xpon-onu-types:onu-not-present-with-v-ani" :
+                    "bbf-xpon-onu-types:onu-not-present-without-v-ani";
+        }
+
+        /* Check if the new state has to be notified */
+        if (!xpon_cterm_is_onu_state_notifiable(cterm_name, presence_state))
+        {
+            NC_LOG_INFO("cterm %s  onu_id %u: skipping state transition report into presence state %s\n",
+                cterm_name, onu_id, presence_state);
+            return BCM_ERR_OK;
+        }
+
         snprintf(notif_xpath, sizeof(notif_xpath),
             "/ietf-interfaces:interfaces-state/interface[name='%s']/"
             "bbf-xpon:channel-termination/bbf-xpon-onu-state:onu-presence-state-change", cterm_name);
@@ -65,7 +111,7 @@ bcmos_errno bcmolt_xpon_v_ani_state_change(const char *cterm_name, uint16_t onu_
         }
 
         snprintf(serial_number_string, sizeof(serial_number_string),
-            "%c%c%c%c%02x%02x%02x%02x",
+            "%c%c%c%c%02X%02X%02X%02X",
             serial_number[0], serial_number[1], serial_number[2], serial_number[3],
             serial_number[4], serial_number[5], serial_number[6], serial_number[7]);
         if (nc_ly_sub_value_add(NULL, notif, notif_xpath, "detected-serial-number", serial_number_string) == NULL)
@@ -81,20 +127,6 @@ bcmos_errno bcmolt_xpon_v_ani_state_change(const char *cterm_name, uint16_t onu_
             break;
         }
 
-        if (is_onu_present)
-        {
-            presence_state = (is_v_ani_present && (onu_id != XPON_ONU_ID_UNDEFINED)) ?
-                "bbf-xpon-onu-types:onu-present-and-on-intended-channel-termination" :
-                (onu_id != XPON_ONU_ID_UNDEFINED) ?
-                    "bbf-xpon-onu-types:onu-present-and-v-ani-known-and-o5-failed" :
-                    "bbf-xpon-onu-types:onu-present-and-no-v-ani-known-and-o5-failed-no-onu-id";
-        }
-        else
-        {
-            presence_state = (is_v_ani_present ?
-                "bbf-xpon-onu-types:onu-not-present-with-v-ani" :
-                    "bbf-xpon-onu-types:onu-not-present-without-v-ani");
-        }
         if (nc_ly_sub_value_add(NULL, notif, notif_xpath, "onu-presence-state", (void *)(long)presence_state) == NULL)
         {
             break;
@@ -118,7 +150,7 @@ bcmos_errno bcmolt_xpon_v_ani_state_change(const char *cterm_name, uint16_t onu_
             break;
         }
 
-        NC_LOG_DBG("Sent state change notification for ONU %s on %s\n", serial_number_string, cterm_name);
+        NC_LOG_INFO("Sent '%s' notification for ONU %s on %s\n", presence_state, serial_number_string, cterm_name);
 
     } while (0);
 #else /* #ifdef TR385_ISSUE2 */
@@ -130,10 +162,11 @@ bcmos_errno bcmolt_xpon_v_ani_state_change(const char *cterm_name, uint16_t onu_
     struct tm tm = *localtime(&t);
     char date_time_string[64];
     char serial_number_string[13];
+    char *presence_state;
     int sr_rc;
 
     snprintf(serial_number_string, sizeof(serial_number_string),
-        "%c%c%c%c%02x%02x%02x%02x",
+        "%c%c%c%c%02X%02X%02X%02X",
         serial_number[0], serial_number[1], serial_number[2], serial_number[3],
         serial_number[4], serial_number[5], serial_number[6], serial_number[7]);
 
@@ -150,13 +183,20 @@ bcmos_errno bcmolt_xpon_v_ani_state_change(const char *cterm_name, uint16_t onu_
 
     values[2].xpath = "/" BBF_XPON_ONU_STATES_MODULE_NAME ":onu-state-change/onu-state";
     values[2].type = SR_IDENTITYREF_T;
-    values[2].data.string_val = is_onu_present ?
-        (((onu_id != XPON_ONU_ID_UNDEFINED) && is_v_ani_present) ?
+
+    if ((presence_flags & XPON_ONU_PRESENCE_FLAG_ONU) != 0)
+    {
+        presence_state = ((presence_flags & XPON_ONU_PRESENCE_FLAG_V_ANI) != 0) ?
             "bbf-xpon-onu-types:onu-present-and-on-intended-channel-termination" :
-            "bbf-xpon-onu-types:onu-present-and-in-discovery") :
-        (is_v_ani_present ?
+            "bbf-xpon-onu-types:onu-present-and-unexpected";
+    }
+    else
+    {
+        presence_state = ((presence_flags & XPON_ONU_PRESENCE_FLAG_V_ANI) != 0) ?
             "bbf-xpon-onu-types:onu-not-present-with-v-ani" :
-                "bbf-xpon-onu-types:onu-not-present-without-v-ani");
+            "bbf-xpon-onu-types:onu-not-present-without-v-ani";
+    }
+    values[2].data.string_val = presence_state;
 
     num_values = 3;
     if (onu_id != XPON_ONU_ID_UNDEFINED)
@@ -178,7 +218,7 @@ bcmos_errno bcmolt_xpon_v_ani_state_change(const char *cterm_name, uint16_t onu_
             values, num_values);
     if (sr_rc == SR_ERR_OK)
     {
-        NC_LOG_DBG("Sent state change notification for ONU %s on %s\n", serial_number_string, cterm_name);
+        NC_LOG_INFO("Sent '%s' notification for ONU %s on %s\n", presence_state, serial_number_string, cterm_name);
     }
     else
     {

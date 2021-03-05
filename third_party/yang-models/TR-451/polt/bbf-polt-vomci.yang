@@ -7,13 +7,13 @@ module bbf-polt-vomci {
     prefix bbf-yang;
   }
   import bbf-nf-client {
-    prefix nf-client;
+    prefix bbf-nf-client;
   }
   import bbf-nf-server {
-    prefix nf-server;
+    prefix bbf-nf-server;
   }
   import bbf-nf-endpoint-filter {
-    prefix nf-efilter;
+    prefix bbf-nf-epf;
   }
 
   organization
@@ -107,7 +107,7 @@ module bbf-polt-vomci {
     description
       "Container for remote network function settings";
     container nf-client {
-      if-feature "nf-client-supported";
+      if-feature "bbf-polt-vomci:nf-client-supported";
       description
         "Container for client network function settings";
       leaf enabled {
@@ -118,7 +118,7 @@ module bbf-polt-vomci {
            capability to the network function.";
       }
       container client-parameters {
-        uses nf-client:nf-endpoint-grouping;
+        uses bbf-nf-client:nf-endpoint-grouping;
         description
           "Container for network function client configuration.";
       }
@@ -153,7 +153,7 @@ module bbf-polt-vomci {
                priority 1 is the highest priority.";
           }
           container flexible-match {
-            uses nf-efilter:onu-criteria-grouping;
+            uses bbf-nf-epf:onu-criteria-grouping;
             description
               "This container provides a generic framework to
                specify match criteria for endpoint filters. Specific
@@ -177,7 +177,7 @@ module bbf-polt-vomci {
     }
     //nf-client
     container nf-server {
-      if-feature "nf-server-supported";
+      if-feature "bbf-polt-vomci:nf-server-supported";
       description
         "Container for server network function settings";
       leaf enabled {
@@ -188,7 +188,7 @@ module bbf-polt-vomci {
            capability for connecting network function.";
       }
       container server-parameters {
-        uses nf-server:nf-server-grouping;
+        uses bbf-nf-server:nf-server-grouping;
         description
           "Container for network function server configuration.";
       }
@@ -223,7 +223,7 @@ module bbf-polt-vomci {
                priority 1 is the highest priority.";
           }
           container flexible-match {
-            uses nf-efilter:onu-criteria-grouping;
+            uses bbf-nf-epf:onu-criteria-grouping;
             description
               "This container provides a generic framework to
                specify match criteria for endpoint filters. Specific

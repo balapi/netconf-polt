@@ -1,22 +1,22 @@
 /*
  *  <:copyright-BRCM:2016-2020:Apache:standard
- *  
+ *
  *   Copyright (c) 2016-2020 Broadcom. All Rights Reserved
- *  
+ *
  *   The term “Broadcom” refers to Broadcom Inc. and/or its subsidiaries
- *  
+ *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
  *   You may obtain a copy of the License at
- *  
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *   Unless required by applicable law or agreed to in writing, software
  *   distributed under the License is distributed on an "AS IS" BASIS,
  *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
- *  
+ *
  *  :>
  *
  *****************************************************************************/
@@ -40,6 +40,7 @@ static bcmos_errno omci_svc_flow_op_queue_create(bcmolt_oltid olt_id, bcmolt_pon
     omci_svc_onu *onu_context = OMCI_SVC_ONU_TOPO_CONTEXT(olt_id, pon_id, onu_id);
     omci_svc_flow_op_queue *queue = &onu_context->flow_op_queue;
 
+    /* coverity[missing_lock] - this is the initial queue creation, there's no need to protect it with a mutex */
     queue->head = queue->queue;
     queue->tail = queue->queue;
 
@@ -124,7 +125,7 @@ static bcmos_errno omci_svc_query_pon_topology(bcmolt_oltid olt_id, uint8_t *max
     {
         *max_pon_for_olt = olt_cfg.data.topology.topology_maps.len;
     }
-	
+
     return rc;
 }
 
@@ -141,7 +142,7 @@ bcmos_errno omci_svc_olt_init(bcmolt_oltid olt_id)
     rc = omci_svc_query_pon_topology(olt_id, &max_pon_for_olt);
         if (BCM_ERR_OK != rc)
         {
-        BCM_LOG(ERROR, omci_svc_log_id, "Failed to query Topology for OLT id=%u, error:%s\n", 
+        BCM_LOG(ERROR, omci_svc_log_id, "Failed to query Topology for OLT id=%u, error:%s\n",
                 olt_id, bcmos_strerror(rc));
             return rc;
         }
@@ -149,7 +150,7 @@ bcmos_errno omci_svc_olt_init(bcmolt_oltid olt_id)
     rc = omci_svc_topo_init_context(olt_id, max_pon_for_olt);
         if (BCM_ERR_OK != rc)
         {
-        BCM_LOG(ERROR, omci_svc_log_id, "Failed to initialize omci svc topo context for OLT id=%u, error:%s\n", 
+        BCM_LOG(ERROR, omci_svc_log_id, "Failed to initialize omci svc topo context for OLT id=%u, error:%s\n",
                 olt_id, bcmos_strerror(rc));
             return rc;
         }
@@ -157,7 +158,7 @@ bcmos_errno omci_svc_olt_init(bcmolt_oltid olt_id)
         /** initialize DB for each logical pon present in Topology */
         for (logical_pon_id=0; logical_pon_id < max_pon_for_olt; logical_pon_id++)
         {
-            omci_svc_pon_context_t *omci_svc_pon_context; 
+            omci_svc_pon_context_t *omci_svc_pon_context;
             omci_svc_pon_context = bcmos_calloc(sizeof(*omci_svc_pon_context));
             if (!omci_svc_pon_context)
             {
@@ -253,4 +254,3 @@ bcmos_errno bcmomci_svc_cfg_clear(bcmonu_mgmt_cfg *cfg)
     }
     return BCM_ERR_OK;
 }
-

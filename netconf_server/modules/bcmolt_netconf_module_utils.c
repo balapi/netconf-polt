@@ -41,6 +41,28 @@ static const char *nc_ds_suffix[] = {
     [NC_DATASTORE_PENDING] = "pending",
 };
 
+/*
+ * Serialization primitives. Lock/unlock configuration
+ */
+
+static bcmos_mutex nc_config_lock_mutex;
+
+void nc_config_lock(void)
+{
+    static bcmos_bool is_initialized = BCMOS_FALSE;
+    if (!is_initialized)
+    {
+        bcmos_mutex_create(&nc_config_lock_mutex, 0, NULL);
+        is_initialized = BCMOS_TRUE;
+    }
+    bcmos_mutex_lock(&nc_config_lock_mutex);
+}
+
+void nc_config_unlock(void)
+{
+    bcmos_mutex_unlock(&nc_config_lock_mutex);
+}
+
 /* Get leaf node name in the xpath.
  * It is the node that follows the last /
  */
@@ -385,7 +407,7 @@ struct lyd_node *nc_ly_sub_value_add(
     result = lyd_new_path(parent, ctx, xpath, (void *)(long)string_val, LYD_ANYDATA_CONSTSTRING, 0);
     NC_LOG_DBG("lyd_new_path(%s, ctx, \"%s\", \"%s\", 0, 0) -> %s\n",
         (parent && parent->schema) ? parent->schema->name : "NULL",
-        xpath, string_val, (result && result->schema) ? result->schema->name : "NULL");
+        xpath, string_val ? string_val : "NULL", (result && result->schema) ? result->schema->name : "NULL");
     if (result == NULL)
     {
         NC_LOG_ERR("Failed to add attribute %s. Error %s\n", xpath, ly_errmsg(ctx));
@@ -468,10 +490,13 @@ void nc_transact_free(nc_transact *tr)
 
     while ((elem=STAILQ_FIRST(&tr->elems)))
     {
-        if (elem->old_val)
-            sr_free_val(elem->old_val);
-        if (elem->new_val)
-            sr_free_val(elem->new_val);
+        if (!tr->do_not_free_values)
+        {
+            if (elem->old_val)
+                sr_free_val(elem->old_val);
+            if (elem->new_val)
+                sr_free_val(elem->new_val);
+        }
         STAILQ_REMOVE_HEAD(&tr->elems, next);
         bcmos_free(elem);
     }

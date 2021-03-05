@@ -8,14 +8,14 @@ bcm_make_normal_option(NETOPEER_SSH_PORT STRING "Default SSH port netopeer liste
 if(NETCONF_TOOLS_FROM_DEVEL)
     set(_VERSION "devel")
 else()
-    set(_VERSION "1.1.34")
+    set(_VERSION "1.1.53")
 endif()
 
 # Netopeer2 consists from multiple components
 # Umbrella module
 bcm_3rdparty_module_name(netopeer2 ${_VERSION})
 if("${NETOPEER2_VERSION}" STREQUAL "devel")
-    bcm_3rdparty_download_wget("https://github.com/CESNET/netopeer2/archive" "netopeer2-devel.tar.gz" "netopeer2-devel")
+    bcm_3rdparty_download_wget("https://github.com/CESNET/netopeer2/archive" "devel.zip" "netopeer2-devel")
 else()
     bcm_3rdparty_download_wget("https://github.com/CESNET/netopeer2/archive" "v${NETOPEER2_VERSION}.tar.gz" "netopeer2-${NETOPEER2_VERSION}")
 endif()
@@ -25,6 +25,10 @@ set(_NETOPEER2_TYPE PACKAGE)
 set(NETOPEER2_BASE_DIR ${_${_MOD_NAME_UPPER}_SRC_DIR})
 set(NETOPEER2_LOADED ${_${_MOD_NAME_UPPER}_LOADED_FILE})
 bcm_3rdparty_export()
+
+if(SYSREPO_SHM_PREFIX AND NOT "${SYSREPO_SHM_PREFIX}" STREQUAL "none")
+    set(ENV{SYSREPO_SHM_PREFIX} ${SYSREPO_SHM_PREFIX})
+endif()
 
 # Use native tools when cross-compiling
 if(BCM_CONFIG_HOST MATCHES "x86")

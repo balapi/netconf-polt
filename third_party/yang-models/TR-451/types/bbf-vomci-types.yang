@@ -143,4 +143,10 @@ module bbf-vomci-types {
       "The name assigned to an ONU for use in
        communication between the vOLTMF and vOMCI function.";
   }
+  
+  typedef omci-sequence-number {
+    type uint16;
+    description
+      "The omci command sequence number for the OMCI message.";
+  }
 }

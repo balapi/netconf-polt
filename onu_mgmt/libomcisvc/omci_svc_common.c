@@ -1,22 +1,22 @@
 /*
  *  <:copyright-BRCM:2016-2020:Apache:standard
- *  
+ *
  *   Copyright (c) 2016-2020 Broadcom. All Rights Reserved
- *  
+ *
  *   The term “Broadcom” refers to Broadcom Inc. and/or its subsidiaries
- *  
+ *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
  *   You may obtain a copy of the License at
- *  
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *   Unless required by applicable law or agreed to in writing, software
  *   distributed under the License is distributed on an "AS IS" BASIS,
  *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
- *  
+ *
  *  :>
  *
  *****************************************************************************/
@@ -153,8 +153,7 @@ bcmos_errno omci_svc_validate(bcmonu_mgmt_onu_key *key, bcmonu_mgmt_msg *msg)
     if (!OMCI_SVC_PON_IS_ONU_ID_VALID(msg->olt_id, key->pon_ni, key->onu_id))
     {
         BCM_LOG(ERROR, omci_svc_log_id, "ONU ID is out of range\n");
-        if (msg)
-            snprintf(msg->err_text, sizeof(msg->err_text), "ONU ID is out of range\n");
+        snprintf(msg->err_text, sizeof(msg->err_text), "ONU ID is out of range\n");
         return BCM_ERR_PARM;
     }
 
@@ -247,4 +246,3 @@ void omci_svc_omci_remove_entry_cnf(bcmolt_oltid olt_id, uint32_t pon_ni, uint16
     OMCI_SVC_LOG(DEBUG, olt_id, key, NULL, "Remove entry request completed successfully, me_id={class_id=%s:entity_id=%u}\n", OMCI_SVC_OMCI_ME_CLASS_ID_STR(me_class_id), entity_id);
     onu_context->sm_run_cb(olt_id, OMCI_SVC_EVENT_ID_REMOVE_ENTRY_SUCCESS, key, NULL);
 }
-

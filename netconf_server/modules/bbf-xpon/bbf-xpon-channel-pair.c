@@ -1,22 +1,22 @@
 /*
  *  <:copyright-BRCM:2016-2020:Apache:standard
- *  
+ *
  *   Copyright (c) 2016-2020 Broadcom. All Rights Reserved
- *  
+ *
  *   The term “Broadcom” refers to Broadcom Inc. and/or its subsidiaries
- *  
+ *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
  *   You may obtain a copy of the License at
- *  
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *   Unless required by applicable law or agreed to in writing, software
  *   distributed under the License is distributed on an "AS IS" BASIS,
  *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
- *  
+ *
  *  :>
  *
  *****************************************************************************/
@@ -55,7 +55,9 @@ void xpon_cpair_delete(xpon_channel_pair *cpair)
     NC_LOG_INFO("channel-pair %s deleted\n", cpair->hdr.name);
     STAILQ_REMOVE_SAFE(&cpair_list, &cpair->hdr, xpon_obj_hdr, next);
     if (cpair->channel_partition_ref != NULL)
+    {
         STAILQ_REMOVE_SAFE(&cpair->channel_partition_ref->cpair_list, cpair, xpon_channel_pair, next);
+    }
     if (cpair->primary_cterm != NULL && cpair->primary_cterm->channel_pair_ref == cpair)
     {
         cpair->primary_cterm->channel_pair_ref = NULL;
@@ -63,6 +65,21 @@ void xpon_cpair_delete(xpon_channel_pair *cpair)
     if (cpair->secondary_cterm != NULL && cpair->secondary_cterm->channel_pair_ref == cpair)
     {
         cpair->secondary_cterm->channel_pair_ref = NULL;
+    }
+    /* Cleanup forward references */
+    if (cpair->channel_partition_ref != NULL &&
+        cpair->channel_partition_ref->hdr.created_by_forward_reference)
+    {
+        xpon_cpart_delete(cpair->channel_partition_ref);
+    }
+    if (cpair->channel_group_ref != NULL &&
+        cpair->channel_group_ref->hdr.created_by_forward_reference)
+    {
+        xpon_cgroup_delete(cpair->channel_group_ref);
+    }
+    if (cpair->wavelen_prof_ref != NULL && cpair->wavelen_prof_ref->hdr.created_by_forward_reference)
+    {
+        xpon_wavelen_prof_delete(cpair->wavelen_prof_ref);
     }
     xpon_object_delete(&cpair->hdr);
 }
@@ -87,6 +104,12 @@ bcmos_errno xpon_cpair_transaction(sr_session_ctx_t *srs, nc_transact *tr)
     err = xpon_cpair_get_by_name(keyname, &cpair, &was_added);
     if (err != BCM_ERR_OK)
         return err;
+    /* If cpair exists and was already populated by forward reference - stop here */
+    if (cpair->hdr.created_by_forward_reference)
+    {
+        cpair->hdr.created_by_forward_reference = BCMOS_FALSE;
+        return BCM_ERR_OK;
+    }
 
     /* Go over transaction elements and map to BAL */
     STAILQ_FOREACH(elem, &tr->elems, next)
@@ -110,11 +133,11 @@ bcmos_errno xpon_cpair_transaction(sr_session_ctx_t *srs, nc_transact *tr)
         }
         else if (!strcmp(leaf, "channel-partition-ref"))
         {
-            xpon_channel_partition *cpart = NULL;
-            const char *cpart_name = elem->new_val ? elem->new_val->data.string_val : elem->old_val->data.string_val;
+            xpon_obj_hdr *cpart = NULL;
             if (elem->new_val != NULL)
             {
-                err = xpon_cpart_get_by_name(cpart_name, &cpart, NULL);
+                const char *cpart_name = elem->new_val->data.string_val;
+                err = xpon_interface_get_populate(srs, cpart_name, XPON_OBJ_TYPE_CPART, &cpart);
                 if (err != BCM_ERR_OK)
                 {
                     NC_ERROR_REPLY(srs, iter_xpath, "channel-pair %s references channel-partition %s which doesn't exist\n",
@@ -123,15 +146,15 @@ bcmos_errno xpon_cpair_transaction(sr_session_ctx_t *srs, nc_transact *tr)
                     break;
                 }
             }
-            XPON_PROP_SET(&cpair_tmp, cpair, channel_partition_ref, cpart);
+            XPON_PROP_SET(&cpair_tmp, cpair, channel_partition_ref, (xpon_channel_partition *)cpart);
         }
         else if (!strcmp(leaf, "channel-group-ref"))
         {
-            xpon_channel_group *cgroup = NULL;
-            const char *cgroup_name = elem->new_val ? elem->new_val->data.string_val : elem->old_val->data.string_val;
+            xpon_obj_hdr *cgroup = NULL;
             if (elem->new_val != NULL)
             {
-                err = xpon_cgroup_get_by_name(cgroup_name, &cgroup, NULL);
+                const char *cgroup_name = elem->new_val->data.string_val;
+                err = xpon_interface_get_populate(srs, cgroup_name, XPON_OBJ_TYPE_CGROUP, &cgroup);
                 if (err != BCM_ERR_OK)
                 {
                     NC_ERROR_REPLY(srs, iter_xpath, "channel-pair %s references channel-group %s which doesn't exist\n",
@@ -140,15 +163,15 @@ bcmos_errno xpon_cpair_transaction(sr_session_ctx_t *srs, nc_transact *tr)
                     break;
                 }
             }
-            XPON_PROP_SET(&cpair_tmp, cpair, channel_group_ref, cgroup);
+            XPON_PROP_SET(&cpair_tmp, cpair, channel_group_ref, (xpon_channel_group *)cgroup);
         }
         else if (!strcmp(leaf, "wavelength-prof-ref"))
         {
             xpon_wavelength_profile *prof = NULL;
-            const char *prof_name = elem->new_val ? elem->new_val->data.string_val : elem->old_val->data.string_val;
             if (elem->new_val != NULL)
             {
-                err = xpon_wavelen_prof_get_by_name(prof_name, &prof, NULL);
+                const char *prof_name = elem->new_val->data.string_val;
+                err = xpon_wavelen_prof_get_populate(srs, prof_name, &prof);
                 if (err != BCM_ERR_OK)
                 {
                     NC_ERROR_REPLY(srs, iter_xpath, "channel-pair %s references wavelength-profile %s which doesn't exist\n",
@@ -173,10 +196,33 @@ bcmos_errno xpon_cpair_transaction(sr_session_ctx_t *srs, nc_transact *tr)
         XPON_PROP_COPY(&cpair_tmp, cpair, cpair, channel_partition_ref);
         XPON_PROP_COPY(&cpair_tmp, cpair, cpair, channel_group_ref);
         XPON_PROP_COPY(&cpair_tmp, cpair, cpair, wavelen_prof_ref);
+        cpair_tmp.channel_partition_ref = NULL;
+        cpair_tmp.channel_group_ref = NULL;
+        cpair_tmp.wavelen_prof_ref = NULL;
     }
 
     if ((err != BCM_ERR_OK && was_added) || cpair_tmp.hdr.being_deleted)
         xpon_cpair_delete(cpair);
+
+    /* Cleanup references auto-populated from operational data */
+    if (err != BCM_ERR_OK)
+    {
+        if (cpair_tmp.channel_partition_ref != NULL &&
+            cpair_tmp.channel_partition_ref->hdr.created_by_forward_reference)
+        {
+            xpon_cpart_delete(cpair_tmp.channel_partition_ref);
+        }
+        if (cpair_tmp.channel_group_ref != NULL &&
+            cpair_tmp.channel_group_ref->hdr.created_by_forward_reference)
+        {
+            xpon_cgroup_delete(cpair_tmp.channel_group_ref);
+        }
+        if (cpair_tmp.wavelen_prof_ref != NULL &&
+            cpair_tmp.wavelen_prof_ref->hdr.created_by_forward_reference)
+        {
+            xpon_wavelen_prof_delete(cpair_tmp.wavelen_prof_ref);
+        }
+    }
 
     if (cpair_tmp.hdr.being_deleted)
         err = BCM_ERR_OK;

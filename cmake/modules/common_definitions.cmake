@@ -7,6 +7,11 @@
 set(SUBSYSTEM host)
 
 #====
+# Skip the install of symbols in the 'fs' directory for the release
+#====
+set(BCM_INSTALL_STRIP_SYMBOLS n CACHE BOOL "Do not install stripped symbols" FORCE)
+
+#====
 # Add a subdirectory within the Aspen system. This is a wrapper on the CMake add_subdirectory that collects
 # information on which directories have been added.
 #
@@ -58,4 +63,11 @@ if(IS_DIRECTORY ${KERNEL_OUTDIR})
 elseif(NOT SIMULATION_BUILD)
     bcm_message(FATAL_ERROR "ERROR: Kernel objects directory not found: KERNEL_OUTDIR=${KERNEL_OUTDIR}")
 endif()
+endif()
+
+#====
+# If the main board is not set explicitly, it defaults to BOARD
+#====
+if(NOT MAIN_BOARD)
+    set(MAIN_BOARD ${BOARD})
 endif()

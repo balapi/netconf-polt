@@ -74,8 +74,7 @@ bcmos_errno sim_tr451_vendor_onu_added(const char *cterm_name, uint16_t onu_id, 
     err = tr451_prepare_onu_info(cterm_name, onu_id, serial, &onu_info);
     if (err != BCM_ERR_OK)
         return err;
-    onu_info.present = BCMOS_TRUE;
-    onu_info.active = BCMOS_TRUE;
+    onu_info.presence_flags = XPON_ONU_PRESENCE_FLAG_ONU;
     vendor_event_cfg.tr451_onu_state_change_cb(vendor_event_cfg.user_handle, &onu_info);
     if (vendor_event_cfg.tr451_onu_state_change_notify_cb != nullptr)
     {
@@ -94,6 +93,7 @@ bcmos_errno sim_tr451_vendor_onu_removed(const char *cterm_name, uint16_t onu_id
     err = tr451_prepare_onu_info(cterm_name, onu_id, serial, &onu_info);
     if (err != BCM_ERR_OK)
         return err;
+    onu_info.presence_flags = XPON_ONU_PRESENCE_FLAG_V_ANI;
     vendor_event_cfg.tr451_onu_state_change_cb(vendor_event_cfg.user_handle, &onu_info);
 
     if (vendor_event_cfg.tr451_onu_state_change_notify_cb != nullptr)

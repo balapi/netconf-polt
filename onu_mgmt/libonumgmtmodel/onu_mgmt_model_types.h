@@ -57,5 +57,6 @@ typedef struct bcmonu_mgmt_multi_cfg
 } bcmonu_mgmt_multi_cfg;
 
 typedef bcmolt_buf bcmonu_mgmt_buf;
+typedef uint16_t bcmonu_mgmt_oltid;
 
 #endif /* _ONU_MGMT_MODEL_TYPES_H_ */

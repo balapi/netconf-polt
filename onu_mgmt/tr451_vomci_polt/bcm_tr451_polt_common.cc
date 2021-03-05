@@ -112,13 +112,27 @@ public:
         bool isMatch(const tr451_polt_onu_serial_number *serial_number)
         {
             if (filter.type == TR451_FILTER_TYPE_ANY)
+            {
+                BCM_POLT_LOG(DEBUG, "isMatch ANY : %c%c%c%c%02X%02X%02X%02X\n",
+                    serial_number->data[0], serial_number->data[1], serial_number->data[2], serial_number->data[3],
+                    serial_number->data[4], serial_number->data[5], serial_number->data[6], serial_number->data[7]);
                 return true;
+            }
             if (filter.type == TR451_FILTER_TYPE_VENDOR_ID)
             {
+                BCM_POLT_LOG(DEBUG, "isMatch VENDOR %c%c%c%c : %c%c%c%c%02X%02X%02X%02X\n",
+                    filter.serial_number[0], filter.serial_number[1], filter.serial_number[2], filter.serial_number[3],
+                    serial_number->data[0], serial_number->data[1], serial_number->data[2], serial_number->data[3],
+                    serial_number->data[4], serial_number->data[5], serial_number->data[6], serial_number->data[7]);
                 return (memcmp(&serial_number->data[0], &filter.serial_number[0], 4) == 0);
             }
             if (filter.type == TR451_FILTER_TYPE_SERIAL_NUMBER)
             {
+                BCM_POLT_LOG(DEBUG, "isMatch SERIAL %c%c%c%c%02X%02X%02X%02X : %c%c%c%c%02X%02X%02X%02X\n",
+                    filter.serial_number[0], filter.serial_number[1], filter.serial_number[2], filter.serial_number[3],
+                    filter.serial_number[4], filter.serial_number[5], filter.serial_number[6], filter.serial_number[7],
+                    serial_number->data[0], serial_number->data[1], serial_number->data[2], serial_number->data[3],
+                    serial_number->data[4], serial_number->data[5], serial_number->data[6], serial_number->data[7]);
                 return (memcmp(&serial_number->data[0], &filter.serial_number[0], sizeof(serial_number->data)) == 0);
             }
             return false;
@@ -497,11 +511,18 @@ static STAILQ_HEAD(, GrpcProcessor) client_server_list;
 VomciConnection *vomci_connection_get_by_name(const char *name, const GrpcProcessor *owner)
 {
     VomciConnection *conn, *tmp;
+    BCM_POLT_LOG(DEBUG, "Looking for connection with name '%s'. Owner: '%s'\n",
+        name, owner ? owner->name() : "<null>");
     STAILQ_FOREACH_SAFE(conn, &connection_list, next, tmp)
     {
+        BCM_POLT_LOG(DEBUG, "..checking connection '%s'. parent '%s'\n",
+            conn->name(), conn->parent()->name());
+
         if ((owner == nullptr || conn->parent() == owner) && !strcmp(name, conn->name()))
             break;
     }
+    BCM_POLT_LOG(DEBUG, "Found connection '%s'. Connected=%d\n",
+        conn ? conn->name() : "<null>", conn ? conn->isConnected() : false);
     return conn;
 }
 
@@ -908,7 +929,7 @@ static void tr451_polt_onu_state_change_cb(void *user_handle, const tr451_polt_o
     OnuInfo *onu_info = onu_info_get(vendor_onu_info->cterm_name, vendor_onu_info->onu_id);
 
     // Removed ?
-    if (!vendor_onu_info->present || !vendor_onu_info->active)
+    if ((vendor_onu_info->presence_flags & XPON_ONU_PRESENCE_FLAG_ONU) == 0)
     {
         if (onu_info != nullptr)
             delete onu_info;
@@ -936,7 +957,7 @@ static bcmos_errno tr451_polt_onu_state_change_notify_cb(void *user_handle, cons
     bcmos_errno err;
     err = tr451_onu_status_change_cb(
         onu_info->cterm_name, onu_info->onu_id,
-        onu_info->serial_number.data, onu_info->present, onu_info->active);
+        onu_info->serial_number.data, onu_info->presence_flags);
     return err;
 }
 

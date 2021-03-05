@@ -11,6 +11,9 @@ if(NETCONF_SERVER)
     if(TR385_ISSUE2)
         bcm_module_definitions(PUBLIC -DTR385_ISSUE2)
     endif()
+    if(USE_OBBAA_YANG_MODELS)
+        bcm_module_definitions(PUBLIC -DOB_BAA)
+    endif()
     bcm_module_header_paths(PUBLIC .)
     bcm_module_srcs(
         b64.c

@@ -39,6 +39,7 @@ static int _fifo_read_handler(long arg)
         terminated = BCMOS_TRUE;
         return 0;
     }
+    /* coverity[tainted_data] - we want to mirror the input directly, even if it's "tainted" */
     while ((c = fgetc(daemon_out_fifo)) >= 0)
     {
         putchar(c);

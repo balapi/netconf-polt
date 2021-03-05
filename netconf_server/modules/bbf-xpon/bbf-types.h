@@ -1,22 +1,22 @@
 /*
  *  <:copyright-BRCM:2016-2020:Apache:standard
- *  
+ *
  *   Copyright (c) 2016-2020 Broadcom. All Rights Reserved
- *  
+ *
  *   The term “Broadcom” refers to Broadcom Inc. and/or its subsidiaries
- *  
+ *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
  *   You may obtain a copy of the License at
- *  
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *   Unless required by applicable law or agreed to in writing, software
  *   distributed under the License is distributed on an "AS IS" BASIS,
  *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
- *  
+ *
  *  :>
  *
  *****************************************************************************/
@@ -137,12 +137,32 @@ typedef struct bbf_multiple_vlan_tag_match
 /* protocol-match */
 typedef enum
 {
-    BBF_PROTOCOL_MATCH_ANY,
-    BBF_PROTOCOL_MATCH_IGMP,
-    BBF_PROTOCOL_MATCH_MLD,
-    BBF_PROTOCOL_MATCH_DHCPV4,
-    BBF_PROTOCOL_MATCH_DHCPV6,
-    BBF_PROTOCOL_MATCH_PPPOE_DISCOVERY
+    BBF_PROTOCOL_MATCH_ANY              = 0,
+    BBF_PROTOCOL_MATCH_IGMP             = 0x1,      /* IP protocol type = 2 */
+    BBF_PROTOCOL_MATCH_MLD              = 0x2,      /* IPv6 protocol type = 58 */
+    BBF_PROTOCOL_MATCH_DHCPV4           = 0x4,      /* client: UDP src port=68, dst port=67 server: src port=67, dst port=68 */
+    BBF_PROTOCOL_MATCH_DHCPV6           = 0x8,      /* client: UDP src port=547, dst port=548 server: src port=548, dst port=547 */
+    BBF_PROTOCOL_MATCH_PPPOE_DISCOVERY  = 0x10,     /* ethertype=0x8863 */
+#define ETHER_TYPE_PPPOE_DISCOVERY  0x8863
+    BBF_PROTOCOL_MATCH_PPPOE_DATA       = 0x20,     /* ethertype=0x8864 */
+#define ETHER_TYPE_PPPOE_DATA       0x8864
+    BBF_PROTOCOL_MATCH_ARP              = 0x40,     /* ethertype=0x0806 */
+#define ETHER_TYPE_ARP              0x0806
+    BBF_PROTOCOL_MATCH_DOT1X            = 0x80,     /* ethertype=0x888E */
+#define ETHER_TYPE_DOT1X            0x888E
+    BBF_PROTOCOL_MATCH_LACP             = 0x100,    /* ethertype=0x8809 */
+#define ETHER_TYPE_LACP             0x8809
+    BBF_PROTOCOL_MATCH_IPV4             = 0x200,    /* ethertype=0x0800 */
+#define ETHER_TYPE_IPV4             0x0800
+    BBF_PROTOCOL_MATCH_IPV6             = 0x400,    /* ethertype=0x86DD */
+#define ETHER_TYPE_IPV6             0x86DD
+    BBF_PROTOCOL_MATCH_SPECIFIC         = 0x8000,   /* other specific ethernet type */
+} bbf_protocol_match_type;
+
+typedef struct bbf_protocol_match
+{
+    bbf_protocol_match_type match_type;
+    uint16_t ether_type;
 } bbf_protocol_match;
 
 typedef struct bbf_match_criteria

@@ -56,7 +56,8 @@ static bcmos_errno _dhcpr_prof_apply(sr_session_ctx_t *srs, const char *xpath,
     }
     if (prof_changes->circuit_id_syntax != NULL)
     {
-        XPON_PROP_SET(prof, dhcpr_profile, circuit_id_syntax, bcmos_strdup(prof_changes->circuit_id_syntax));
+        XPON_PROP_SET(prof, dhcpr_profile, circuit_id_syntax, prof_changes->circuit_id_syntax);
+        prof_changes->circuit_id_syntax = NULL;
     }
 
     if (prof->remote_id_syntax != NULL)
@@ -68,7 +69,8 @@ static bcmos_errno _dhcpr_prof_apply(sr_session_ctx_t *srs, const char *xpath,
     }
     if (prof_changes->remote_id_syntax != NULL)
     {
-        XPON_PROP_SET(prof, dhcpr_profile, remote_id_syntax, bcmos_strdup(prof_changes->remote_id_syntax));
+        XPON_PROP_SET(prof, dhcpr_profile, remote_id_syntax, prof_changes->remote_id_syntax);
+        prof_changes->remote_id_syntax = NULL;
     }
     XPON_PROP_COPY(prof_changes, prof, dhcpr_profile, start_numbering_from_zero);
     XPON_PROP_COPY(prof_changes, prof, dhcpr_profile, use_leading_zeros);
@@ -77,6 +79,88 @@ static bcmos_errno _dhcpr_prof_apply(sr_session_ctx_t *srs, const char *xpath,
 
     if (prof->circuit_id_syntax != NULL || prof->remote_id_syntax != NULL)
         err = dhcp_relay_profile_add(prof);
+
+    return err;
+}
+
+/* Populate dhcp-relay-profile attribute */
+static bcmos_errno _dhcpr_prof_attribute_populate(sr_session_ctx_t *srs,
+    xpon_dhcpr_profile *prof, sr_val_t *sr_old_val, sr_val_t *sr_new_val)
+{
+    const char *iter_xpath;
+    char leafbuf[BCM_MAX_LEAF_LENGTH];
+    const char *leaf;
+    sr_val_t *val = (sr_new_val != NULL) ? sr_new_val : sr_old_val;
+    bcmos_errno err = BCM_ERR_OK;
+
+    NC_LOG_DBG("old_val=%s new_val=%s type=%d\n",
+        sr_old_val ? sr_old_val->xpath : "none",
+        sr_new_val ? sr_new_val->xpath : "none",
+        sr_old_val ? sr_old_val->type : sr_new_val->type);
+
+    if (val->type == SR_LIST_T || val->type == SR_CONTAINER_T)
+    {
+        /* no semantic meaning */
+        return BCM_ERR_OK;
+    }
+
+    iter_xpath = val->xpath;
+    leaf = nc_xpath_leaf_get(iter_xpath, leafbuf, sizeof(leafbuf));
+    if (leaf == NULL)
+    {
+        /* no semantic meaning */
+        return BCM_ERR_OK;
+    }
+
+    do
+    {
+        /* Go over supported leafs */
+        if (!strcmp(leaf, "name"))
+        {
+            prof->hdr.being_deleted = (sr_new_val == NULL);
+        }
+        else if (!strcmp(leaf, "max-packet-size"))
+        {
+            XPON_PROP_SET(prof, dhcpr_profile, max_packet_size, val->data.uint16_val);
+        }
+        else if (!strcmp(leaf, "default-circuit-id-syntax"))
+        {
+            XPON_PROP_SET(prof, dhcpr_profile, circuit_id_syntax,
+                val->data.string_val ? bcmos_strdup(val->data.string_val) : NULL);
+        }
+        else if (!strcmp(leaf, "default-remote-id-syntax"))
+        {
+            XPON_PROP_SET(prof, dhcpr_profile, remote_id_syntax,
+                val->data.string_val ? bcmos_strdup(val->data.string_val) : NULL);
+        }
+        else if (!strcmp(leaf, "start-numbering-from-zero"))
+        {
+            XPON_PROP_SET(prof, dhcpr_profile, start_numbering_from_zero, val->data.bool_val);
+        }
+        else if (!strcmp(leaf, "use-leading-zeroes"))
+        {
+            XPON_PROP_SET(prof, dhcpr_profile, use_leading_zeros, val->data.bool_val);
+        }
+        else if (!strcmp(leaf, "suboptions"))
+        {
+            dhcp_relay_option82_suboptions suboptions = prof->suboptions | prof->suboptions;
+            dhcp_relay_option82_suboptions new_suboption = DHCP_RELAY_OPTION82_SUBOPTION_NONE;
+            if (val->data.enum_val != NULL)
+            {
+                if (!strcmp(val->data.enum_val, "circuit-id"))
+                    new_suboption |= DHCP_RELAY_OPTION82_SUBOPTION_CIRCUIT_ID;
+                else if (!strcmp(val->data.enum_val, "remote-id"))
+                    new_suboption |= DHCP_RELAY_OPTION82_SUBOPTION_REMOTE_ID;
+                else if (!strcmp(val->data.enum_val, "access-loop-characteristics"))
+                    new_suboption |= DHCP_RELAY_OPTION82_SUBOPTION_ACCESS_LOOP;
+            }
+            if (sr_new_val != NULL)
+                suboptions |= new_suboption;
+            else
+                suboptions &= ~new_suboption;
+            XPON_PROP_SET(prof, dhcpr_profile, suboptions, suboptions);
+        }
+    } while (0);
 
     return err;
 }
@@ -94,10 +178,11 @@ static int _dhcpr_prof_change_cb(sr_session_ctx_t *srs, const char *module_name,
     bcmos_bool was_added = BCMOS_FALSE;
     const char *prev_xpath = NULL;
     char qualified_xpath[BCM_MAX_XPATH_LENGTH];
-    char circuit_id_syntax[64] = {};
-    char remote_id_syntax[64] = {};
     int sr_rc;
     bcmos_errno err = BCM_ERR_OK;
+    bcmos_bool skip = BCMOS_FALSE;
+
+    nc_config_lock();
 
     NC_LOG_INFO("xpath=%s event=%d\n", xpath, event);
 
@@ -108,7 +193,10 @@ static int _dhcpr_prof_change_cb(sr_session_ctx_t *srs, const char *module_name,
      * ABORT event will roll-back the changes.
      */
     if (event == SR_EV_DONE)
+    {
+        nc_config_unlock();
         return SR_ERR_OK;
+    }
 
     snprintf(qualified_xpath, sizeof(qualified_xpath)-1, "%s//.", xpath);
     qualified_xpath[sizeof(qualified_xpath)-1] = 0;
@@ -120,30 +208,11 @@ static int _dhcpr_prof_change_cb(sr_session_ctx_t *srs, const char *module_name,
         nc_sr_free_value_pair(&sr_old_val, &sr_new_val))
     {
         const char *iter_xpath;
-        char leafbuf[BCM_MAX_LEAF_LENGTH];
-        const char *leaf;
-        sr_val_t *val;
+        sr_val_t *val = sr_new_val ? sr_new_val : sr_old_val;
 
-        if ((sr_old_val && ((sr_old_val->type == SR_LIST_T) && (sr_oper != SR_OP_MOVED))) ||
-            (sr_new_val && ((sr_new_val->type == SR_LIST_T) && (sr_oper != SR_OP_MOVED))) ||
-            (sr_old_val && (sr_old_val->type == SR_CONTAINER_T)) ||
-            (sr_new_val && (sr_new_val->type == SR_CONTAINER_T)))
-        {
-            /* no semantic meaning */
-            continue;
-        }
-        NC_LOG_DBG("old_val=%s new_val=%s\n",
-            sr_old_val ? sr_old_val->xpath : "none",
-            sr_new_val ? sr_new_val->xpath : "none");
-
-        val = sr_new_val ? sr_new_val : sr_old_val;
         if (val == NULL)
             continue;
         iter_xpath = val->xpath;
-
-        leaf = nc_xpath_leaf_get(iter_xpath, leafbuf, sizeof(leafbuf));
-        if (leaf == NULL)
-            continue;
 
         if (nc_xpath_key_get(iter_xpath, "name", keyname, sizeof(keyname)) != BCM_ERR_OK ||
             ! *keyname)
@@ -170,59 +239,16 @@ static int _dhcpr_prof_change_cb(sr_session_ctx_t *srs, const char *module_name,
             err = xpon_dhcpr_prof_get_by_name(keyname, &prof, &was_added);
             if (err != BCM_ERR_OK)
                 break;
+            skip = prof->hdr.created_by_forward_reference;
+            prof->hdr.created_by_forward_reference = BCMOS_FALSE;
         }
         strcpy(prev_keyname, keyname);
         prev_xpath = iter_xpath;
 
         /* handle attributes */
-        /* Go over supported leafs */
-
-        if (!strcmp(leaf, "name"))
+        if (!skip)
         {
-            prof_changes.hdr.being_deleted = (sr_new_val == NULL);
-        }
-        else if (!strcmp(leaf, "max-packet-size"))
-        {
-            XPON_PROP_SET(&prof_changes, dhcpr_profile, max_packet_size, val->data.uint16_val);
-        }
-        else if (!strcmp(leaf, "default-circuit-id-syntax"))
-        {
-            if (val->data.string_val != NULL)
-                strncpy(circuit_id_syntax, val->data.string_val, sizeof(circuit_id_syntax) - 1);
-            XPON_PROP_SET(&prof_changes, dhcpr_profile, circuit_id_syntax, sr_new_val ? circuit_id_syntax : NULL);
-        }
-        else if (!strcmp(leaf, "default-remote-id-syntax"))
-        {
-            if (val->data.string_val != NULL)
-                strncpy(remote_id_syntax, val->data.string_val, sizeof(remote_id_syntax) - 1);
-            XPON_PROP_SET(&prof_changes, dhcpr_profile, remote_id_syntax, sr_new_val ? remote_id_syntax : NULL);
-        }
-        else if (!strcmp(leaf, "start-numbering-from-zero"))
-        {
-            XPON_PROP_SET(&prof_changes, dhcpr_profile, start_numbering_from_zero, val->data.bool_val);
-        }
-        else if (!strcmp(leaf, "use-leading-zeroes"))
-        {
-            XPON_PROP_SET(&prof_changes, dhcpr_profile, use_leading_zeros, val->data.bool_val);
-        }
-        else if (!strcmp(leaf, "suboptions"))
-        {
-            dhcp_relay_option82_suboptions suboptions = prof->suboptions | prof_changes.suboptions;
-            dhcp_relay_option82_suboptions new_suboption = DHCP_RELAY_OPTION82_SUBOPTION_NONE;
-            if (val->data.enum_val != NULL)
-            {
-                if (!strcmp(val->data.enum_val, "circuit-id"))
-                    new_suboption |= DHCP_RELAY_OPTION82_SUBOPTION_CIRCUIT_ID;
-                else if (!strcmp(val->data.enum_val, "remote-id"))
-                    new_suboption |= DHCP_RELAY_OPTION82_SUBOPTION_REMOTE_ID;
-                else if (!strcmp(val->data.enum_val, "access-loop-characteristics"))
-                    new_suboption |= DHCP_RELAY_OPTION82_SUBOPTION_ACCESS_LOOP;
-            }
-            if (sr_new_val != NULL)
-                suboptions |= new_suboption;
-            else
-                suboptions &= ~new_suboption;
-            XPON_PROP_SET(&prof_changes, dhcpr_profile, suboptions, suboptions);
+            err = _dhcpr_prof_attribute_populate(srs, &prof_changes, sr_old_val, sr_new_val);
         }
     }
 
@@ -236,8 +262,15 @@ static int _dhcpr_prof_change_cb(sr_session_ctx_t *srs, const char *module_name,
     if (prof_changes.hdr.being_deleted)
         err = BCM_ERR_OK;
 
+    if (prof_changes.circuit_id_syntax != NULL)
+        bcmos_free(prof_changes.circuit_id_syntax);
+    if (prof_changes.remote_id_syntax != NULL)
+        bcmos_free(prof_changes.remote_id_syntax);
+
     nc_sr_free_value_pair(&sr_old_val, &sr_new_val);
     sr_free_change_iter(sr_iter);
+
+    nc_config_unlock();
 
     return nc_bcmos_errno_to_sr_errno(err);
 }
@@ -274,6 +307,53 @@ bcmos_errno xpon_dhcpr_start(sr_session_ctx_t *srs)
 
 void xpon_dhcpr_exit(sr_session_ctx_t *srs)
 {
+}
+
+/* Get DHCP relay profile object by name, add a new one if doesn't exist and populate from operational data */
+bcmos_errno xpon_dhcpr_prof_get_populate(sr_session_ctx_t *srs, const char *name, xpon_dhcpr_profile **p_obj)
+{
+    bcmos_bool is_added = BCMOS_FALSE;
+    bcmos_errno err;
+    char query_xpath[256];
+    sr_val_t *values = NULL;
+    size_t value_cnt = 0;
+    int i;
+    int sr_rc;
+
+    err = xpon_dhcpr_prof_get_by_name(name, p_obj, &is_added);
+    if (err != BCM_ERR_OK)
+        return err;
+    if (is_added)
+    {
+        snprintf(query_xpath, sizeof(query_xpath)-1,
+            BBF_XPON_DHCPR_PROFILE_PATH_BASE "[name='%s']//.", name);
+        sr_rc = sr_get_items(srs, query_xpath, 0, SR_OPER_DEFAULT, &values, &value_cnt);
+        if (sr_rc)
+        {
+            NC_LOG_ERR("sr_get_items(%s) -> %s\n", query_xpath, sr_strerror(sr_rc));
+            xpon_dhcpr_prof_delete(*p_obj);
+            *p_obj = NULL;
+            return BCM_ERR_PARM;
+        }
+        NC_LOG_DBG("Populating from xpath '%s'. values %u\n",
+            query_xpath, (unsigned)value_cnt);
+
+        for (i = 0; i < value_cnt && err == BCM_ERR_OK; i++)
+        {
+            err = _dhcpr_prof_attribute_populate(srs, *p_obj, NULL, &values[i]);
+        }
+        sr_free_values(values, value_cnt);
+        if (err != BCM_ERR_OK)
+        {
+            xpon_dhcpr_prof_delete(*p_obj);
+            *p_obj = NULL;
+        }
+        else
+        {
+            (*p_obj)->hdr.created_by_forward_reference = BCMOS_TRUE;
+        }
+    }
+    return err;
 }
 
 /* Find or add dhcp-relay-profile object */

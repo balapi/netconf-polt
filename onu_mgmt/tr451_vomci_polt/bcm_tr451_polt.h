@@ -36,6 +36,9 @@ extern "C"
 #include <bcmcli.h>
 #include <bcm_dev_log.h>
 
+/* Include vendor-specific services that can be used for integration with vendor's NETCONF server */
+#include <tr451_polt_vendor_specific.h>
+
 typedef enum
 {
    TR451_FILTER_TYPE_ANY,
@@ -125,9 +128,20 @@ bcmos_errno bcm_tr451_polt_grpc_client_filter_set(const tr451_polt_filter *filte
 bcmos_errno bcm_tr451_polt_grpc_client_filter_get(const char *filter_name, tr451_polt_filter *filter);
 bcmos_errno bcm_tr451_polt_grpc_client_filter_delete(const char *filter_name);
 
-/* callback for ONU status change reporting */
+#ifndef XPON_ONU_PRESENCE_FLAGS_DEFINED
+typedef enum
+{
+    XPON_ONU_PRESENCE_FLAG_NONE                      = 0,
+    XPON_ONU_PRESENCE_FLAG_V_ANI                     = 0x01,
+    XPON_ONU_PRESENCE_FLAG_ONU                       = 0x02,
+    XPON_ONU_PRESENCE_FLAG_ONU_IN_O5                 = 0x04,
+    XPON_ONU_PRESENCE_FLAG_ONU_ACTIVATION_FAILED     = 0x08,
+} xpon_onu_presence_flags;
+#define XPON_ONU_PRESENCE_FLAGS_DEFINED
+#endif
+
 typedef bcmos_errno (*xpon_v_ani_state_change_report_cb)(const char *cterm_name, uint16_t onu_id,
-    const uint8_t *serial_number, bcmos_bool is_present, bcmos_bool is_active);
+    const uint8_t *serial_number, xpon_onu_presence_flags presence_flags);
 bcmos_errno bcm_tr451_onu_state_change_notify_cb_register(xpon_v_ani_state_change_report_cb cb);
 
 void bcm_tr451_polt_cli_init(void);
@@ -135,8 +149,5 @@ void bcm_tr451_polt_cli_init(void);
 #ifdef __cplusplus
 }
 #endif
-
-/* Include vendor-specific services that can be used for integration with vendor's NETCONF server */
-#include <tr451_polt_vendor_specific.h>
 
 #endif /* BCM_DOLT_H_ */

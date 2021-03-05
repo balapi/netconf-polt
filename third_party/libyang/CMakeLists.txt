@@ -5,7 +5,7 @@ include(third_party)
 if(NETCONF_TOOLS_FROM_DEVEL)
     set(_VERSION "devel")
 else()
-    set(_VERSION "1.0.176")
+    set(_VERSION "1.0.215")
 endif()
 
 bcm_3rdparty_module_name(libyang "${_VERSION}")

@@ -1,22 +1,22 @@
 /*
  *  <:copyright-BRCM:2016-2020:Apache:standard
- *  
+ *
  *   Copyright (c) 2016-2020 Broadcom. All Rights Reserved
- *  
+ *
  *   The term “Broadcom” refers to Broadcom Inc. and/or its subsidiaries
- *  
+ *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
  *   You may obtain a copy of the License at
- *  
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *   Unless required by applicable law or agreed to in writing, software
  *   distributed under the License is distributed on an "AS IS" BASIS,
  *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
- *  
+ *
  *  :>
  *
  *****************************************************************************/
@@ -307,8 +307,8 @@ bcmos_errno omci_svc_omci_gal_eth_prof_me_create (bcmolt_oltid olt_id, uint32_t 
     bcm_omci_gal_eth_prof_cfg gal_eth_prof_cfg = {};
     bcm_omci_me_key me_key = {
         .olt_id = olt_id,
-        .logical_pon = pon_ni, 
-        .onu_id = onu_id, 
+        .logical_pon = pon_ni,
+        .onu_id = onu_id,
         .entity_instance = entity_id,
         .cookie = omci_svc_omci_assign_op_ref(olt_id, pon_ni, onu_id) };
     BCM_OMCI_HDR_INIT(&gal_eth_prof_cfg.hdr, gal_eth_prof, me_key);
@@ -356,8 +356,8 @@ static bcmos_errno omci_svc_omci_ext_vlan_tag_oper_config_data_me_create_or_set 
     bcm_omci_ext_vlan_tag_oper_config_data_cfg ext_vlan_tag_oper_config_data_cfg = {};
     bcm_omci_me_key me_key = {
         .olt_id = olt_id,
-        .logical_pon = pon_ni, 
-        .onu_id = onu_id, 
+        .logical_pon = pon_ni,
+        .onu_id = onu_id,
         .entity_instance = entity_id,
         .cookie = omci_svc_omci_assign_op_ref(olt_id, pon_ni, onu_id) };
     BCM_OMCI_HDR_INIT(&ext_vlan_tag_oper_config_data_cfg.hdr, ext_vlan_tag_oper_config_data, me_key);
@@ -459,8 +459,8 @@ static bcmos_errno omci_svc_omci_ext_vlan_tag_oper_config_data_set_entry_in_tabl
     bcm_omci_ext_vlan_tag_oper_config_data_cfg ext_vlan_tag_oper_config_data_cfg = {};
     bcm_omci_me_key me_key = {
         .olt_id = olt_id,
-        .logical_pon = pon_ni, 
-        .onu_id = onu_id, 
+        .logical_pon = pon_ni,
+        .onu_id = onu_id,
         .entity_instance = entity_id,
         .cookie = cookie };
     BCM_OMCI_HDR_INIT(&ext_vlan_tag_oper_config_data_cfg.hdr, ext_vlan_tag_oper_config_data, me_key);
@@ -581,8 +581,8 @@ bcmos_errno omci_svc_omci_mac_bridge_svc_prof_me_create (bcmolt_oltid olt_id, ui
     bcm_omci_mac_bridge_svc_prof_cfg  mac_bridge_svc_prof_cfg = {};
     bcm_omci_me_key me_key = {
         .olt_id = olt_id,
-        .logical_pon = pon_ni, 
-        .onu_id = onu_id, 
+        .logical_pon = pon_ni,
+        .onu_id = onu_id,
         .entity_instance = entity_id,
         .cookie = omci_svc_omci_assign_op_ref(olt_id, pon_ni, onu_id) };
     BCM_OMCI_HDR_INIT(&mac_bridge_svc_prof_cfg.hdr, mac_bridge_svc_prof, me_key);
@@ -679,8 +679,8 @@ bcmos_errno omci_svc_omci_mac_bridge_port_config_data_me_create (bcmolt_oltid ol
     bcm_omci_mac_bridge_port_config_data_cfg  mac_bridge_port_config_data_cfg = {};
     bcm_omci_me_key me_key = {
         .olt_id = olt_id,
-        .logical_pon = pon_ni, 
-        .onu_id = onu_id, 
+        .logical_pon = pon_ni,
+        .onu_id = onu_id,
         .entity_instance = entity_id,
         .cookie = omci_svc_omci_assign_op_ref(olt_id, pon_ni, onu_id) };
     BCM_OMCI_HDR_INIT(&mac_bridge_port_config_data_cfg.hdr, mac_bridge_port_config_data, me_key);
@@ -774,8 +774,8 @@ bcmos_errno omci_svc_omci_mac_bridge_port_config_data_me_delete (bcmolt_oltid ol
 {
     bcm_omci_me_key me_key = {
         .olt_id = olt_id,
-        .logical_pon = pon_ni, 
-        .onu_id = onu_id, 
+        .logical_pon = pon_ni,
+        .onu_id = onu_id,
         .entity_instance = entity_id,
         .cookie = omci_svc_omci_assign_op_ref(olt_id, pon_ni, onu_id),
         .entity_class = BCM_OMCI_ME_CLASS_VAL_MAC_BRIDGE_PORT_CONFIG_DATA};
@@ -800,8 +800,8 @@ static bcmos_errno omci_svc_omci_mcast_operations_profile_me_create_or_set (bcmo
     bcm_omci_mcast_operations_profile_cfg mcast_operations_profile_cfg = {};
     bcm_omci_me_key me_key = {
         .olt_id = olt_id,
-        .logical_pon = pon_ni, 
-        .onu_id = onu_id, 
+        .logical_pon = pon_ni,
+        .onu_id = onu_id,
         .entity_instance = entity_id,
         .cookie = omci_svc_omci_assign_op_ref(olt_id, pon_ni, onu_id) };
     BCM_OMCI_HDR_INIT(&mcast_operations_profile_cfg.hdr, mcast_operations_profile, me_key);
@@ -852,6 +852,7 @@ static bcmos_errno omci_svc_omci_mcast_operations_profile_me_create_or_set (bcmo
                 BCM_OMCI_REQ_PROP_SET(&mcast_operations_profile_cfg, mcast_operations_profile, query_max_response_time, attr_val);
                 break;
             case OMCI_SVC_OMCI_ATTR_ID_DS_IGMP_AND_MCAST_TCI:
+            {
                 attr_val_ptr = va_arg(arg_list, char*);
                 char prefix1, prefix2;
                 uint8_t control_type;
@@ -871,7 +872,8 @@ static bcmos_errno omci_svc_omci_mcast_operations_profile_me_create_or_set (bcmo
                 };
 
                 BCM_OMCI_REQ_PROP_SET(&mcast_operations_profile_cfg, mcast_operations_profile, ds_igmp_and_multicast_tci, ds_igmp_and_multicast_tci);
-                break;
+            }
+            break;
 
             default:
                 BCM_LOG(ERROR, omci_svc_log_id, "%s: unhandled attr : %d\n", __FUNCTION__, attr_id);
@@ -931,8 +933,8 @@ bcmos_errno omci_svc_omci_mcast_operations_profile_me_delete(bcmolt_oltid olt_id
 {
     bcm_omci_me_key me_key = {
         .olt_id = olt_id,
-        .logical_pon = pon_ni, 
-        .onu_id = onu_id, 
+        .logical_pon = pon_ni,
+        .onu_id = onu_id,
         .entity_instance = entity_id,
         .cookie = omci_svc_omci_assign_op_ref(olt_id, pon_ni, onu_id),
         .entity_class = BCM_OMCI_ME_CLASS_VAL_MCAST_OPERATIONS_PROFILE};
@@ -1007,8 +1009,8 @@ static bcmos_errno omci_svc_omci_mcast_operations_profile_set_entry_in_table (bc
         (is_add_entry ? OMCI_SVC_OPER_SET_ADD_ENTRY : OMCI_SVC_OPER_SET_REMOVE_ENTRY);
     bcm_omci_me_key me_key = {
         .olt_id = olt_id,
-        .logical_pon = pon_ni, 
-        .onu_id = onu_id, 
+        .logical_pon = pon_ni,
+        .onu_id = onu_id,
         .entity_instance = entity_id,
         .cookie = cookie };
     BCM_OMCI_HDR_INIT(&mcast_operations_profile_cfg.hdr, mcast_operations_profile, me_key);
@@ -1048,8 +1050,8 @@ bcmos_errno omci_svc_omci_mcast_subscriber_config_info_me_create (bcmolt_oltid o
     bcm_omci_mcast_subscriber_config_info_cfg mcast_subscriber_config_info_cfg = {};
     bcm_omci_me_key me_key = {
         .olt_id = olt_id,
-        .logical_pon = pon_ni, 
-        .onu_id = onu_id, 
+        .logical_pon = pon_ni,
+        .onu_id = onu_id,
         .entity_instance = entity_id,
         .cookie = omci_svc_omci_assign_op_ref(olt_id, pon_ni, onu_id) };
     BCM_OMCI_HDR_INIT(&mcast_subscriber_config_info_cfg.hdr, mcast_subscriber_config_info, me_key);
@@ -1106,8 +1108,8 @@ bcmos_errno omci_svc_omci_mcast_subscriber_config_info_me_delete (bcmolt_oltid o
 {
     bcm_omci_me_key me_key = {
         .olt_id = olt_id,
-        .logical_pon = pon_ni, 
-        .onu_id = onu_id, 
+        .logical_pon = pon_ni,
+        .onu_id = onu_id,
         .entity_instance = entity_id,
         .cookie = omci_svc_omci_assign_op_ref(olt_id, pon_ni, onu_id),
         .entity_class = BCM_OMCI_ME_CLASS_VAL_MCAST_SUBSCRIBER_CONFIG_INFO };
@@ -1131,8 +1133,8 @@ bcmos_errno omci_svc_omci_tcont_me_set (bcmolt_oltid olt_id, uint32_t pon_ni, ui
     bcm_omci_tcont_cfg  tcont_cfg = {};
     bcm_omci_me_key me_key = {
         .olt_id = olt_id,
-        .logical_pon = pon_ni, 
-        .onu_id = onu_id, 
+        .logical_pon = pon_ni,
+        .onu_id = onu_id,
         .entity_instance = entity_id,
         .cookie = omci_svc_omci_assign_op_ref(olt_id, pon_ni, onu_id) };
     BCM_OMCI_HDR_INIT(&tcont_cfg.hdr, tcont, me_key);
@@ -1184,8 +1186,8 @@ bcmos_errno omci_svc_omci_gem_port_net_ctp_me_create (bcmolt_oltid olt_id, uint3
     bcm_omci_gem_port_net_ctp_cfg  gem_port_net_ctp_cfg = {};
     bcm_omci_me_key me_key = {
         .olt_id = olt_id,
-        .logical_pon = pon_ni, 
-        .onu_id = onu_id, 
+        .logical_pon = pon_ni,
+        .onu_id = onu_id,
         .entity_instance = entity_id,
         .cookie = omci_svc_omci_assign_op_ref(olt_id, pon_ni, onu_id) };
     BCM_OMCI_HDR_INIT(&gem_port_net_ctp_cfg.hdr, gem_port_net_ctp, me_key);
@@ -1262,8 +1264,8 @@ bcmos_errno omci_svc_omci_gem_port_net_ctp_me_delete (bcmolt_oltid olt_id, uint3
 {
     bcm_omci_me_key me_key = {
         .olt_id = olt_id,
-        .logical_pon = pon_ni, 
-        .onu_id = onu_id, 
+        .logical_pon = pon_ni,
+        .onu_id = onu_id,
         .entity_instance = entity_id,
         .cookie = omci_svc_omci_assign_op_ref(olt_id, pon_ni, onu_id),
         .entity_class = BCM_OMCI_ME_CLASS_VAL_GEM_PORT_NET_CTP };
@@ -1286,8 +1288,8 @@ static bcmos_errno omci_svc_omci_ieee_8021_p_mapper_svc_prof_me_create_or_set (b
     bcm_omci_ieee_8021_p_mapper_svc_prof_cfg  ieee_8021_p_mapper_svc_prof_cfg = {};
     bcm_omci_me_key me_key = {
         .olt_id = olt_id,
-        .logical_pon = pon_ni, 
-        .onu_id = onu_id, 
+        .logical_pon = pon_ni,
+        .onu_id = onu_id,
         .entity_instance = entity_id,
         .cookie = omci_svc_omci_assign_op_ref(olt_id, pon_ni, onu_id) };
     BCM_OMCI_HDR_INIT(&ieee_8021_p_mapper_svc_prof_cfg.hdr, ieee_8021_p_mapper_svc_prof, me_key);
@@ -1423,8 +1425,8 @@ bcmos_errno omci_svc_omci_ieee_8021_p_mapper_svc_prof_me_delete (bcmolt_oltid ol
 {
     bcm_omci_me_key me_key = {
         .olt_id = olt_id,
-        .logical_pon = pon_ni, 
-        .onu_id = onu_id, 
+        .logical_pon = pon_ni,
+        .onu_id = onu_id,
         .entity_instance = entity_id,
         .cookie = omci_svc_omci_assign_op_ref(olt_id, pon_ni, onu_id),
         .entity_class = BCM_OMCI_ME_CLASS_VAL_IEEE_8021_P_MAPPER_SVC_PROF };
@@ -1450,8 +1452,8 @@ bcmos_errno omci_svc_omci_gem_iw_tp_me_create (bcmolt_oltid olt_id, uint32_t pon
     bcm_omci_gem_iw_tp_cfg  gem_iw_tp_cfg = {};
     bcm_omci_me_key me_key = {
         .olt_id = olt_id,
-        .logical_pon = pon_ni, 
-        .onu_id = onu_id, 
+        .logical_pon = pon_ni,
+        .onu_id = onu_id,
         .entity_instance = entity_id,
         .cookie = omci_svc_omci_assign_op_ref(olt_id, pon_ni, onu_id) };
     BCM_OMCI_HDR_INIT(&gem_iw_tp_cfg.hdr, gem_iw_tp, me_key);
@@ -1515,8 +1517,8 @@ bcmos_errno omci_svc_omci_gem_iw_tp_me_delete (bcmolt_oltid olt_id, uint32_t pon
 {
     bcm_omci_me_key me_key = {
         .olt_id = olt_id,
-        .logical_pon = pon_ni, 
-        .onu_id = onu_id, 
+        .logical_pon = pon_ni,
+        .onu_id = onu_id,
         .entity_instance = entity_id,
         .cookie = omci_svc_omci_assign_op_ref(olt_id, pon_ni, onu_id),
         .entity_class = BCM_OMCI_ME_CLASS_VAL_GEM_IW_TP };
@@ -1542,8 +1544,8 @@ bcmos_errno omci_svc_omci_mcast_gem_iw_tp_me_create (bcmolt_oltid olt_id, uint32
     bcm_omci_mcast_gem_iw_tp_cfg  mcast_gem_iw_tp_cfg = {};
     bcm_omci_me_key me_key = {
         .olt_id = olt_id,
-        .logical_pon = pon_ni, 
-        .onu_id = onu_id, 
+        .logical_pon = pon_ni,
+        .onu_id = onu_id,
         .entity_instance = entity_id,
         .cookie = omci_svc_omci_assign_op_ref(olt_id, pon_ni, onu_id) };
     BCM_OMCI_HDR_INIT(&mcast_gem_iw_tp_cfg.hdr, mcast_gem_iw_tp, me_key);
@@ -1610,8 +1612,8 @@ bcmos_errno omci_svc_omci_mcast_gem_iw_tp_me_delete (bcmolt_oltid olt_id, uint32
 {
     bcm_omci_me_key me_key = {
         .olt_id = olt_id,
-        .logical_pon = pon_ni, 
-        .onu_id = onu_id, 
+        .logical_pon = pon_ni,
+        .onu_id = onu_id,
         .entity_instance = entity_id,
         .cookie = omci_svc_omci_assign_op_ref(olt_id, pon_ni, onu_id),
         .entity_class = BCM_OMCI_ME_CLASS_VAL_MCAST_GEM_IW_TP };
@@ -1692,8 +1694,8 @@ static bcmos_errno omci_svc_omci_mcast_gem_iw_tp_set_entry_in_table (bcmolt_olti
     bcm_omci_mcast_gem_iw_tp_cfg mcast_gem_iw_tp_cfg = {};
     bcm_omci_me_key me_key = {
         .olt_id = olt_id,
-        .logical_pon = pon_ni, 
-        .onu_id = onu_id, 
+        .logical_pon = pon_ni,
+        .onu_id = onu_id,
         .entity_instance = entity_id,
         .cookie = cookie };
     BCM_OMCI_HDR_INIT(&mcast_gem_iw_tp_cfg.hdr, mcast_gem_iw_tp, me_key);
@@ -1736,8 +1738,8 @@ bcmos_errno omci_svc_omci_vlan_tag_filter_data_me_create (bcmolt_oltid olt_id, u
     bcm_omci_vlan_tag_filter_data_cfg  vlan_tag_filter_data_cfg = {};
     bcm_omci_me_key me_key = {
         .olt_id = olt_id,
-        .logical_pon = pon_ni, 
-        .onu_id = onu_id, 
+        .logical_pon = pon_ni,
+        .onu_id = onu_id,
         .entity_instance = entity_id,
         .cookie = omci_svc_omci_assign_op_ref(olt_id, pon_ni, onu_id) };
     BCM_OMCI_HDR_INIT(&vlan_tag_filter_data_cfg.hdr, vlan_tag_filter_data, me_key);
@@ -1755,6 +1757,7 @@ bcmos_errno omci_svc_omci_vlan_tag_filter_data_me_create (bcmolt_oltid olt_id, u
                 break;
 
             case OMCI_SVC_OMCI_ATTR_ID_VLAN_FILTER_TABLE:
+            {
                 attr_val = va_arg(arg_list, uint32_t);
                 uint16_t vlan_filter_entry = attr_val; /** @todo add support for PBIT and CFI */
 
@@ -1770,7 +1773,8 @@ bcmos_errno omci_svc_omci_vlan_tag_filter_data_me_create (bcmolt_oltid olt_id, u
                 {
                     BCM_OMCI_REQ_PROP_SET_ARRAY(&vlan_tag_filter_data_cfg, vlan_tag_filter_data, vlan_filter_list, vlan_filter_list, sizeof(vlan_filter_list));
                 }
-                break;
+            }
+            break;
 
             case OMCI_SVC_OMCI_ATTR_ID_FORWARD_OPER:
                 attr_val = va_arg(arg_list, uint32_t);
@@ -1802,8 +1806,8 @@ bcmos_errno omci_svc_omci_vlan_tag_filter_data_me_delete (bcmolt_oltid olt_id, u
 {
     bcm_omci_me_key me_key = {
         .olt_id = olt_id,
-        .logical_pon = pon_ni, 
-        .onu_id = onu_id, 
+        .logical_pon = pon_ni,
+        .onu_id = onu_id,
         .entity_instance = entity_id,
         .cookie = omci_svc_omci_assign_op_ref(olt_id, pon_ni, onu_id),
         .entity_class = BCM_OMCI_ME_CLASS_VAL_VLAN_TAG_FILTER_DATA };

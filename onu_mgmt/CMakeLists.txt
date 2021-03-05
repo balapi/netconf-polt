@@ -24,5 +24,5 @@ if(${ONU_MGMT})
     bcm_add_subdirectory(tr451_vomci_polt OPTIONAL)
 
     install(FILES config/onu_mgmt_config.ini DESTINATION fs)
-    bcm_release_install(${CMAKE_INSTALL_PREFIX}/fs/onu_mgmt_config.ini RELEASE ${BCM_HOST_IMAGES_RELEASE}/bal)
+    bcm_release_install(${CMAKE_INSTALL_PREFIX}/fs/onu_mgmt_config.ini RELEASE ${BCM_HOST_IMAGES_RELEASE})
 endif()
