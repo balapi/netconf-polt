@@ -1,0 +1,32 @@
+syntax = "proto3";
+package control_relay_packet_filter_service.v1;
+option go_package = "control_relay/pb";
+
+import "google/protobuf/empty.proto";
+
+service ControlRelayPacketFilterService {
+    rpc SetControlRelayPacketFilter(ControlRelayPacketFilterList) returns (ControlRelayPacketFilterResponse) {}
+    rpc ClearControlRelayPacketFilter(google.protobuf.Empty) returns (ControlRelayPacketFilterResponse) {}
+}
+
+message ControlRelayPacketFilterList {
+    message ControlRelayPacketFilter {
+        enum FilterType {
+            INCLUDE = 0;
+            EXCLUDE = 1;
+        }
+        FilterType type = 1;
+        string     device_name = 2;
+        string     device_interface = 3;
+        string     originating_rule = 4;
+    }
+    repeated ControlRelayPacketFilter filter = 1;
+}
+
+message ControlRelayPacketFilterResponse {
+    enum Response {
+        SUCCESS = 0;
+        FAIL    = 1;
+    }
+    Response response = 1;
+}

@@ -47,7 +47,15 @@ static bcmos_errno xpon_find_rule_gem(
     xpon_vlan_subif *acc_if, bbf_subif_ingress_rule *rule,
     const xpon_v_ani_v_enet *v_ani_v_enet,
     bcmos_bool stop_on_error);
-
+#ifdef NETCONF_MODULE_BBF_MFC
+void Add_interface(bbf_subif_ingress_rule *ds_rule,
+                   bbf_subif_ingress_rule *us_rule,
+                   const xpon_enet *nni,
+                   const xpon_v_ani *v_ani);
+uint32_t find_flowid_by_up_stream_packet (uint16_t intf_id, const bbf_match_criteria *match);
+uint32_t find_flowid_by_down_stream_packet (uint16_t intf_id, const bbf_match_criteria *match);
+extern STAILQ_HEAD(, interface_info) interface_list;
+#endif
 /*
  * ONU management handlers
  */
@@ -1144,8 +1152,83 @@ static bcmos_errno xpon_apply_n_1_flow_create(sr_session_ctx_t *srs, xpon_forwar
 
     return err;
 }
+#ifdef NETCONF_MODULE_BBF_MFC
+uint32_t find_flowid_by_down_stream_packet (uint16_t intf_id, const bbf_match_criteria *match)
+{
+    interface_info *iface, *iface_tmp;
+    STAILQ_FOREACH_SAFE(iface, &interface_list, next, iface_tmp)
+    {
+        if (iface->nni != intf_id)
+            continue;
+        if (BBF_DOT1Q_TAG_PROP_IS_SET(&iface->ds_filter.vlan_tag_match.tags[BBF_TAG_INDEX_TYPE_OUTER], vlan_id) &&
+            (!BBF_DOT1Q_TAG_PROP_IS_SET(&match->vlan_tag_match.tags[BBF_TAG_INDEX_TYPE_OUTER], vlan_id) ||
+             iface->ds_filter.vlan_tag_match.tags[BBF_TAG_INDEX_TYPE_OUTER].vlan_id !=
+             match->vlan_tag_match.tags[BBF_TAG_INDEX_TYPE_OUTER].vlan_id))
+            continue;
+        if (BBF_DOT1Q_TAG_PROP_IS_SET(&iface->ds_filter.vlan_tag_match.tags[BBF_TAG_INDEX_TYPE_INNER], vlan_id) &&
+            (!BBF_DOT1Q_TAG_PROP_IS_SET(&match->vlan_tag_match.tags[BBF_TAG_INDEX_TYPE_INNER], vlan_id) ||
+             iface->ds_filter.vlan_tag_match.tags[BBF_TAG_INDEX_TYPE_INNER].vlan_id !=
+             match->vlan_tag_match.tags[BBF_TAG_INDEX_TYPE_INNER].vlan_id))
+            continue;
+        break;
+    }
+    if (iface != NULL)
+       return iface->us_bal_flow;
+    else
+       return 0;
+}
 
+uint32_t find_flowid_by_up_stream_packet (uint16_t intf_id, const bbf_match_criteria *match)
+{
+    interface_info *iface, *iface_tmp;
+    STAILQ_FOREACH_SAFE(iface, &interface_list, next, iface_tmp)
+    {
+        if (iface->pon_ni != intf_id)
+            continue;
+        if (BBF_DOT1Q_TAG_PROP_IS_SET(&iface->us_filter.vlan_tag_match.tags[BBF_TAG_INDEX_TYPE_OUTER], vlan_id) &&
+            (!BBF_DOT1Q_TAG_PROP_IS_SET(&match->vlan_tag_match.tags[BBF_TAG_INDEX_TYPE_OUTER], vlan_id) ||
+             iface->us_filter.vlan_tag_match.tags[BBF_TAG_INDEX_TYPE_OUTER].vlan_id !=
+             match->vlan_tag_match.tags[BBF_TAG_INDEX_TYPE_OUTER].vlan_id))
+            continue;
+        if (BBF_DOT1Q_TAG_PROP_IS_SET(&iface->us_filter.vlan_tag_match.tags[BBF_TAG_INDEX_TYPE_INNER], vlan_id) &&
+            (!BBF_DOT1Q_TAG_PROP_IS_SET(&match->vlan_tag_match.tags[BBF_TAG_INDEX_TYPE_INNER], vlan_id) ||
+             iface->us_filter.vlan_tag_match.tags[BBF_TAG_INDEX_TYPE_INNER].vlan_id !=
+             match->vlan_tag_match.tags[BBF_TAG_INDEX_TYPE_INNER].vlan_id))
+            continue;
+        break;
+    }
+    if (iface != NULL)
+       return iface->ds_bal_flow;
+    else
+       return 0;
+}
 
+void Add_interface(bbf_subif_ingress_rule *ds_rule,
+              bbf_subif_ingress_rule *us_rule,
+              const xpon_enet *nni,
+              const xpon_v_ani *v_ani)
+{
+
+struct interface_info *iface;
+iface = bcmos_calloc(sizeof(struct interface_info));
+iface->pon_ni = v_ani->pon_ni;
+iface->nni = nni->intf_id;
+iface->ds_filter = ds_rule->match;
+iface->us_filter = us_rule->match;
+iface->ds_bal_flow = ds_rule->flows[0].flow_id;
+iface->us_bal_flow = us_rule->flows[0].flow_id;
+ printf("\n pon_ni %d \n nni %d \n ds_bal_flow %d \n us_bal_flow %d \n us_outer_vid %d \n us_inner_vid %d \n ds_outer_vid %d \n ds_inner_vid %d \n",
+               v_ani->pon_ni,
+               nni->intf_id,
+               ds_rule->flows[0].flow_id,
+               us_rule->flows[0].flow_id,
+               iface->us_filter.vlan_tag_match.tags[BBF_TAG_INDEX_TYPE_OUTER].vlan_id,
+               iface->us_filter.vlan_tag_match.tags[BBF_TAG_INDEX_TYPE_INNER].vlan_id,
+               iface->ds_filter.vlan_tag_match.tags[BBF_TAG_INDEX_TYPE_OUTER].vlan_id,
+               iface->ds_filter.vlan_tag_match.tags[BBF_TAG_INDEX_TYPE_INNER].vlan_id);
+STAILQ_INSERT_TAIL(&interface_list, iface, next);
+}
+#endif
 bcmos_errno xpon_apply_flow_create(sr_session_ctx_t *srs, xpon_forwarder *fwd)
 {
     xpon_vlan_subif *net_if, *acc_if;
@@ -1348,7 +1431,11 @@ bcmos_errno xpon_apply_flow_create(sr_session_ctx_t *srs, xpon_forwarder *fwd)
             if (err != BCM_ERR_OK)
                 break;
         }
-
+        /* Updated the interface list during flow creation this database 
+         * used for other application to fetch the flow id */
+#ifdef NETCONF_MODULE_BBF_MFC
+        Add_interface(ds_rule,rule,nni,v_ani);
+#endif
         /* Create ONU flows if not done yet */
         if (ani_if != NULL && v_ani->registered)
         {

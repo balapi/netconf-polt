@@ -1,0 +1,8 @@
+if(MFC)
+bcm_module_name(mfc_relay)
+    bcm_module_dependencies(PRIVATE os host_api mfc_relay_polt daemon grpc)
+    bcm_module_header_paths(PUBLIC .)
+    bcm_module_srcs(mfc_relay_client.cc)
+    bcm_create_lib_target()
+bcm_add_subdirectory(message_definition)
+endif()

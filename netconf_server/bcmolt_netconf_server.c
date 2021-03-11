@@ -44,7 +44,9 @@
 #ifdef NETCONF_MODULE_BBF_POLT_VOMCI
 #include <bcm_tr451_polt.h>
 #endif
-
+#ifdef MFC_RELAY
+#include <mfc_relay_client_internal.h>
+#endif
 #define BCM_NETCONF_LOG_SIZE               (10*1000*1000)
 
 dev_log_id log_id_netconf;
@@ -55,7 +57,12 @@ static struct ly_ctx *ly_ctx;         /**< libyang's context */
 static bcmcli_session *current_session;
 static nc_startup_options startup_opts;
 static bcmos_task netconf_task;
-
+#ifdef MFC_RELAY
+extern tGlobMfcConfig gGlobalMfcConfig;
+STAILQ_HEAD(, interface_info) interface_list;
+bcmos_errno _mfc_config_ip_port(bcmcli_session *sess, const bcmcli_cmd_parm parm[], uint16_t nParms);
+bcmos_errno _mfc_disconnect(bcmcli_session *sess, const bcmcli_cmd_parm parm[], uint16_t nParms);
+#endif
 static int print_help(const char *cmd)
 {
     const char *p;
@@ -247,9 +254,31 @@ static bcmos_errno _cli_quit(bcmcli_session *session, const bcmcli_cmd_parm parm
     bcmcli_stop(session);
     return BCM_ERR_OK;
 }
-
+#ifdef MFC_RELAY
+bcmos_errno _mfc_disconnect(bcmcli_session *sess, const bcmcli_cmd_parm parm[], uint16_t nParms)
+{
+    Mfc_disconnect();
+    return BCM_ERR_OK;
+}
+bcmos_errno _mfc_config_ip_port(bcmcli_session *sess, const bcmcli_cmd_parm parm[], uint16_t nParms)
+{
+    int rc;
+    strcpy(gGlobalMfcConfig.a1Ipaddress,parm[0].value.string);
+    gGlobalMfcConfig.port = parm[1].value.number;
+    //sprintf(ga1Ipaddressandport,"%s:%ld",parm[0].value.string,parm[1].value.number);
+    rc = bcm_mfc_relay_start();
+    if (rc != BCM_ERR_OK)
+    {
+	bcmos_printf("Mfc relay init failed\n");
+    }
+    return BCM_ERR_OK;
+}
+#endif
 int main(int argc, char *argv[])
 {
+#ifdef MFC_RELAY
+    STAILQ_INIT(&interface_list);
+#endif
 #ifndef BCM_OPEN_SOURCE_SIM
     bcmolt_host_init_parms init_parms = {
         .transport.type = BCM_HOST_API_CONN_LOCAL
@@ -278,8 +307,16 @@ int main(int argc, char *argv[])
     };
     const char *init_script_name = NULL;
     bcmos_errno rc;
-    int i;
+    int i,i4iter;
     int sr_rc;
+    for (i4iter = 1; i4iter < argc; i4iter++)
+    {
+        if (!strcmp(argv[i4iter], "-polt_name"))
+        {
+            ++i4iter;
+            strcpy(gGlobalMfcConfig.DeviceName,argv[i4iter]);
+        }
+    }
 
     // Parameter validation
     for (i = 1; i < argc; i++)
@@ -495,7 +532,15 @@ int main(int argc, char *argv[])
         BUG_ON(rc != BCM_ERR_OK);
     }
 #endif
+#ifdef MFC_RELAY
+    bcm_mfc_relay_init(netconf_agent_olt_id());
+    BCMCLI_MAKE_CMD(NULL, "connect-Mfc-relay", "Run CLI script", _mfc_config_ip_port,
+        BCMCLI_MAKE_PARM("ip", "Ip address of Control relay", BCMCLI_PARM_STRING, 0),
+	BCMCLI_MAKE_PARM("port", "Port number", BCMCLI_PARM_NUMBER, BCMCLI_PARM_FLAG_NONE));
+    BCMCLI_MAKE_CMD(NULL,"disconnect","Disconnect control-relay",_mfc_disconnect,
+        BCMCLI_MAKE_PARM("Mfc-relay", " Mfc-relay", BCMCLI_PARM_STRING, 0));
 
+#endif
     /* Connect with sysrepo */
     sr_rc = sr_connect(SR_CONN_DEFAULT, &sr_conn);
     if (sr_rc != SR_ERR_OK)

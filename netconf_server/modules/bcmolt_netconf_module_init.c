@@ -33,6 +33,9 @@
 #ifdef NETCONF_MODULE_BBF_POLT_VOMCI
 #include <bbf-vomci.h>
 #endif
+#ifdef MFC_RELAY
+#include <bbf-mfc.h>
+#endif
 
 static nc_startup_options startup_options;
 static sr_session_ctx_t *netconf_session;
@@ -58,6 +61,9 @@ bcmos_errno bcm_netconf_modules_init(sr_session_ctx_t *srs, struct ly_ctx *ly_ct
     if (bcm_tr451_onu_management_is_enabled())
         err = err ? err : bbf_polt_vomci_module_init(srs, ly_ctx);
 #endif
+#ifdef MFC_RELAY 
+    err = err ? err : bbf_polt_mfc_module_init(srs, ly_ctx);
+#endif
 
     /*
      * Start modules
@@ -71,6 +77,9 @@ bcmos_errno bcm_netconf_modules_init(sr_session_ctx_t *srs, struct ly_ctx *ly_ct
 #ifdef NETCONF_MODULE_BBF_POLT_VOMCI
     if (bcm_tr451_onu_management_is_enabled())
         err = err ? err : bbf_polt_vomci_module_start(srs, ly_ctx);
+#endif
+#ifdef MFC_RELAY 
+    err = err ? err : bbf_polt_mfc_module_start(srs, ly_ctx);
 #endif
 
     return err;
@@ -88,6 +97,10 @@ void bcm_netconf_modules_exit(sr_session_ctx_t *srs, struct ly_ctx *ly_ctx)
     if (bcm_tr451_onu_management_is_enabled())
         bbf_polt_vomci_module_exit(srs, ly_ctx);
 #endif
+#ifdef MFC_RELAY 
+    bbf_polt_mfc_module_exit(srs, ly_ctx);
+#endif
+
 }
 
 const nc_startup_options *netconf_agent_startup_options_get(void)
