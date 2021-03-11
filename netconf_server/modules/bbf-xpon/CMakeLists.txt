@@ -5,6 +5,9 @@ if(NETCONF_SERVER)
     bcm_module_header_paths(PUBLIC .)
     bcm_module_cflags(PUBLIC -Wno-strict-prototypes)
     bcm_module_definitions(PUBLIC -DNETCONF_MODULE_BBF_XPON)
+    if (MFC)
+        bcm_module_definitions(PUBLIC -DNETCONF_MODULE_BBF_MFC)
+    endif()
     bcm_module_srcs(
         bbf-xpon.c
         bbf-xpon-utils.c

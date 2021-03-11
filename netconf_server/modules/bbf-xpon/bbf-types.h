@@ -171,7 +171,18 @@ typedef struct bbf_match_criteria
     bbf_multiple_vlan_tag_match vlan_tag_match;
     bbf_protocol_match protocol_match;
 } bbf_match_criteria;
-
+#ifdef NETCONF_MODULE_BBF_MFC
+typedef struct interface_info
+{
+    uint16_t pon_ni;
+    uint16_t nni;
+    bbf_match_criteria ds_filter;
+    bbf_match_criteria us_filter;
+    uint32_t us_bal_flow;
+    uint32_t ds_bal_flow;
+    STAILQ_ENTRY(interface_info) next;
+}interface_info;
+#endif
 /* flixible-rewrite */
 typedef struct bbf_flexible_rewrite
 {

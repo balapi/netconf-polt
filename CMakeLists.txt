@@ -48,6 +48,7 @@ bcm_add_subdirectory(third_party)
 bcm_add_subdirectory(onu_mgmt)
 bcm_add_subdirectory(netconf_server)
 bcm_add_subdirectory(balapi)
+bcm_add_subdirectory(mfc_relay OPTIONAL)
 
 #====
 # Post processing support to make the custom properties transitive
