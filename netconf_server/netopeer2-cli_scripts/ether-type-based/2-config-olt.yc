@@ -141,10 +141,11 @@
                                 <dot1q-tag>
                                     <tag-type xmlns:bbf-dot1qt="urn:bbf:yang:bbf-dot1q-types">bbf-dot1qt:c-vlan</tag-type>
                                     <vlan-id>301</vlan-id>
-                                    <pbit>any</pbit>
+                                    <pbit>4</pbit>
                                     <dei>any</dei>
                                 </dot1q-tag>
                             </tag>
+                            <ethernet-frame-type>ipv6</ethernet-frame-type>
                         </match-criteria>
                     </flexible-match>
                 </rule>
@@ -304,10 +305,11 @@
                                 <dot1q-tag>
                                     <tag-type xmlns:bbf-dot1qt="urn:bbf:yang:bbf-dot1q-types">bbf-dot1qt:c-vlan</tag-type>
                                     <vlan-id>301</vlan-id>
-                                    <pbit>any</pbit>
+                                    <pbit>4</pbit>
                                     <dei>any</dei>
                                 </dot1q-tag>
                             </tag>
+                            <ethernet-frame-type>ipv6</ethernet-frame-type>
                         </match-criteria>
                     </flexible-match>
                     <ingress-rewrite>
