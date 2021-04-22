@@ -56,6 +56,14 @@ static bcmcli_session *current_session;
 static nc_startup_options startup_opts;
 static bcmos_task netconf_task;
 
+/* We only need to allow one -config_log entry per logging level.  The user
+ * can group all log ids together in a single entry per logging level, and
+ * specify several config_log entries for different logging levels,
+ * like:
+ *    -config_log debug ACCESS_CONTROL,TOPOLOGY -config_log error FLOW,OLT_AGENT -config_log none SW_UTIL,CORE_CTRL
+ */
+#define NUM_LOG_CONFIG_SELECTIONS (DEV_LOG_LEVEL_NUM_OF)
+
 static int print_help(const char *cmd)
 {
     const char *p;
@@ -97,10 +105,17 @@ static int print_help(const char *cmd)
 #ifndef BCM_OPEN_SOURCE_SIM
             "\t\t -tr451_polt - ONU management is done by TR-451 vOMCI. Enable pOLT support\n"
 #endif
-            "\t\t -polt_name name\t\tSet pOLT name\n"
             "\t\t -tr451_polt_log error|info|debug TR-451 pOLT log level\n"
 #endif
             "\t\t -log error|info|debug - netconf server log level\n"
+#ifdef ENABLE_LOG
+            "\t\t -config_log\tlogging level with comma-delimited-list-of-log-type-name or ALL\t\tEnable specified logging level at startup for the specified modules, or ALL for all modules\n"
+            "\t\t  One or more -config_log entries may be specified\n"
+            "\t\t  Logging level is one of:\n"
+            "\t\t    d (for debug), e (for error), w (for warn), f (for fatal), i (for info), n (for none)\n"
+            "\t\t  Example 1: -config_log d NETCONF -config_log d api\n"
+            "\t\t  Example 2: -config_log e ALL\n"
+#endif
             "\t\t -srlog error|info|debug - sysrepo log level\n"
             );
 
@@ -264,6 +279,11 @@ int main(int argc, char *argv[])
 #ifdef NETCONF_MODULE_BBF_POLT_VOMCI
     tr451_polt_init_parms tr451_init_parms = { .log_level = DEV_LOG_LEVEL_INFO };
 #endif
+#ifdef ENABLE_LOG
+    char *config_log_names[NUM_LOG_CONFIG_SELECTIONS] = { };
+    int config_log_cntr = 0;
+    bcm_dev_log_level dev_log_level[NUM_LOG_CONFIG_SELECTIONS] = { DEV_LOG_LEVEL_NO_LOG };
+#endif
     bcmos_bool do_not_daemonize = BCMOS_FALSE;
     bcmolt_daemon_parms daemon_parms = {
         .name = "netconf"
@@ -347,13 +367,6 @@ int main(int argc, char *argv[])
         {
             startup_opts.tr451_onu_management = BCMOS_TRUE;
         }
-        else if (!strcmp(argv[i], "-polt_name"))
-        {
-            ++i;
-            if (i >= argc)
-                return print_help(argv[0]);
-            tr451_init_parms.polt_name = argv[i];
-        }
 #endif
         else if (!strcmp(argv[i], "-tr451_polt_log"))
         {
@@ -368,6 +381,54 @@ int main(int argc, char *argv[])
                 tr451_init_parms.log_level = DEV_LOG_LEVEL_ERROR;
             else
                 return print_help(argv[0]);
+        }
+#endif
+#ifdef ENABLE_LOG
+        else if (!strcmp(argv[i], "-config_log"))
+        {
+            const char *user_logging_level;
+            ++i;
+            if (i >= argc)
+                return print_help(argv[0]);
+            /* pick up the logging level */
+            user_logging_level = argv[i];
+            switch(user_logging_level[0])
+            {
+                case 'd': /* debug */
+                case 'D':
+                    dev_log_level[config_log_cntr] = DEV_LOG_LEVEL_DEBUG;
+                    break;
+                case 'i': /* info */
+                case 'I':
+                    dev_log_level[config_log_cntr] = DEV_LOG_LEVEL_INFO;
+                    break;
+                case 'e': /* error */
+                case 'E':
+                    dev_log_level[config_log_cntr] = DEV_LOG_LEVEL_ERROR;
+                    break;
+                case 'w': /* warning */
+                case 'W':
+                    dev_log_level[config_log_cntr] = DEV_LOG_LEVEL_WARNING;
+                    break;
+                case 'f': /* fatal */
+                case 'F':
+                    dev_log_level[config_log_cntr] = DEV_LOG_LEVEL_FATAL;
+                    break;
+                case 'n': /* none */
+                case 'N':
+                    dev_log_level[config_log_cntr] = DEV_LOG_LEVEL_NO_LOG;
+                    break;
+                default:
+                    return print_help(argv[0]);
+            }
+            ++i;
+            config_log_names[config_log_cntr] = argv[i];
+            if(++config_log_cntr == NUM_LOG_CONFIG_SELECTIONS)
+            {
+                fprintf(stderr, "Too many config_log choices have been made, only %d allowed\n\n",
+                       NUM_LOG_CONFIG_SELECTIONS);
+                return print_help(argv[0]);
+            }
         }
 #endif
         else if (!strcmp(argv[i], "-f"))
@@ -436,13 +497,64 @@ int main(int argc, char *argv[])
     BCMOS_TRACE_CHECK_RETURN(rc, rc, "bcmolt_log_init()\n");
 #endif
 
-#endif /* #ifndef BCM_OPEN_SOURCE */
+#endif /* #ifndef BCM_OPEN_SOURCE_SIM */
 
 #ifdef ENABLE_LOG
     log_id_netconf = bcm_dev_log_id_register("NETCONF", log_level, DEV_LOG_ID_TYPE_BOTH);
     bcm_dev_log_id_set_level(log_id_netconf, log_level, log_level);
     log_id_sysrepo = bcm_dev_log_id_register("SYSREPO", log_level, DEV_LOG_ID_TYPE_BOTH);
     bcm_dev_log_id_set_level(log_id_sysrepo, sr_log_level, sr_log_level);
+
+    /* Set log levels as per command line */
+    for (i=0; i<config_log_cntr; i++)
+    {
+        char *log_name = strtok(config_log_names[i], ",");
+        dev_log_id log_id;
+
+        while (log_name != NULL)
+        {
+            fprintf(stdout, "Enable logging for %s with dev_log set to %d\n", log_name, dev_log_level[i]);
+
+            if (!strcmp(log_name, "ALL"))
+            {
+                dev_log_id_parm id_parm = {};
+
+                fprintf(stdout, "All logs enabled at all levels\n");
+
+                log_id = DEV_LOG_INVALID_ID;
+
+                while ((log_id = bcm_dev_log_id_get_next(log_id)) != DEV_LOG_INVALID_ID)
+                {
+                    bcm_dev_log_id_get(log_id, &id_parm);
+
+                    /* Set the default level of all modules to the selected level. However, if the
+                     * selected level is DEBUG, don't set the serializer module to the debug logging level,
+                     * since it would be too chatty once the host is connected to the device(s)
+                     */
+                    if((strcmp(id_parm.name, "serializer")) && (DEV_LOG_LEVEL_DEBUG == dev_log_level[i]))
+                    {
+                        bcm_dev_log_id_set_level(log_id, dev_log_level[i], dev_log_level[i]);
+                    }
+                }
+                break;
+            }
+            else
+            {
+                log_id = bcm_dev_log_id_get_by_name(log_name);
+                if (log_id != DEV_LOG_INVALID_ID)
+                {
+                    bcm_dev_log_id_set_level(log_id, dev_log_level[i], dev_log_level[i]);
+                }
+                else
+                {
+                    fprintf(stderr, "Log name %s is unknown. Skipped\n", log_name);
+                }
+
+                log_name = strtok(NULL, ",");
+            }
+        }
+    }
+
 #endif
 
     sr_log_set_cb(_sr_log_cb);
@@ -494,6 +606,59 @@ int main(int argc, char *argv[])
         rc = bcm_tr451_polt_init(&tr451_init_parms);
         BUG_ON(rc != BCM_ERR_OK);
     }
+#endif
+
+#ifdef ENABLE_LOG
+    /* Set log levels as per configuration in the command line */
+    for (i=0; i<config_log_cntr; i++)
+    {
+        char *log_name = strtok(config_log_names[i], ",");
+        dev_log_id log_id;
+
+        while (log_name != NULL)
+        {
+            fprintf(stdout, "Enable logging for %s with dev_log set to %d\n", log_name, dev_log_level[i]);
+
+            if (!strcmp(log_name, "ALL"))
+            {
+                dev_log_id_parm id_parm = {};
+
+                fprintf(stdout, "All logs enabled at all levels\n");
+
+                log_id = DEV_LOG_INVALID_ID;
+
+                while ((log_id = bcm_dev_log_id_get_next(log_id)) != DEV_LOG_INVALID_ID)
+                {
+                    bcm_dev_log_id_get(log_id, &id_parm);
+
+                    /* Set the default level of all modules to the selected level. However, if the
+                     * selected level is DEBUG, don't set the serializer module to the debug logging level,
+                     * since it would be too chatty once the host is connected to the device(s)
+                     */
+                    if((strcmp(id_parm.name, "serializer")) && (DEV_LOG_LEVEL_DEBUG == dev_log_level[i]))
+                    {
+                        bcm_dev_log_id_set_level(log_id, dev_log_level[i], dev_log_level[i]);
+                    }
+                }
+                break;
+            }
+            else
+            {
+                log_id = bcm_dev_log_id_get_by_name(log_name);
+                if (log_id != DEV_LOG_INVALID_ID)
+                {
+                    bcm_dev_log_id_set_level(log_id, dev_log_level[i], dev_log_level[i]);
+                }
+                else
+                {
+                    fprintf(stderr, "Log name %s is unknown. Skipped\n", log_name);
+                }
+
+                log_name = strtok(NULL, ",");
+            }
+        }
+    }
+
 #endif
 
     /* Connect with sysrepo */

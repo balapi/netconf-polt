@@ -1,7 +1,7 @@
-module bbf-grpc-client {
+module bbf-kafka-agent {
   yang-version 1.1;
-  namespace "urn:bbf:yang:bbf-grpc-client";
-  prefix bbf-grpc;
+  namespace "urn:bbf:yang:bbf-kafka-agent";
+  prefix bbf-kafkaa;
 
   organization
     "Broadband Forum <https://www.broadband-forum.org>
@@ -21,9 +21,9 @@ module bbf-grpc-client {
      WA Director: Bruno Cornaglia, Vodafone";
   description
     "This module contains a collection of YANG definitions needed to
-     communicate with gRPC servers as a client as described in TR-451.
+     communicate with Kafka brokers as an agent.
 
-     Copyright (c) 2019-2020, Broadband Forum
+     Copyright (c) 2019-2021, Broadband Forum
 
      Redistribution and use in source and binary forms, with or
      without modification, are permitted provided that the following
@@ -66,113 +66,98 @@ module bbf-grpc-client {
      This version of this YANG module is part of TR-451; see
      the TR itself for full legal notices.";
 
-  revision 2019-10-09 {
+  revision 2021-02-19 {
     description
       "Initial revision.";
     reference
-      "TR-451: Section 5.5 vOMCI Function to OLT Interface";
+      "TR-451: Section 5.5.3.1 Message Transfer Using Kafka";
   }
 
   // Features
-
-  feature connection-backoff-supported {
+  feature publication-supported {
     description
-      "Indicates that the server supports configuring local
-       bindings (i.e., the local address and local port) for
-       TCP clients.";
+      "Indicates that the agent supports publication 
+       of messages to the broker on specific topics.";
   }
 
-  // Groupings
-
-  grouping grpc-client-grouping {
+  feature consumption-supported {
     description
-      "A reusable grouping for configuring a gRPC client,
-       including the IP address and port number it initiates
-       a connections to.
+      "Indicates that the agent supports consumption 
+       of message from the broker on specific topics.";
+  }
+ 
+  // Groupings
+  grouping kafka-topic-parameters {
+    description
+    "A reusable grouping for configuring Kafka topics.";
+    leaf name {
+      type string;
+      description
+        "The name of the topic.";
+    }
+    leaf purpose {
+      type string;
+      description
+        "The purpose of the topic (e.g., VOMCI_NOTIFICATION,
+         VOMCI_REQUEST, VOMCI_RESPONSE).";
+    }
+    leaf partition {
+      type string;
+      description
+        "For topics that are partitioned, the partition used for
+         production and consumption.";
+    }
+  }
+  
+  grouping kafka-agent-grouping {
+    description
+      "A reusable grouping for configuring a Kafka agent.
 
        Note that this grouping uses fairly typical descendent
        node names such that a stack of 'uses' statements will
        have name conflicts.  It is intended that the consuming
        data model will resolve the issue (e.g., by wrapping
        the 'uses' statement in a container called
-       'grpc-client-parameters').  This model purposely does
+       'kafka-agent-parameters').  This model purposely does
        not do this itself so as to provide maximum flexibility
        to consuming models.";
-    container channel {
-      description
-        "The gRPC channel properties.";
-      leaf ping-interval {
-        type uint32 {
-          range "0..max";
-        }
-        units "seconds";
-        default "300";
-        description
-          "Sets the amount of time after to send a ping request.
-           A value of 0 disables pings from being sent.";
-      }
-    }
-    // container channel
-    container connection-backoff {
-      if-feature "bbf-grpc:connection-backoff-supported";
-      description
-        "The connection backoff directs how a client
-         reconnects to a remote endpoint, after discovering
-         its connection to the remote endpoint has dropped.
-         The gRPC connection backoff protocol is documented
-         in github.com/grpc/grpc/blob/master/doc
-                      /connection-backoff.md.";
-      leaf initial-backoff {
-        type uint16 {
-          range "1..max";
-        }
-        units "seconds";
-        default "30";
-        description
-          "Specifies the initial wait period after the first
-           failure before retrying.";
-      }
-      leaf min-connect-timeout {
-        type uint16 {
-          range "1..max";
-        }
-        units "seconds";
-        default "20";
-        description
-          "Specifies the minimum time to wait for the
-           connection attempts.";
-      }
-      leaf multiplier {
-        type decimal64 {
-          fraction-digits 2;
-        }
-        default "1.60";
-        description
-          "Specifies the factor with which to multiply the
-           backoff after a failed retry.";
-      }
-      leaf jitter {
-        type decimal64 {
-          fraction-digits 2;
-        }
-        default "0.20";
-        description
-          "Specifies the factor with which to randomize
-           the backoff.";
-      }
-      leaf max-backoff {
-        type uint16 {
-          range "1..max";
-        }
-        default "10";
-        description
-          "Specifies the number times the client tries
-           to connect to a specific endpoint before moving on
-           to the next endpoint in the list (round robin).";
-      }
-    }
-    // connection-backoff
-  }
 
-  //grouping grpc-client-grouping
+    leaf client-id {
+        type string;
+        description
+          "The identifier that the client/consumer (agent) uses 
+           to identify the source of a message.";
+    }
+
+    container publication-parameters{
+      if-feature "bbf-kafkaa:publication-supported";
+      description
+        "The Kafka agent publication properties.";
+      list topic {
+        key name;
+        description
+          "The topics the agent will publish.";
+        uses kafka-topic-parameters;
+      }
+    }
+    container consumption-parameters{
+      if-feature "bbf-kafkaa:consumption-supported";
+      description
+        "The Kafka agent consumption properties.";
+
+      leaf group-id {
+          type string;
+          description
+            "The identifier that the group that the consumer can 
+             participate.";
+      }
+
+      list topics {
+        key name;
+        description
+          "The topics the agent will consume.";
+        uses kafka-topic-parameters;
+      }
+    }
+  }
 }

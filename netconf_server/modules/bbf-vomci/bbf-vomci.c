@@ -57,9 +57,7 @@ static int bbf_polt_vomci_server_change_cb(sr_session_ctx_t *srs, const char *mo
     const struct lyd_node *node;
     const char *prev_val, *prev_list;
     bool prev_dflt;
-    tr451_endpoint endpoint = {};
-    tr451_polt_filter filter = {};
-    const char *filter_endpoint_name = NULL;
+    tr451_server_endpoint server_ep = {};
     char qualified_xpath[BCM_MAX_XPATH_LENGTH];
     int sr_rc;
     bcmos_errno err = BCM_ERR_OK;
@@ -103,7 +101,9 @@ static int bbf_polt_vomci_server_change_cb(sr_session_ctx_t *srs, const char *mo
 
         if (sr_oper != SR_OP_DELETED)
         {
-            if (!strcmp(node_name, "local-port") || !strcmp(node_name, "local-address"))
+            if (!strcmp(node_name, "local-port") ||
+                !strcmp(node_name, "local-address") ||
+                !strcmp(node_name, "local-endpoint-name"))
             {
                 /* access points */
                 const struct lyd_node *endpoint_name_node;
@@ -117,113 +117,40 @@ static int bbf_polt_vomci_server_change_cb(sr_session_ctx_t *srs, const char *mo
                 }
                 NC_LOG_DBG("Handling listen-endpoint[%s]\n", endpoint_name_node->schema->name);
                 endpoint_name = ((const struct lyd_node_leaf_list *)endpoint_name_node)->value.string;
-                if (endpoint.name != NULL && strcmp(endpoint.name, endpoint_name))
+                if (server_ep.endpoint.name != NULL && strcmp(server_ep.endpoint.name, endpoint_name))
                 {
-                    tr451_server_endpoint server_ep = { .endpoint = endpoint };
                     err = bcm_tr451_polt_grpc_server_create(&server_ep);
-                    memset(&endpoint, 0, sizeof(endpoint));
+                    memset(&server_ep, 0, sizeof(server_ep));
                 }
-                endpoint.name = endpoint_name;
+                server_ep.endpoint.name = endpoint_name;
                 if (!strcmp(node_name, "local-port"))
-                    endpoint.port = ((const struct lyd_node_leaf_list *)node)->value.uint16;
+                    server_ep.endpoint.port = ((const struct lyd_node_leaf_list *)node)->value.uint16;
                 else if (!strcmp(node_name, "local-address"))
-                    endpoint.host_name = ((const struct lyd_node_leaf_list *)node)->value_str;
-            }
-            else if (!strcmp(node_name, "priority") || !strcmp(node_name, "resulting-endpoint") ||
-                    !strcmp(node_name, "any-onu") || !strcmp(node_name, "onu-vendor") ||
-                    !strcmp(node_name, "onu-serial-number"))
-            {
-                /* endpoint filter */
-                const struct lyd_node *filter_name_node;
-                const char *rule_name;
-
-                /* Commit endpoint if any */
-                if (endpoint.name)
-                {
-                    tr451_server_endpoint server_ep = { .endpoint = endpoint };
-                    err = bcm_tr451_polt_grpc_server_create(&server_ep);
-                    memset(&endpoint, 0, sizeof(endpoint));
-                }
-
-                filter_name_node = nc_ly_get_sibling_or_parent_node(node, "name");
-                if (filter_name_node == NULL)
-                {
-                    NC_LOG_ERR("can't find nf-endpoint-filter/rule\n");
-                    continue;
-                }
-                rule_name = ((const struct lyd_node_leaf_list *)filter_name_node)->value.string;
-                /* Filter rule changed ? */
-                if (filter.name && strcmp(filter.name, rule_name))
-                {
-                    if (filter_endpoint_name)
-                    {
-                        err = bcm_tr451_polt_grpc_server_filter_set(&filter, filter_endpoint_name);
-                    }
-                    memset(&filter, 0, sizeof(filter));
-                    filter_endpoint_name = NULL;
-                }
-                filter.name = rule_name;
-                if (!strcmp(node_name, "priority"))
-                    filter.priority = ((const struct lyd_node_leaf_list *)node)->value.uint16;
-                else if (!strcmp(node_name, "resulting-endpoint"))
-                    filter_endpoint_name = ((const struct lyd_node_leaf_list *)node)->value_str;
-                else if (!strcmp(node_name, "any-onu"))
-                    filter.type = TR451_FILTER_TYPE_ANY;
-                else if (!strcmp(node_name, "onu-vendor"))
-                {
-                    filter.type = TR451_FILTER_TYPE_VENDOR_ID;
-                    strncpy((char *)&filter.serial_number[0], ((const struct lyd_node_leaf_list *)node)->value.string, 4);
-                }
-                else if (!strcmp(node_name, "onu-serial-number"))
-                {
-                    const char *serial_number = ((const struct lyd_node_leaf_list *)node)->value.string;
-                    if (serial_number == NULL || strlen(serial_number) < 6)
-                    {
-                        NC_LOG_ERR("invalid onu-serial-number: NULL or too short\n");
-                        continue;
-                    }
-                    strncpy((char *)&filter.serial_number[0], serial_number, 4);
-                    /* Serial number consists of 4xASCII vendor_id + 8xHex string vendor-specific id */
-                    if (nc_hex_to_bin(serial_number + 4, &filter.serial_number[4], 4) < 0)
-                    {
-                        NC_LOG_ERR("invalid onu-serial-number format: %s\n", serial_number);
-                        continue;
-                    }
-                    filter.type = TR451_FILTER_TYPE_SERIAL_NUMBER;
-                }
+                    server_ep.endpoint.host_name = ((const struct lyd_node_leaf_list *)node)->value_str;
+                else if (!strcmp(node_name, "local-endpoint-name"))
+                    server_ep.local_name = ((const struct lyd_node_leaf_list *)node)->value_str;
             }
         }
         else
         {
             const struct lyd_node *endpoint_node;
-            const struct lyd_node *filter_node;
             const char *entity_name = ((const struct lyd_node_leaf_list *)node)->value.string;
 
             /* Deleted */
             if (!strcmp(node_name, "name"))
             {
                 endpoint_node = nc_ly_get_sibling_or_parent_node(node, "listen-endpoint");
-                filter_node = nc_ly_get_sibling_or_parent_node(node, "rule");
-                if (filter_node)
+                if (endpoint_node != NULL)
                 {
-                    err = bcm_tr451_polt_grpc_server_filter_delete(entity_name);
-                }
-                else if (endpoint_node != NULL)
-                {
-                    err = bcm_tr451_polt_grpc_server_delete(entity_name);
+                    bcm_tr451_polt_grpc_server_delete(entity_name);
                 }
             }
         }
     }
 
-    if (endpoint.name && err == BCM_ERR_OK)
+    if (server_ep.endpoint.name && err == BCM_ERR_OK)
     {
-        tr451_server_endpoint server_ep = { .endpoint = endpoint };
         err = bcm_tr451_polt_grpc_server_create(&server_ep);
-    }
-    if (filter.name)
-    {
-        err = bcm_tr451_polt_grpc_server_filter_set(&filter, filter_endpoint_name);
     }
 
     sr_free_change_iter(sr_iter);
@@ -242,10 +169,8 @@ static int bbf_polt_vomci_client_change_cb(sr_session_ctx_t *srs, const char *mo
     const struct lyd_node *node;
     const char *prev_val, *prev_list;
     bool prev_dflt;
-    tr451_client_endpoint *endpoint = NULL;
+    tr451_client_endpoint *client_ep = NULL;
     tr451_endpoint entry = {};
-    tr451_polt_filter filter = {};
-    const char *filter_endpoint_name = NULL;
     char qualified_xpath[BCM_MAX_XPATH_LENGTH];
     int sr_rc;
     bcmos_errno err = BCM_ERR_OK;
@@ -289,12 +214,13 @@ static int bbf_polt_vomci_client_change_cb(sr_session_ctx_t *srs, const char *mo
 
         if (sr_oper != SR_OP_DELETED)
         {
-            if (!strcmp(node_name, "remote-port") || !strcmp(node_name, "remote-address"))
+            const struct lyd_node *endpoint_name_node;
+            const char *endpoint_name;
+            if (!strcmp(node_name, "remote-port") ||
+                !strcmp(node_name, "remote-address"))
             {
                 /* access points */
                 const struct lyd_node *access_name_node;
-                const struct lyd_node *endpoint_name_node;
-                const char *endpoint_name;
                 const char *access_point_name;
 
                 access_name_node = nc_ly_get_sibling_or_parent_node(node, "name");
@@ -314,19 +240,19 @@ static int bbf_polt_vomci_client_change_cb(sr_session_ctx_t *srs, const char *mo
                     endpoint_name_node->schema->name, access_name_node->schema->name);
                 endpoint_name = ((const struct lyd_node_leaf_list *)endpoint_name_node)->value.string;
                 access_point_name = ((const struct lyd_node_leaf_list *)access_name_node)->value.string;
-                if (endpoint != NULL && strcmp(endpoint->name, endpoint_name))
+                if (client_ep != NULL && strcmp(client_ep->name, endpoint_name))
                 {
-                    err = bcm_tr451_polt_grpc_client_create(endpoint);
-                    endpoint = NULL;
+                    err = bcm_tr451_polt_grpc_client_create(client_ep);
+                    client_ep = NULL;
                 }
-                if (endpoint == NULL)
+                if (client_ep == NULL)
                 {
-                    endpoint = bcm_tr451_client_endpoint_alloc(endpoint_name);
+                    client_ep = bcm_tr451_client_endpoint_alloc(endpoint_name);
                 }
                 /* access-point name changed ? */
                 if (entry.name && strcmp(entry.name, access_point_name))
                 {
-                    bcm_tr451_client_endpoint_add_entry(endpoint, &entry);
+                    bcm_tr451_client_endpoint_add_entry(client_ep, &entry);
                     memset(&entry, 0, sizeof(entry));
                 }
                 entry.name = access_point_name;
@@ -335,27 +261,126 @@ static int bbf_polt_vomci_client_change_cb(sr_session_ctx_t *srs, const char *mo
                 else if (!strcmp(node_name, "remote-address"))
                     entry.host_name = ((const struct lyd_node_leaf_list *)node)->value_str;
             }
-            else if (!strcmp(node_name, "priority") || !strcmp(node_name, "resulting-endpoint") ||
+            else if (!strcmp(node_name, "local-endpoint-name"))
+            {
+                endpoint_name_node = nc_ly_get_sibling_or_parent_node(node, "name");
+                if (endpoint_name_node == NULL)
+                {
+                    NC_LOG_ERR("can't find remote-endpoint node\n");
+                    continue;
+                }
+                NC_LOG_DBG("Handling remote-endpoint[%s]/grpc/local-endpoint-name\n",
+                    endpoint_name_node->schema->name);
+                endpoint_name = ((const struct lyd_node_leaf_list *)endpoint_name_node)->value.string;
+                if (client_ep != NULL && strcmp(client_ep->name, endpoint_name))
+                {
+                    err = bcm_tr451_polt_grpc_client_create(client_ep);
+                    client_ep = NULL;
+                }
+                if (client_ep == NULL)
+                {
+                    client_ep = bcm_tr451_client_endpoint_alloc(endpoint_name);
+                }
+                client_ep->local_name = ((const struct lyd_node_leaf_list *)node)->value_str;
+            }
+        }
+        else
+        {
+            const struct lyd_node *endpoint_node;
+            const struct lyd_node *access_node;
+            const char *entity_name = ((const struct lyd_node_leaf_list *)node)->value.string;
+
+            /* Deleted */
+            if (!strcmp(node_name, "name"))
+            {
+                access_node = nc_ly_get_sibling_or_parent_node(node, "access-points");
+                endpoint_node = nc_ly_get_sibling_or_parent_node(node, "remote-endpoints");
+                if (access_node)
+                {
+                    NC_LOG_DBG("Deleting access-points [%s] is not supported. Request ignored\n",
+                        entity_name);
+                }
+                else if (endpoint_node != NULL)
+                {
+                    err = bcm_tr451_polt_grpc_client_delete(entity_name);
+                }
+            }
+        }
+    }
+
+    if (client_ep && err == BCM_ERR_OK)
+    {
+        if (entry.name)
+        {
+            bcm_tr451_client_endpoint_add_entry(client_ep, &entry);
+            memset(&entry, 0, sizeof(entry));
+        }
+        err = bcm_tr451_polt_grpc_client_create(client_ep);
+        client_ep = NULL;
+    }
+    if (client_ep != NULL)
+        bcm_tr451_client_endpoint_free(client_ep);
+
+    sr_free_change_iter(sr_iter);
+
+    nc_config_unlock();
+
+    return nc_bcmos_errno_to_sr_errno(err);
+}
+
+/* Data store change indication callback */
+static int bbf_polt_vomci_filter_change_cb(sr_session_ctx_t *srs, const char *module_name,
+    const char *xpath, sr_event_t event, uint32_t request_id, void *private_ctx)
+{
+    sr_change_iter_t *sr_iter = NULL;
+    sr_change_oper_t sr_oper;
+    const struct lyd_node *node;
+    const char *prev_val, *prev_list;
+    bool prev_dflt;
+    tr451_polt_filter filter = {};
+    const char *filter_endpoint_name = NULL;
+    char qualified_xpath[BCM_MAX_XPATH_LENGTH];
+    int sr_rc;
+    bcmos_errno err = BCM_ERR_OK;
+
+    nc_config_lock();
+
+    NC_LOG_INFO("xpath=%s event=%d\n", xpath, event);
+
+    /* We only handle CHANGE and ABORT events.
+     * Since there is no way to reserve resources in advance and no way to fail the APPLY event,
+     * configuration is applied in VERIFY event.
+     * There are no other verifiers, but if there are and they fail,
+     * ABORT event will roll-back the changes.
+     */
+    if (event == SR_EV_DONE)
+    {
+        nc_config_unlock();
+        return SR_ERR_OK;
+    }
+
+    snprintf(qualified_xpath, sizeof(qualified_xpath)-1, "%s//.", xpath);
+    qualified_xpath[sizeof(qualified_xpath)-1] = 0;
+
+    sr_rc = sr_get_changes_iter(srs, qualified_xpath, &sr_iter);
+    while ((err == BCM_ERR_OK) && (sr_rc == SR_ERR_OK) &&
+           ((sr_rc = sr_get_change_tree_next(srs, sr_iter, &sr_oper,
+                &node, &prev_val, &prev_list, &prev_dflt)) == SR_ERR_OK))
+    {
+        const char *node_name = node->schema->name;
+
+        NC_LOG_DBG("op=%s node=%s\n", sr_op_name(sr_oper), node_name);
+
+        /* Handle attributes */
+        if (sr_oper != SR_OP_DELETED)
+        {
+            if (!strcmp(node_name, "priority") || !strcmp(node_name, "resulting-endpoint") ||
                     !strcmp(node_name, "any-onu") || !strcmp(node_name, "onu-vendor") ||
                     !strcmp(node_name, "onu-serial-number"))
             {
                 /* endpoint filter */
                 const struct lyd_node *filter_name_node;
                 const char *rule_name;
-
-                /* Commit endpoint if any */
-                if (endpoint)
-                {
-                    if (entry.name)
-                    {
-                        bcm_tr451_client_endpoint_add_entry(endpoint, &entry);
-                        memset(&entry, 0, sizeof(entry));
-                    }
-                    err = bcm_tr451_polt_grpc_client_create(endpoint);
-                    if (err != BCM_ERR_OK)
-                        break;
-                    endpoint = NULL;
-                }
 
                 filter_name_node = nc_ly_get_sibling_or_parent_node(node, "name");
                 if (filter_name_node == NULL)
@@ -369,7 +394,7 @@ static int bbf_polt_vomci_client_change_cb(sr_session_ctx_t *srs, const char *mo
                 {
                     if (filter_endpoint_name)
                     {
-                        err = bcm_tr451_polt_grpc_client_filter_set(&filter, filter_endpoint_name);
+                        err = bcm_tr451_polt_filter_set(&filter, filter_endpoint_name);
                     }
                     memset(&filter, 0, sizeof(filter));
                     filter_endpoint_name = NULL;
@@ -405,52 +430,12 @@ static int bbf_polt_vomci_client_change_cb(sr_session_ctx_t *srs, const char *mo
                 }
             }
         }
-        else
-        {
-            const struct lyd_node *endpoint_node;
-            const struct lyd_node *access_node;
-            const struct lyd_node *filter_node;
-            const char *entity_name = ((const struct lyd_node_leaf_list *)node)->value.string;
-
-            /* Deleted */
-            if (!strcmp(node_name, "name"))
-            {
-                access_node = nc_ly_get_sibling_or_parent_node(node, "access-points");
-                endpoint_node = nc_ly_get_sibling_or_parent_node(node, "remote-endpoints");
-                filter_node = nc_ly_get_sibling_or_parent_node(node, "rule");
-                if (filter_node)
-                {
-                    err = bcm_tr451_polt_grpc_client_filter_delete(entity_name);
-                }
-                else if (access_node)
-                {
-                    NC_LOG_DBG("Deleting access-points [%s] is not supported. Request ignored\n",
-                        entity_name);
-                }
-                else if (endpoint_node != NULL)
-                {
-                    err = bcm_tr451_polt_grpc_client_delete(entity_name);
-                }
-            }
-        }
     }
 
-    if (endpoint && err == BCM_ERR_OK)
-    {
-        if (entry.name)
-        {
-            bcm_tr451_client_endpoint_add_entry(endpoint, &entry);
-            memset(&entry, 0, sizeof(entry));
-        }
-        err = bcm_tr451_polt_grpc_client_create(endpoint);
-        endpoint = NULL;
-    }
     if (filter.name)
     {
-        err = bcm_tr451_polt_grpc_client_filter_set(&filter, filter_endpoint_name);
+        err = bcm_tr451_polt_filter_set(&filter, filter_endpoint_name);
     }
-    if (endpoint != NULL)
-        bcm_tr451_client_endpoint_free(endpoint);
 
     sr_free_change_iter(sr_iter);
 
@@ -522,7 +507,7 @@ static void _server_connect_disconnect_cb(void *data, const char *server_name,
     do
     {
         snprintf(notif_xpath, sizeof(notif_xpath)-1,
-            "%s[name='%s']/remote-endpoint-status-change",
+            "%s[name='%s']/remote-endpoints/remote-endpoint-status-change",
             BBF_POLT_VOMCI_SERVER_LISTEN_ENDPOINTS_PATH, server_name);
         notif = lyd_new_path(NULL, ctx, notif_xpath, NULL, 0, 0);
         if (notif == NULL)
@@ -585,7 +570,7 @@ static void _client_connect_disconnect_cb(void *data, const char *remote_endpoin
     do
     {
         snprintf(notif_xpath, sizeof(notif_xpath)-1,
-            "%s[name='%s']/remote-endpoint-status-change",
+            "%s/remote-endpoint[name='%s']/remote-endpoint-status-change",
             BBF_POLT_VOMCI_CLIENT_REMOTE_ENDPOINTS_PATH, remote_endpoint_name);
         notif = lyd_new_path(NULL, ctx, notif_xpath, NULL, 0, 0);
         if (notif == NULL)
@@ -680,6 +665,23 @@ bcmos_errno bbf_polt_vomci_module_start(sr_session_ctx_t *srs, struct ly_ctx *ly
     if (SR_ERR_OK == sr_rc)
     {
         NC_LOG_INFO("Subscribed to %s subtree changes.\n", BBF_POLT_VOMCI_CLIENT_PATH);
+    }
+    else
+    {
+        NC_LOG_ERR("Failed to subscribe to %s subtree changes (%s).\n",
+            BBF_POLT_VOMCI_CLIENT_PATH, sr_strerror(sr_rc));
+        sr_unsubscribe(sr_ctx);
+        sr_ctx = NULL;
+        return nc_sr_errno_to_bcmos_errno(sr_rc);
+    }
+
+    /* subscribe to events */
+    sr_rc = sr_module_change_subscribe(srs, BBF_POLT_VOMCI_MODULE_NAME, BBF_POLT_VOMCI_FILTER_PATH,
+            bbf_polt_vomci_filter_change_cb, NULL, 0, SR_SUBSCR_ENABLED | SR_SUBSCR_CTX_REUSE,
+            &sr_ctx);
+    if (SR_ERR_OK == sr_rc)
+    {
+        NC_LOG_INFO("Subscribed to %s subtree changes.\n", BBF_POLT_VOMCI_FILTER_PATH);
     }
     else
     {

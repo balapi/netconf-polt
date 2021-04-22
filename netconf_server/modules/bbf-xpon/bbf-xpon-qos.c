@@ -48,11 +48,6 @@ static bcmos_errno xpon_qos_classifier_attribute_populate(sr_session_ctx_t *srs,
     sr_val_t *val = (sr_new_val != NULL) ? sr_new_val : sr_old_val;
     bcmos_errno err = BCM_ERR_OK;
 
-    NC_LOG_DBG("old_val=%s new_val=%s type=%d\n",
-        sr_old_val ? sr_old_val->xpath : "none",
-        sr_new_val ? sr_new_val->xpath : "none",
-        sr_old_val ? sr_old_val->type : sr_new_val->type);
-
     if (val->type == SR_LIST_T || val->type == SR_CONTAINER_T)
     {
         /* no semantic meaning */
@@ -67,6 +62,12 @@ static bcmos_errno xpon_qos_classifier_attribute_populate(sr_session_ctx_t *srs,
         return BCM_ERR_OK;
     }
 
+    NC_LOG_DBG("old_val=%s new_val=%s type=%d leaf=%s\n",
+        sr_old_val ? sr_old_val->xpath : "none",
+        sr_new_val ? sr_new_val->xpath : "none",
+        sr_old_val ? sr_old_val->type : sr_new_val->type,
+        leaf);
+
     do
     {
         /* Go over supported leafs */
@@ -79,26 +80,24 @@ static bcmos_errno xpon_qos_classifier_attribute_populate(sr_session_ctx_t *srs,
             /* Validate */
             if (sr_new_val != NULL)
             {
-                if (strstr(iter_xpath, "match-all") == NULL &&
-                    strstr(iter_xpath, "dscp-range") == NULL &&
-                    strstr(iter_xpath, "any-protocol") == NULL &&
-                    strstr(iter_xpath, "pbit-marking-list") == NULL &&
-                    strstr(iter_xpath, "tag") == NULL)
+                if (strstr(match_xpath, "match-all") == NULL &&
+                    strstr(match_xpath, "dscp-range") == NULL &&
+                    strstr(match_xpath, "any-protocol") == NULL &&
+                    strstr(match_xpath, "pbit-marking-list") == NULL &&
+                    strstr(match_xpath, "tag") == NULL &&
+                    strstr(match_xpath, "untagged") == NULL)
                 {
                     NC_LOG_WARN("IGNORED: unsupported match-criteria: %s\n", iter_xpath);
                     continue;
                 }
-                if (strstr(iter_xpath, "dscp-range") != NULL &&
+                if (strstr(match_xpath, "dscp-range") != NULL &&
                     ((sr_new_val->type != SR_ENUM_T && sr_new_val->type != SR_STRING_T) ||
                         strcmp(sr_new_val->data.string_val, "any")))
                 {
                     NC_LOG_ERR("IGNORED: unsupported match-criteria: dscp-range: %s\n", iter_xpath);
-                    // NC_ERROR_REPLY(srs, iter_xpath, "unsupported match-criteria: dscp-range\n");
-                    // err = BCM_ERR_NOT_SUPPORTED;
-                    // break;
                 }
-                else if (strstr(iter_xpath, "pbit-marking-list") != NULL ||
-                         strstr(iter_xpath, "in-pbit-list") != NULL)
+                else if (strstr(match_xpath, "pbit-marking-list") != NULL ||
+                         strstr(match_xpath, "in-pbit-list") != NULL)
                 {
                     char index_str[16] = "";
                     bbf_tag_index_type tag_index;
@@ -151,6 +150,10 @@ static bcmos_errno xpon_qos_classifier_attribute_populate(sr_session_ctx_t *srs,
                         if (obj->match.vlan_tag_match.num_tags < tag_index + 1)
                             obj->match.vlan_tag_match.num_tags = tag_index + 1;
                     }
+                }
+                else if (strstr(leaf, "untagged") != NULL)
+                {
+                    obj->match.vlan_tag_match.tag_match_types[BBF_TAG_INDEX_TYPE_OUTER] = BBF_VLAN_TAG_MATCH_TYPE_UNTAGGED;
                 }
             }
         }

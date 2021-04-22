@@ -27,7 +27,7 @@
 // BcmPoltServer constructor
 BcmPoltServer::BcmPoltServer(const tr451_server_endpoint *ep):
     GrpcProcessor(GrpcProcessor::processor_type::GRPC_PROCESSOR_TYPE_SERVER, ep->endpoint.name),
-    hello_service_(this), message_service_(this), endpoint_(&ep->endpoint)
+    hello_service_(this), message_service_(this), endpoint_(&ep->endpoint, ep->local_name)
 {
     p_server_ = nullptr;
 }
@@ -111,7 +111,9 @@ Status BcmPoltServer::OmciServiceHello::HelloVomci(
     const HelloVomciRequest* request,
     HelloVomciResponse* response)
 {
-    const char *vomci_name = request->has_vomci_function() ? request->vomci_function().vomci_name().c_str() : nullptr;
+    const char *vomci_name = request->has_local_endpoint_hello() ?
+        request->local_endpoint_hello().endpoint_name().c_str() : nullptr;
+    const char *local_name = parent_->endpoint()->name_for_hello();
     if (context->auth_context()->IsPeerAuthenticated() && vomci_name == nullptr)
     {
         std::vector<grpc::string_ref> auth_identity =
@@ -128,20 +130,20 @@ Status BcmPoltServer::OmciServiceHello::HelloVomci(
             "Can't identify connection. vomci_name is missing in HelloVomci and in Auth identity");
     }
 
-    OltHello *olt = new OltHello();
-    olt->set_olt_name(polt_name);
-    response->set_allocated_olt(olt);
+    Hello *olt = new Hello();
+    olt->set_endpoint_name(local_name);
+    response->set_allocated_remote_endpoint_hello(olt);
 
-    new VomciConnection(parent_, parent_->name(), vomci_name, context->peer());
+    new VomciConnection(parent_, parent_->endpoint()->name(), local_name, vomci_name, context->peer());
 
     return Status::OK;
 }
 
 // OmciFunctionMessage::ListenForOmciRx service handler
-Status BcmPoltServer::OmciServiceMessage::ListenForOmciRx(
+Status BcmPoltServer::OmciServiceMessage::ListenForVomciRx(
     ServerContext* context,
     const Empty* request,
-    ServerWriter<OmciPacket>* writer)
+    ServerWriter<VomciMessage>* writer)
 {
     bcmos_errno err;
 
@@ -165,10 +167,11 @@ Status BcmPoltServer::OmciServiceMessage::ListenForOmciRx(
             continue;
 
         // Send to vOMCI peer
-        writer->Write(*omci_packet);
+        VomciMessage tx_msg;
+        tx_msg.set_allocated_omci_packet_msg(omci_packet);
+        writer->Write(tx_msg);
 
-        ++conn->packets_onu_to_vomci_sent;
-        delete omci_packet;
+        ++conn->stats.packets_onu_to_vomci_sent;
     }
     conn->setConnected(false);
     BCM_POLT_LOG(INFO, "%s: Forwarding OMCI messages from pOLT to vOMCI %s disabled\n",
@@ -178,12 +181,17 @@ Status BcmPoltServer::OmciServiceMessage::ListenForOmciRx(
     return Status::OK;
 }
 
-Status BcmPoltServer::OmciServiceMessage::OmciTx(
+Status BcmPoltServer::OmciServiceMessage::VomciTx(
     ServerContext* context,
-    const OmciPacket* request,
+    const VomciMessage* request,
     Empty* response)
 {
-    return parent()->OmciTxToOnu(*request);
+    if (!request->has_omci_packet_msg())
+    {
+        BCM_POLT_LOG(ERROR, "message is not a packet. Ignored\n");
+        return grpc::Status(StatusCode::INVALID_ARGUMENT, "message is not a packet");
+    }
+    return parent()->OmciTxToOnu(request->omci_packet_msg());
 }
 
 //
@@ -198,8 +206,9 @@ bcmos_errno bcm_tr451_polt_grpc_server_init(void)
 bcmos_errno bcm_tr451_polt_grpc_server_create(const tr451_server_endpoint *endpoint)
 {
     bcmos_errno err = BCM_ERR_OK;
-    BCM_POLT_LOG(INFO, "Creating server %s: %s:%u\n",
+    BCM_POLT_LOG(INFO, "Creating server %s: name_for_hello=%s listen=%s:%u\n",
         endpoint->endpoint.name,
+        endpoint->local_name ? endpoint->local_name : endpoint->endpoint.name,
         endpoint->endpoint.host_name ? endpoint->endpoint.host_name : "any",
         endpoint->endpoint.port);
     BcmPoltServer *server = new BcmPoltServer(endpoint);

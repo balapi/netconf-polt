@@ -25,15 +25,19 @@
 /* Print OMCI send/receive statistics */
 static bcmos_errno polt_cli_stats(bcmcli_session *session, const bcmcli_cmd_parm parm[], uint16_t nparms)
 {
-    uint32_t sent_, recv_, err_;
-    const char *ep_name = NULL;
+    VomciConnectionStats stats = {};
+    const char *ep_name = nullptr;
+    const char *peer_name = nullptr;
     do
     {
-        bcm_tr451_stats_get(&ep_name, &sent_, &recv_, &err_);
-        if (ep_name == NULL)
+        bcm_tr451_stats_get(&ep_name, &peer_name, &stats);
+        if (ep_name == nullptr)
             break;
-        bcmcli_print(session, "Endpoint %s: sent=%u  received=%u  errors=%u\n",
-            ep_name, sent_, recv_, err_);
+        bcmcli_print(session,
+            "Endpoint %s peer=%s: to-ONU: gRPC=%u OMCI=%u discarded=%u  from-ONU: OMCI=%u gRPC=%u discarded=%u\n",
+            ep_name, peer_name,
+            stats.packets_vomci_to_onu_recv, stats.packets_vomci_to_onu_sent, stats.packets_vomci_to_onu_disc,
+            stats.packets_onu_to_vomci_recv, stats.packets_onu_to_vomci_sent, stats.packets_onu_to_vomci_disc);
     } while (BCMOS_TRUE);
     return BCM_ERR_OK;
 }
@@ -91,20 +95,19 @@ static bcmos_errno polt_cli_endpoint_delete(bcmcli_session *session, const bcmcl
 /* Create client/server filter */
 static bcmos_errno polt_cli_create_filter(bcmcli_session *session, const bcmcli_cmd_parm parm[], uint16_t nparms)
 {
-    bcmos_bool is_server = (bcmos_bool)parm[0].value.number;
     tr451_polt_filter filter = {
-        .name = (const char *)parm[1].value.string,
-        .type = (tr451_polt_filter_type)parm[4].value.number,
-        .priority = (uint16_t)parm[2].value.number,
+        .name = (const char *)parm[0].value.string,
+        .type = (tr451_polt_filter_type)parm[3].value.number,
+        .priority = (uint16_t)parm[1].value.number,
     };
-    const char *ep_name = (const char *)parm[3].value.string;
-    uint16_t vendor_id = (uint16_t)parm[5].value.number;
-    uint16_t vendor_specific = (uint16_t)parm[6].value.number;
+    const char *ep_name = (const char *)parm[2].value.string;
+    uint16_t vendor_id = (uint16_t)parm[4].value.number;
+    uint16_t vendor_specific = (uint16_t)parm[5].value.number;
     bcmos_errno rc;
 
     if (filter.type == TR451_FILTER_TYPE_ANY)
     {
-        if (bcmcli_parm_is_set(session, &parm[5]) || bcmcli_parm_is_set(session, &parm[6]))
+        if (bcmcli_parm_is_set(session, &parm[4]) || bcmcli_parm_is_set(session, &parm[5]))
         {
             bcmcli_print(session, "vendor_id and/or vendor_specific parameters are incompatible with filter mode ANY\n");
             return BCM_ERR_PARM;
@@ -112,12 +115,12 @@ static bcmos_errno polt_cli_create_filter(bcmcli_session *session, const bcmcli_
     }
     else if (filter.type == TR451_FILTER_TYPE_VENDOR_ID)
     {
-        if (!bcmcli_parm_is_set(session, &parm[5]))
+        if (!bcmcli_parm_is_set(session, &parm[4]))
         {
             bcmcli_print(session, "vendor_id is required for filter mode vendor_id\n");
             return BCM_ERR_PARM;
         }
-        if (bcmcli_parm_is_set(session, &parm[6]))
+        if (bcmcli_parm_is_set(session, &parm[5]))
         {
             bcmcli_print(session, "vendor_specific is incompatible with filter mode vendor_id\n");
             return BCM_ERR_PARM;
@@ -129,7 +132,7 @@ static bcmos_errno polt_cli_create_filter(bcmcli_session *session, const bcmcli_
     }
     else if (filter.type == TR451_FILTER_TYPE_SERIAL_NUMBER)
     {
-        if (!bcmcli_parm_is_set(session, &parm[5]) || !bcmcli_parm_is_set(session, &parm[6]))
+        if (!bcmcli_parm_is_set(session, &parm[4]) || !bcmcli_parm_is_set(session, &parm[5]))
         {
             bcmcli_print(session, "vendor_id and vendor_specific are required for filter mode vendor_id\n");
             return BCM_ERR_PARM;
@@ -143,14 +146,7 @@ static bcmos_errno polt_cli_create_filter(bcmcli_session *session, const bcmcli_
         filter.serial_number[6] = (vendor_specific >> 8) & 0xff;
         filter.serial_number[7] = vendor_specific & 0xff;
     }
-    if (is_server)
-    {
-        rc = bcm_tr451_polt_grpc_server_filter_set(&filter, ep_name);
-    }
-    else
-    {
-        rc = bcm_tr451_polt_grpc_client_filter_set(&filter, ep_name);
-    }
+    rc = bcm_tr451_polt_filter_set(&filter, ep_name);
     return rc;
 }
 
@@ -233,7 +229,6 @@ void bcm_tr451_polt_cli_init(void)
     /* Create a filter */
     {
         static bcmcli_cmd_parm cmd_parms[] = {
-            BCMCLI_MAKE_PARM("client_server", "Client/Server", BCMCLI_PARM_ENUM, 0),
             BCMCLI_MAKE_PARM("name", "Filter name", BCMCLI_PARM_STRING, 0),
             BCMCLI_MAKE_PARM("priority", "Filter priority", BCMCLI_PARM_NUMBER, 0),
             BCMCLI_MAKE_PARM("ep_name", "Endpoint name", BCMCLI_PARM_STRING, 0),

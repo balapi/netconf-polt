@@ -29,7 +29,6 @@ extern "C"
 }
 
 dev_log_id bcm_polt_log_id;
-const char *polt_name = "bcm_polt";
 
 static bool subsystem_enabled[2];
 
@@ -165,10 +164,9 @@ private:
     }
 
     STAILQ_HEAD(, FilterEntry) filter_list_;
-    GrpcProcessor::processor_type type_;
 
 public:
-    OnuFilterSet(GrpcProcessor::processor_type type) : type_(type)
+    OnuFilterSet()
     {
         STAILQ_INIT(&filter_list_);
     }
@@ -206,32 +204,23 @@ public:
     }
 };
 
-// Server fileters set
-static OnuFilterSet server_filter_set(GrpcProcessor::processor_type::GRPC_PROCESSOR_TYPE_SERVER);
-// Client fileters set
-static OnuFilterSet client_filter_set(GrpcProcessor::processor_type::GRPC_PROCESSOR_TYPE_CLIENT);
+// Endpoint filters set
+static OnuFilterSet filter_set;
 
 // Add server filter
-bcmos_errno bcm_tr451_polt_grpc_server_filter_set(const tr451_polt_filter *filter, const char *endpoint_name)
+bcmos_errno bcm_tr451_polt_filter_set(const tr451_polt_filter *filter, const char *endpoint_name)
 {
     // Look up filter. Update if exists, add if doesn't
-    server_filter_set.FilterSet(filter, endpoint_name);
+    filter_set.FilterSet(filter, endpoint_name);
     return BCM_ERR_OK;
 }
 
-// Add client filter. Client endpoint must exist
-bcmos_errno bcm_tr451_polt_grpc_client_filter_set(const tr451_polt_filter *filter, const char *endpoint_name)
-{
-    client_filter_set.FilterSet(filter, endpoint_name);
-    return BCM_ERR_OK;
-}
-
-// Get client / server filter
-static bcmos_errno bcm_tr451_polt_grpc_filter_get(OnuFilterSet &set, const char *filter_name, tr451_polt_filter *filter)
+// Get filter
+bcmos_errno bcm_tr451_polt_filter_get(const char *filter_name, tr451_polt_filter *filter)
 {
     if (filter_name == nullptr)
         return BCM_ERR_PARM;
-    OnuFilterSet::FilterEntry *entry = set.FilterGet(filter_name);
+    OnuFilterSet::FilterEntry *entry = filter_set.FilterGet(filter_name);
     if (entry == nullptr)
         return BCM_ERR_NOENT;
     if (filter != nullptr)
@@ -239,40 +228,16 @@ static bcmos_errno bcm_tr451_polt_grpc_filter_get(OnuFilterSet &set, const char 
     return BCM_ERR_OK;
 }
 
-// Get server filter
-bcmos_errno bcm_tr451_polt_grpc_server_filter_get(const char *filter_name, tr451_polt_filter *filter)
-{
-    return bcm_tr451_polt_grpc_filter_get(server_filter_set, filter_name, filter);
-}
-
-// Get client filter. Client endpoint must exist
-bcmos_errno bcm_tr451_polt_grpc_client_filter_get(const char *filter_name, tr451_polt_filter *filter)
-{
-    return bcm_tr451_polt_grpc_filter_get(client_filter_set, filter_name, filter);
-}
-
-// Delete client / server filter
-static bcmos_errno bcm_tr451_polt_grpc_filter_delete(OnuFilterSet &set, const char *filter_name)
+// Delete filter
+bcmos_errno bcm_tr451_polt_filter_delete(const char *filter_name)
 {
     if (filter_name == nullptr)
         return BCM_ERR_PARM;
-    OnuFilterSet::FilterEntry *entry = set.FilterGet(filter_name);
+    OnuFilterSet::FilterEntry *entry = filter_set.FilterGet(filter_name);
     if (entry == nullptr)
         return BCM_ERR_NOENT;
-    set.FilterDelete(entry);
+    filter_set.FilterDelete(entry);
     return BCM_ERR_OK;
-}
-
-// Delete server filter
-bcmos_errno bcm_tr451_polt_grpc_server_filter_delete(const char *filter_name)
-{
-    return bcm_tr451_polt_grpc_filter_delete(server_filter_set, filter_name);
-}
-
-// Delete client filter. Client endpoint must exist
-bcmos_errno bcm_tr451_polt_grpc_client_filter_delete(const char *filter_name)
-{
-    return bcm_tr451_polt_grpc_filter_delete(client_filter_set, filter_name);
 }
 
 //
@@ -302,12 +267,18 @@ public:
         uint16_t onu_id,
         const tr451_polt_onu_serial_number *serial_number) :
             vomci(nullptr), filter(nullptr),
-            cterm_name_(cterm_name), onu_id_(onu_id), serial_number_ (*serial_number)
+            cterm_name_(cterm_name), onu_id_(onu_id), _endpoint_name()
     {
         onu_info_key key;
         onu_info_make_key(cterm_name, onu_id, &key);
         OnuInfo *obj = this;
         hash_table_put(onu_info_table, (uint8_t *)&key, &obj);
+        if (serial_number != nullptr)
+            serial_number_ = *serial_number;
+        else
+            memset(&serial_number_, 0, sizeof(serial_number_));
+        reset_counters();
+        BCM_POLT_LOG(DEBUG, "Added onu %s.%u\n", cterm_name, onu_id);
     }
 
     ~OnuInfo()
@@ -315,34 +286,44 @@ public:
         onu_info_key key;
         onu_info_make_key(cterm_name_.c_str(), onu_id_, &key);
         hash_table_remove(onu_info_table, (uint8_t *)&key);
+        BCM_POLT_LOG(DEBUG, "Deleted onu %s.%u\n", cterm_name_.c_str(), onu_id_);
     }
 
-    void SendOmciToVomci(OmciPacketEntry *omci_packet)
+    void AssignEndpoint(VomciConnection *conn, OnuFilterSet::FilterEntry *filt)
     {
-        // Make sure that peer is connected
-        if (vomci==nullptr)
+        filter = filt;
+        if (conn != vomci)
         {
-            BCM_POLT_LOG(ERROR, "Can't deliver OMCI RX message from ONU %s:%u. No connection\n",
-                cterm_name(), onu_id_);
-            delete omci_packet;
-            return;
+            BCM_POLT_LOG(INFO, "ONU %s:%u is assigned to remote endpoint %s using filter '%s'\n",
+                cterm_name(), onu_id(), (conn != nullptr) ? conn->name() : "<none>",
+                (filt != nullptr) ? filt->name() : "<none>");
         }
-
-        // Send to the vOMCI instance
-        vomci->OmciRxFromOnu(omci_packet);
+        vomci = conn;
     }
 
     const tr451_polt_onu_serial_number *serial_number() const { return &serial_number_; }
     const char *cterm_name() const { return cterm_name_.c_str(); }
     uint16_t onu_id() const { return onu_id_; }
+    void endpoint_name_set(const char *endpoint_name) { _endpoint_name = endpoint_name; }
+    const char *endpoint_name() { return (_endpoint_name.length() > 0) ? _endpoint_name.c_str() : nullptr; }
+    void reset_counters() {
+        in_messages = out_messages = message_errors = 0;
+    }
+    bool isConnected() {
+        return vomci != nullptr && vomci->isConnected();
+    }
 
     VomciConnection *vomci;
     OnuFilterSet::FilterEntry *filter;
+    uint64_t in_messages;
+    uint64_t out_messages;
+    uint64_t message_errors;
 
 private:
     string cterm_name_;
     uint16_t onu_id_;
     tr451_polt_onu_serial_number serial_number_;
+    string _endpoint_name;
 };
 
 static OnuInfo *onu_info_get(const char *cterm_name, uint16_t onu_id)
@@ -360,7 +341,7 @@ static OnuInfo *onu_info_get(const char *cterm_name, uint16_t onu_id)
 }
 
 static void onu_info_set(const char *cterm_name,
-uint16_t onu_id,
+    uint16_t onu_id,
     const tr451_polt_onu_serial_number *serial_number,
     OnuFilterSet::FilterEntry *filter,
     VomciConnection *vomci)
@@ -371,8 +352,7 @@ uint16_t onu_id,
     {
         onu_info = new OnuInfo(cterm_name, onu_id, serial_number);
     }
-    onu_info->vomci = vomci;
-    onu_info->filter = filter;
+    onu_info->AssignEndpoint(vomci, filter);
 }
 
 static OnuInfo *onu_info_get_next(ht_iterator *iter)
@@ -386,6 +366,25 @@ static OnuInfo *onu_info_get_next(ht_iterator *iter)
     return (pp_info != nullptr) ? *pp_info : nullptr;
 }
 
+// Create an explicit association between v-ani and vomci-endpoint */
+bcmos_errno xpon_v_ani_vomci_endpoint_set(const char *cterm_name, uint16_t onu_id, const char *endpoint_name)
+{
+    BUG_ON(cterm_name == nullptr || onu_id >= TR451_POLT_MAX_ONUS_PER_PON);
+    OnuInfo *onu_info = onu_info_get(cterm_name, onu_id);
+    if (onu_info == nullptr)
+    {
+        onu_info = new OnuInfo(cterm_name, onu_id, nullptr);
+    }
+    onu_info->endpoint_name_set(endpoint_name);
+    return BCM_ERR_OK;
+}
+
+// Clear an explicit association between v-ani and vomci-endpoint */
+bcmos_errno xpon_v_ani_vomci_endpoint_clear(const char *cterm_name, uint16_t onu_id)
+{
+    return xpon_v_ani_vomci_endpoint_set(cterm_name, onu_id, nullptr);
+}
+
 //
 // Filter Service implementation
 //
@@ -396,9 +395,7 @@ static bool find_channel_assignment(const tr451_polt_onu_serial_number *serial_n
 {
     *p_filter = nullptr;
     *p_vomci = nullptr;
-    bool assigned =  client_filter_set.FindConnectedFilter(serial_number, p_filter, p_vomci);
-    if (!assigned)
-        assigned = server_filter_set.FindConnectedFilter(serial_number, p_filter, p_vomci);
+    bool assigned =  filter_set.FindConnectedFilter(serial_number, p_filter, p_vomci);
     return assigned;
 }
 
@@ -463,13 +460,17 @@ bool OnuFilterSet::UpdateOnuAssignmentsFilterAdded(FilterEntry *entry)
     OnuInfo *info = onu_info_get_next(&iter);
     while (info != nullptr)
     {
-        if (entry->isMatch(info->serial_number()) &&
-            (info->filter == nullptr ||entry->filter.priority < info->filter->filter.priority))
+        // Skip ONUs for which endpoint name is set explictly in v-ani
+        if (info->endpoint_name() != nullptr)
         {
-            info->filter = entry;
-            info->vomci = conn;
-            BCM_POLT_LOG(INFO, "ONU %s:%u is assigned to remote endpoint %s\n",
-                info->cterm_name(), info->onu_id(), conn->name());
+            info = onu_info_get_next(&iter);
+            continue;
+        }
+
+        if (entry->isMatch(info->serial_number()) &&
+            (info->filter == nullptr || entry->filter.priority < info->filter->filter.priority))
+        {
+            info->AssignEndpoint(conn, entry);
             updated = true;
         }
         info = onu_info_get_next(&iter);
@@ -486,6 +487,13 @@ bool OnuFilterSet::UpdateOnuAssignmentsFilterRemoved(FilterEntry *entry)
     OnuInfo *info = onu_info_get_next(&iter);
     while (info != nullptr)
     {
+        // Skip ONUs for which endpoint name is set explictly in v-ani
+        if (info->endpoint_name() != nullptr)
+        {
+            info = onu_info_get_next(&iter);
+            continue;
+        }
+
         const VomciConnection *old_conn = info->vomci;
         if (info->filter == entry)
         {
@@ -493,9 +501,7 @@ bool OnuFilterSet::UpdateOnuAssignmentsFilterRemoved(FilterEntry *entry)
         }
         if (old_conn != info->vomci)
         {
-            BCM_POLT_LOG(INFO, "ONU %s:%u is assigned to remote endpoint %s\n",
-                info->cterm_name(), info->onu_id(),
-                (info->vomci != nullptr) ? info->vomci->name() : "<none>");
+            info->AssignEndpoint(info->vomci, info->filter);
         }
         info = onu_info_get_next(&iter);
     }
@@ -508,17 +514,23 @@ bool OnuFilterSet::UpdateOnuAssignmentsFilterRemoved(FilterEntry *entry)
 static STAILQ_HEAD(, VomciConnection) connection_list;
 static STAILQ_HEAD(, GrpcProcessor) client_server_list;
 
+/* Find connection by name, whereas name is
+   - endpoint name for client connection
+   - remote endpoint name for server connection
+*/
 VomciConnection *vomci_connection_get_by_name(const char *name, const GrpcProcessor *owner)
 {
     VomciConnection *conn, *tmp;
-    BCM_POLT_LOG(DEBUG, "Looking for connection with name '%s'. Owner: '%s'\n",
+
+    BCM_POLT_LOG(DEBUG, "Looking for connection with remote-endpoint name '%s'. Owner: '%s'\n",
         name, owner ? owner->name() : "<null>");
+
     STAILQ_FOREACH_SAFE(conn, &connection_list, next, tmp)
     {
-        BCM_POLT_LOG(DEBUG, "..checking connection '%s'. parent '%s'\n",
-            conn->name(), conn->parent()->name());
-
-        if ((owner == nullptr || conn->parent() == owner) && !strcmp(name, conn->name()))
+        const char *remote_endpoint_name = conn->remote_endpoint_name();
+        BCM_POLT_LOG(DEBUG, "..checking connection '%s': remote-endpoint='%s' parent='%s'\n",
+            conn->name(), remote_endpoint_name, conn->parent()->name());
+        if ((owner == nullptr || conn->parent() == owner) && !strcmp(name, remote_endpoint_name))
             break;
     }
     BCM_POLT_LOG(DEBUG, "Found connection '%s'. Connected=%d\n",
@@ -612,22 +624,19 @@ void vomci_notify_connect_disconnect(VomciConnection *conn, bool is_connected)
 }
 
 
-static VomciConnection *vomci_get_by_omci_packet(const OmciPacket &grpc_omci_packet)
+static OnuInfo *vomci_get_by_omci_packet(const OmciPacket &grpc_omci_packet)
 {
     uint16_t onu_id;
-    char *endptr = nullptr;
 
-    onu_id = (uint16_t)strtoul(grpc_omci_packet.onu_id().c_str(), &endptr, 0);
-    if ((endptr && *endptr) || onu_id >= TR451_POLT_MAX_ONUS_PER_PON)
+    onu_id = (uint16_t)grpc_omci_packet.header().onu_id();
+    if (onu_id >= TR451_POLT_MAX_ONUS_PER_PON)
     {
-        BCM_POLT_LOG(ERROR, "onu_id %s is insane\n", grpc_omci_packet.onu_id().c_str());
+        BCM_POLT_LOG(ERROR, "onu_id %u is insane\n", onu_id);
         return nullptr;
     }
 
     // Identify OnuInfo record
-    OnuInfo *onu = onu_info_get(grpc_omci_packet.chnl_term_name().c_str(), onu_id);
-
-    return (onu != nullptr) ? onu->vomci : nullptr;
+    return onu_info_get(grpc_omci_packet.header().chnl_term_name().c_str(), onu_id);
 }
 
 
@@ -682,34 +691,36 @@ Status GrpcProcessor::OmciTxToOnu(const OmciPacket &grpc_omci_packet, const char
 {
     bcmos_errno err;
 
-    VomciConnection *conn = vomci_get_by_omci_packet(grpc_omci_packet);
-    if (conn == nullptr || conn->parent() != this ||
-        (peer != nullptr && strcmp(peer, conn->peer())))
+    OnuInfo *onu = vomci_get_by_omci_packet(grpc_omci_packet);
+    VomciConnection *conn = (onu != nullptr) ? onu->vomci : nullptr;
+    if (conn==nullptr)
     {
         grpc::Status status = tr451_bcm_errno_grpc_status(BCM_ERR_NOENT,
-            "%s: attempt to send OMCI message to ONU %s:%s via wrong connection.",
-            name(), grpc_omci_packet.chnl_term_name().c_str(), grpc_omci_packet.onu_id().c_str());
+            "%s: Can't send OMCI message to vOMCI. No connection. ONU %s:%u\n",
+            name(), grpc_omci_packet.header().chnl_term_name().c_str(), grpc_omci_packet.header().onu_id());
         BCM_POLT_LOG(ERROR, "%s:\n", status.error_message().c_str());
         return status;
     }
 
-    ++conn->packets_vomci_to_onu_recv;
+    ++conn->stats.packets_vomci_to_onu_recv;
+    ++onu->in_messages;
     err = tr451_vendor_omci_send_to_onu(grpc_omci_packet);
     if (err != BCM_ERR_OK)
     {
         grpc::Status status = tr451_bcm_errno_grpc_status(err,
-            "Failed to send OMCI message to ONU %s:%s. Error '%s'",
-            grpc_omci_packet.chnl_term_name().c_str(), grpc_omci_packet.onu_id().c_str(),
+            "Failed to send OMCI message to ONU %s:%u. Error '%s'",
+            grpc_omci_packet.header().chnl_term_name().c_str(), grpc_omci_packet.header().onu_id(),
             bcmos_strerror(err));
-        ++conn->packets_vomci_to_onu_disc;
+        ++conn->stats.packets_vomci_to_onu_disc;
+        ++onu->message_errors;
         BCM_POLT_LOG(ERROR, "%s:\n", status.error_message().c_str());
         return status;
     }
-    BCM_POLT_LOG(DEBUG, "Sent OMCI message to ONU %s:%s. %lu bytes\n",
-        grpc_omci_packet.chnl_term_name().c_str(), grpc_omci_packet.onu_id().c_str(),
+    BCM_POLT_LOG(DEBUG, "Sent OMCI message to ONU %s:%u. %lu bytes\n",
+        grpc_omci_packet.header().chnl_term_name().c_str(), grpc_omci_packet.header().onu_id(),
         grpc_omci_packet.payload().length());
 
-    ++conn->packets_vomci_to_onu_sent;
+    ++conn->stats.packets_vomci_to_onu_sent;
 
     return Status::OK;
 }
@@ -719,14 +730,13 @@ Status GrpcProcessor::OmciTxToOnu(const OmciPacket &grpc_omci_packet, const char
 //
 VomciConnection::VomciConnection(GrpcProcessor *parent,
             const string &endpoint,
+            const string &local_name,
             const string &vomci_name,
             const string &vomci_address) :
-    parent_(parent) , name_(vomci_name), peer_(vomci_address), endpoint_(endpoint), connected_(false)
+    parent_(parent) , name_(vomci_name), peer_(vomci_address),
+    endpoint_(endpoint), local_name_(local_name), connected_(false)
 {
-    packets_onu_to_vomci_recv = packets_onu_to_vomci_sent =
-        packets_onu_to_vomci_disc = packets_vomci_to_onu_recv =
-        packets_vomci_to_onu_sent = packets_vomci_to_onu_disc = 0;
-
+    memset(&stats, 0, sizeof(stats));
     bcmos_mutex_create(&conn_lock_, 0, "vomci");
     bcmos_mutex_create(&omci_ind_lock, 0, "omci_ind");
     bcmos_sem_create(&omci_ind_sem, 0, 0, "omci_ind");
@@ -771,8 +781,9 @@ void VomciConnection::setConnected(bool connected)
 
 // Enque packet received from ONU.
 // Eventually it will be popped using PopPacketFromOnuFromTxQueue and transmitted to vOMCI peer
-void VomciConnection::OmciRxFromOnu(OmciPacketEntry *omci_packet)
+bool VomciConnection::OmciRxFromOnu(OmciPacketEntry *omci_packet)
 {
+    bool ret;
     bcmos_mutex_lock(&conn_lock_);
     if (connected_)
     {
@@ -782,16 +793,19 @@ void VomciConnection::OmciRxFromOnu(OmciPacketEntry *omci_packet)
         if (STAILQ_FIRST(&omci_ind_list) == omci_packet)
             bcmos_sem_post(&omci_ind_sem);
         bcmos_mutex_unlock(&omci_ind_lock);
-        ++packets_onu_to_vomci_recv;
+        ++stats.packets_onu_to_vomci_recv;
+        ret = true;
     }
     else
     {
-        BCM_POLT_LOG(DEBUG, "vOMCI %s: Failed to send OMCI RX message from  %s:%s. Not connected\n",
-            name_.c_str(), omci_packet->chnl_term_name().c_str(), omci_packet->onu_id().c_str());
+        BCM_POLT_LOG(DEBUG, "vOMCI %s: Failed to send OMCI RX message from  %s:%u. Not connected\n",
+            name_.c_str(), omci_packet->header().chnl_term_name().c_str(), omci_packet->header().onu_id());
         delete omci_packet;
-        ++packets_onu_to_vomci_disc;
+        ++stats.packets_onu_to_vomci_disc;
+        ret = false;
     }
     bcmos_mutex_unlock(&conn_lock_);
+    return ret;
 }
 
 // Pop packet received from ONU from vomci connection's TX queue
@@ -811,21 +825,47 @@ OmciPacketEntry *VomciConnection::PopPacketFromOnuFromTxQueue(void)
 // Connected. It might affect ONU channel assignment
 void VomciConnection::UpdateOnuAssignmentsConnected()
 {
+    const char *remote_endpoint_name = this->remote_endpoint_name();
+    // Assign ONUs with vomci-endpoint explicitly assigned in v-ani
+    ht_iterator iter = ht_iterator_get(onu_info_table);
+    OnuInfo *info = onu_info_get_next(&iter);
+    while (info != nullptr)
+    {
+        if (info->endpoint_name() != nullptr && remote_endpoint_name != nullptr &&
+            !strcmp(info->endpoint_name(), remote_endpoint_name))
+        {
+            info->AssignEndpoint(this, nullptr);
+        }
+        info = onu_info_get_next(&iter);
+    }
+
+    // Assign by filter
     OnuFilterSet::FilterEntry *filter = nullptr;
-    while ((filter = client_filter_set.GetNextByEndpoint(filter, name_.c_str())) != nullptr)
-        client_filter_set.UpdateOnuAssignmentsFilterAdded(filter);
-    while ((filter = server_filter_set.GetNextByEndpoint(filter, name_.c_str())) != nullptr)
-        server_filter_set.UpdateOnuAssignmentsFilterAdded(filter);
+    while ((filter = filter_set.GetNextByEndpoint(filter, remote_endpoint_name)) != nullptr)
+        filter_set.UpdateOnuAssignmentsFilterAdded(filter);
 }
 
 // Disconnected. It might affect ONU channel assignment
 void VomciConnection::UpdateOnuAssignmentsDisconnected()
 {
+    const char *remote_endpoint_name = this->remote_endpoint_name();
+    // Assign ONUs with vomci-endpoint explicitly assigned in v-ani
+    ht_iterator iter = ht_iterator_get(onu_info_table);
+    OnuInfo *info = onu_info_get_next(&iter);
+    while (info != nullptr)
+    {
+        if (info->endpoint_name() != nullptr && remote_endpoint_name != nullptr &&
+            !strcmp(info->endpoint_name(), remote_endpoint_name))
+        {
+            info->AssignEndpoint(nullptr, nullptr);
+        }
+        info = onu_info_get_next(&iter);
+    }
+
+    // Assign by filter
     OnuFilterSet::FilterEntry *filter = nullptr;
-    while ((filter = client_filter_set.GetNextByEndpoint(filter, name_.c_str())) != nullptr)
-        client_filter_set.UpdateOnuAssignmentsFilterRemoved(filter);
-    while ((filter = server_filter_set.GetNextByEndpoint(filter, name_.c_str())) != nullptr)
-        server_filter_set.UpdateOnuAssignmentsFilterRemoved(filter);
+    while ((filter = filter_set.GetNextByEndpoint(filter, remote_endpoint_name)) != nullptr)
+        filter_set.UpdateOnuAssignmentsFilterRemoved(filter);
 }
 
 //
@@ -871,8 +911,27 @@ bool bcm_grpc_processor_is_enabled(GrpcProcessor::processor_type type)
 // Debug functions
 //
 
-void bcm_tr451_stats_get(const char **endpoint_name, uint32_t *omci_sent, uint32_t *omci_recv, uint32_t *send_errors)
+void bcm_tr451_stats_get(const char **endpoint_name, const char **peer_name, VomciConnectionStats *stats)
 {
+    const char *prev_name=*endpoint_name;
+    VomciConnection *conn = nullptr;
+
+    memset(stats, 0, sizeof(*stats));
+    *endpoint_name = nullptr;
+    *peer_name = nullptr;
+
+    if (prev_name != nullptr)
+    {
+        conn = vomci_connection_get_by_name(prev_name, nullptr);
+        if (conn == nullptr)
+            return;
+    }
+    conn = vomci_connection_get_next(conn, nullptr);
+    if (conn == nullptr)
+        return;
+    *stats = conn->stats;
+    *endpoint_name = conn->endpoint();
+    *peer_name = conn->name();
 }
 
 //
@@ -897,17 +956,25 @@ bcmos_errno bcm_tr451_onu_state_change_notify_cb_register(xpon_v_ani_state_chang
 static void tr451_polt_omci_rx_cb(void *user_handle, OmciPacketEntry *packet)
 {
     // Find vomci connection
-    VomciConnection *conn = vomci_get_by_omci_packet(*packet);
+    OnuInfo *onu = vomci_get_by_omci_packet(*packet);
+    VomciConnection *conn = (onu != nullptr ) ? onu->vomci : nullptr;
+    bool is_sent;
     if (conn == nullptr)
     {
-        BCM_POLT_LOG(ERROR, "Can't forward OMCI packet from ONU %s:%s to vOMCI. No connection\n",
-            packet->chnl_term_name().c_str(), packet->onu_id().c_str());
+        BCM_POLT_LOG(ERROR, "Can't forward OMCI packet from ONU %s:%u to vOMCI. No connection\n",
+            packet->header().chnl_term_name().c_str(), packet->header().onu_id());
+        ++onu->message_errors;
         delete packet;
         return;
     }
+    packet->mutable_header()->set_olt_name(conn->local_name());
 
     // Push to vOMCI connection tranmsit queue
-    conn->OmciRxFromOnu(packet);
+    is_sent = conn->OmciRxFromOnu(packet);
+    if (is_sent)
+        ++onu->out_messages;
+    else
+        ++onu->message_errors;
 }
 
 /**
@@ -943,9 +1010,6 @@ static void tr451_polt_onu_state_change_cb(void *user_handle, const tr451_polt_o
     // Register in onu_info
     onu_info_set(vendor_onu_info->cterm_name, vendor_onu_info->onu_id,
         &vendor_onu_info->serial_number, filter, vomci);
-    BCM_POLT_LOG(INFO, "ONU %s:%u is assigned to remote endpoint %s\n",
-        vendor_onu_info->cterm_name, vendor_onu_info->onu_id,
-        (vomci != nullptr) ? vomci->name() : "<none>");
 }
 
 // Report ONU state change to NETCONF server.
@@ -974,9 +1038,6 @@ bcmos_errno bcm_tr451_polt_init(const tr451_polt_init_parms *init_parms)
 
     if (polt_initialized)
         return BCM_ERR_ALREADY;
-
-    if (init_parms->polt_name != nullptr)
-        polt_name = init_parms->polt_name;
 
     bcm_polt_log_id = bcm_dev_log_id_register("POLT", init_parms->log_level, DEV_LOG_ID_TYPE_BOTH);
 
@@ -1079,6 +1140,44 @@ void bcm_tr451_client_endpoint_free(tr451_client_endpoint *ep)
     }
     bcmos_free(ep);
 }
+
+bcmos_errno bcm_tr451_onu_status_get(const char *cterm_name, uint16_t onu_id,
+   bbf_vomci_communication_status *status, const char **remote_endpoint,
+   uint64_t *in_messages, uint64_t *out_messages, uint64_t *message_errors)
+{
+    OnuInfo *onu_info = onu_info_get(cterm_name, onu_id);
+    if (onu_info == nullptr)
+        return BCM_ERR_NOENT;
+    const char *onu_endpoint = onu_info->endpoint_name();
+    if (remote_endpoint != nullptr)
+        *remote_endpoint = onu_endpoint;
+    if (status != nullptr)
+    {
+        VomciConnection *conn = onu_info->vomci;
+        if (conn != nullptr)
+        {
+            *status = conn->isConnected() ?
+                BBF_VOMCI_COMMUNICATION_STATUS_CONNECTION_ACTIVE :
+                BBF_VOMCI_COMMUNICATION_STATUS_CONNECTION_INACTIVE;
+        }
+        else if (onu_endpoint && *onu_endpoint)
+        {
+            *status = BBF_VOMCI_COMMUNICATION_STATUS_CONNECTION_INACTIVE;
+        }
+        else
+        {
+            *status = BBF_VOMCI_COMMUNICATION_STATUS_REMOTE_ENDPOINT_IS_NOT_ASSIGNED;
+        }
+    }
+    if (in_messages)
+        *in_messages = onu_info->in_messages;
+    if (out_messages)
+        *out_messages = onu_info->out_messages;
+    if (message_errors)
+        *message_errors = onu_info->message_errors;
+    return BCM_ERR_OK;
+}
+
 
 /*
  * Authentication parameters

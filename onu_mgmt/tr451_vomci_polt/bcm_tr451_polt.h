@@ -60,12 +60,14 @@ typedef struct tr451_endpoint
 typedef struct tr451_server_endpoint
 {
    tr451_endpoint endpoint;
+   const char *local_name; /* If set, it overrides name for hello exchange */
 } tr451_server_endpoint;
 
 /* Client endpoint */
 typedef struct tr451_client_endpoint
 {
    const char *name;
+   const char *local_name; /* If set, it overrides name for hello exchange */
    STAILQ_HEAD(, tr451_endpoint) entry_list; /* Client attempts connecting to the entries 1-by-1 untilll successful */
 } tr451_client_endpoint;
 
@@ -79,7 +81,6 @@ typedef struct tr451_polt_filter
 
 typedef struct tr451_polt_init_parms
 {
-   const char *polt_name;
    bcm_dev_log_level log_level;
 } tr451_polt_init_parms;
 
@@ -108,11 +109,12 @@ bcmos_errno bcm_tr451_polt_grpc_server_delete(const char *endpoint_name);
 const char *bcm_tr451_polt_grpc_server_client_get_next(const char *prev);
 bcmos_errno bcm_tr451_polt_grpc_server_connect_disconnect_cb_register(
    bcm_tr451_polt_grpc_server_connect_disconnect_cb cb, void *data);
-
-bcmos_errno bcm_tr451_polt_grpc_server_filter_set(const tr451_polt_filter *filter, const char *endpoint_name);
-bcmos_errno bcm_tr451_polt_grpc_server_filter_get(const char *filter_name, tr451_polt_filter *filter);
-bcmos_errno bcm_tr451_polt_grpc_server_filter_delete(const char *filter_name);
 void bcm_tr451_polt_grpc_server_shutdown(void);
+
+bcmos_errno bcm_tr451_polt_filter_set(const tr451_polt_filter *filter, const char *endpoint_name);
+bcmos_errno bcm_tr451_polt_filter_get(const char *filter_name, tr451_polt_filter *filter);
+bcmos_errno bcm_tr451_polt_filter_delete(const char *filter_name);
+
 
 /* Client interface */
 bcmos_errno bcm_tr451_polt_grpc_client_init(void);
@@ -123,10 +125,6 @@ bcmos_errno bcm_tr451_polt_grpc_client_stop(const char *endpoint_name);
 bcmos_errno bcm_tr451_polt_grpc_client_delete(const char *endpoint_name);
 bcmos_errno bcm_tr451_polt_grpc_client_connect_disconnect_cb_register(
    bcm_tr451_polt_grpc_client_connect_disconnect_cb cb, void *data);
-
-bcmos_errno bcm_tr451_polt_grpc_client_filter_set(const tr451_polt_filter *filter, const char *endpoint_name);
-bcmos_errno bcm_tr451_polt_grpc_client_filter_get(const char *filter_name, tr451_polt_filter *filter);
-bcmos_errno bcm_tr451_polt_grpc_client_filter_delete(const char *filter_name);
 
 #ifndef XPON_ONU_PRESENCE_FLAGS_DEFINED
 typedef enum
@@ -140,9 +138,23 @@ typedef enum
 #define XPON_ONU_PRESENCE_FLAGS_DEFINED
 #endif
 
+typedef enum
+{
+   BBF_VOMCI_COMMUNICATION_STATUS_CONNECTION_ACTIVE,
+   BBF_VOMCI_COMMUNICATION_STATUS_CONNECTION_INACTIVE,
+   BBF_VOMCI_COMMUNICATION_STATUS_REMOTE_ENDPOINT_IS_NOT_ASSIGNED,
+   BBF_VOMCI_COMMUNICATION_STATUS_COMMUNICATION_FAILURE,
+   BBF_VOMCI_COMMUNICATION_STATUS_UNSPECIFIED_FAILURE
+} bbf_vomci_communication_status;
+
+bcmos_errno xpon_v_ani_vomci_endpoint_set(const char *cterm_name, uint16_t onu_id, const char *endpoint_name);
+bcmos_errno xpon_v_ani_vomci_endpoint_clear(const char *cterm_name, uint16_t onu_id);
 typedef bcmos_errno (*xpon_v_ani_state_change_report_cb)(const char *cterm_name, uint16_t onu_id,
     const uint8_t *serial_number, xpon_onu_presence_flags presence_flags);
 bcmos_errno bcm_tr451_onu_state_change_notify_cb_register(xpon_v_ani_state_change_report_cb cb);
+bcmos_errno bcm_tr451_onu_status_get(const char *cterm_name, uint16_t onu_id,
+   bbf_vomci_communication_status *status, const char **remote_endpoint,
+   uint64_t *in_messages, uint64_t *out_messages, uint64_t *message_errors);
 
 void bcm_tr451_polt_cli_init(void);
 

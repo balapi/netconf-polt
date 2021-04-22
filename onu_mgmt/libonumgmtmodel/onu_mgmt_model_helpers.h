@@ -239,15 +239,18 @@ static inline void *bcmonu_mgmt_multi_msg_alloc(
 #define ONU_MGMT_FLOW_IS_BROADCAST(cfg)    (BCMONU_MGMT_FIELD_IS_SET(&(cfg)->data, flow_cfg_data, flow_type) &&\
                                             (BCMONU_MGMT_FLOW_TYPE_BROADCAST == (cfg)->data.flow_type))
 
+/** @brief check of flow cfg has uni port not configured (i.e. all ports) */
+#define ONU_MGMT_FLOW_IS_ALL_UNI_PORTS(cfg) (BCMOS_TRUE != BCMONU_MGMT_FIELD_IS_SET(&(cfg)->data, flow_cfg_data, uni_port))
+
 /**
   Macro to check for a flow which is configured to match untagged upstream packets
   through ONU UNI and also forwarded to ANI side as untagged
   (i.e. no action to insert VID or PCP).
   Vice versa for downstream packets.
   */
-#define ONU_MGMT_FLOW_IS_UNTAGGED_END_TO_END(cfg_data)\
-        (BCMONU_MGMT_FLOW_PROP_IS_SET(cfg_data, match, o_untagged) &&\
-        (!BCMONU_MGMT_FLOW_PROP_IS_SET(cfg_data, action, o_vid) &&\
+#define ONU_MGMT_FLOW_IS_UNTAGGED_END_TO_END(cfg_data)                  \
+        (BCMONU_MGMT_FLOW_PROP_IS_SET(cfg_data, match, o_untagged) &&   \
+        (!BCMONU_MGMT_FLOW_PROP_IS_SET(cfg_data, action, o_vid) &&      \
          !BCMONU_MGMT_FLOW_PROP_IS_SET(cfg_data, action, o_pcp)))
 
 #define BCMONU_MGMT_FLOW_ACTION_TYPE_MASK_GET(_p) bcmonu_mgmt_flow_ ## action_type ## _id_ ## _p

@@ -269,6 +269,7 @@ static bcmos_errno xpon_create_bal_flow(sr_session_ctx_t *srs, bcmolt_flow_type 
     /* ToDo: implement free flow_id assignment */
     flow_key.flow_id = (tc_flow->flow_id != BCM_FLOW_ID_INVALID) ? tc_flow->flow_id : ++global_flow_id;
     BCMOLT_CFG_INIT(&flow_cfg, flow, flow_key);
+    BCMOLT_MSG_FIELD_SET(&flow_cfg, statistics, BCMOS_TRUE);
     if (type == BCMOLT_FLOW_TYPE_DOWNSTREAM || type == BCMOLT_FLOW_TYPE_MULTICAST)
     {
         BCMOLT_MSG_FIELD_SET(&flow_cfg, ingress_intf.intf_type, BCMOLT_FLOW_INTERFACE_TYPE_NNI);
@@ -525,10 +526,13 @@ static bcmos_errno xpon_create_onu_flow(sr_session_ctx_t *srs, xpon_v_ani *v_ani
         BCMONU_MGMT_FIELD_SET(&cfg.data, flow_cfg_data, agg_port_id, gem->tcont->alloc_id);
 
     /* Map classifier */
-    if (match.vlan_tag_match.num_tags &&
-        match.vlan_tag_match.tag_match_types[BBF_TAG_INDEX_TYPE_OUTER] != BBF_VLAN_TAG_MATCH_TYPE_ALL)
+    if (match.vlan_tag_match.tag_match_types[BBF_TAG_INDEX_TYPE_OUTER] != BBF_VLAN_TAG_MATCH_TYPE_ALL)
     {
         const bbf_dot1q_tag *tag;
+        if (match.vlan_tag_match.tag_match_types[BBF_TAG_INDEX_TYPE_OUTER] == BBF_VLAN_TAG_MATCH_TYPE_UNTAGGED)
+        {
+            BCMONU_MGMT_FIELD_SET(&cfg.data.match, flow_match, o_untagged, BCMOS_TRUE);
+        }
         if (match.vlan_tag_match.num_tags)
         {
             tag = &match.vlan_tag_match.tags[BBF_TAG_INDEX_TYPE_OUTER];
@@ -774,16 +778,52 @@ static bcmos_errno xpon_create_onu_flows(sr_session_ctx_t *srs, xpon_v_ani *v_an
         return BCM_ERR_NOENT;
     }
 
-    /* Now go over all traffic classes of the OLT rule and create ONU flows */
-    for (int i = 0; i < BCM_SIZEOFARRAY(olt_rule->flows); i++)
+    /* Assign TCs and GEMs based on the qos_profile */
+    err = xpon_find_rule_gem(srs, subif, rule, v_ani_v_enet, BCMOS_FALSE);
+    if (err != BCM_ERR_OK)
+    {
+        /* We couldn't identify GEM based on the qos_profile associated with ani-side vsi.
+           Try to check what GEM(s) are assigned to the linked vani-side vsi
+        */
+        int num_assigned_gems = 0;
+        for (int i = 0; i < BCM_SIZEOFARRAY(olt_rule->flows); i++)
+        {
+            bbf_match_criteria match_with_qos = rule->match;
+            bbf_subif_ingress_rule_flow *tc_flow = &rule->flows[i];
+            if (olt_rule->flows[i].gem == NULL)
+                continue;
+            if (tc_flow->gem != NULL)
+            {
+                ++num_assigned_gems;
+                continue; /* already exists */
+            }
+            if (tc_flow->qos_class != NULL)
+            {
+                /* Extended match with QoS classification */
+                err = xpon_merge_match(&match_with_qos, &tc_flow->qos_class->match);
+                if (err != BCM_ERR_OK)
+                    continue;
+            }
+            tc_flow->gem = olt_rule->flows[i].gem;
+            tc_flow->qos_class = olt_rule->flows[i].qos_class;
+            ++num_assigned_gems;
+        }
+        if (!num_assigned_gems)
+        {
+            NC_ERROR_REPLY(srs, NULL, "rule %s: can't find matching GEM port needed to create an ONU flow for VSI %s.\n",
+                rule->name, subif->hdr.name);
+            return BCM_ERR_PARM;
+        }
+    }
+
+    /* Now go over all traffic classes and create ONU flows */
+    for (int i = 0; i < BCM_SIZEOFARRAY(rule->flows); i++)
     {
         bbf_subif_ingress_rule_flow *tc_flow = &rule->flows[i];
-        if (olt_rule->flows[i].gem == NULL)
+        if (tc_flow->flow_id != BCM_FLOW_ID_INVALID)
             continue;
-        if (tc_flow->gem != NULL)
-            continue; /* already exists */
-        tc_flow->gem = olt_rule->flows[i].gem;
-        tc_flow->qos_class = olt_rule->flows[i].qos_class;
+        if (tc_flow->gem == NULL)
+            continue;
         err = xpon_create_onu_flow(srs, v_ani, subif, rule, i, BCMONU_MGMT_FLOW_DIR_ID_UPSTREAM);
         if (err != BCM_ERR_OK)
         {
@@ -906,12 +946,15 @@ static bcmos_errno xpon_find_rule_gem(
     qos_class = xpon_qos_classifier_get_next(prof, rule, NULL);
     while (qos_class != NULL)
     {
-        const xpon_gem *gem = xpon_gem_get_by_traffic_class(v_ani_v_enet, qos_class->traffic_class);
-        if (gem != NULL)
+        if (xpon_is_match(&rule->match, &qos_class->match))
         {
-            rule->flows[qos_class->traffic_class].gem = gem;
-            rule->flows[qos_class->traffic_class].qos_class = qos_class;
-            ++num_assigned;
+            const xpon_gem *gem = xpon_gem_get_by_traffic_class(v_ani_v_enet, qos_class->traffic_class);
+            if (gem != NULL)
+            {
+                rule->flows[qos_class->traffic_class].gem = gem;
+                rule->flows[qos_class->traffic_class].qos_class = qos_class;
+                ++num_assigned;
+            }
         }
         qos_class = xpon_qos_classifier_get_next(prof, rule, qos_class);
     }
@@ -920,12 +963,12 @@ static bcmos_errno xpon_find_rule_gem(
     {
         if (stop_on_error)
         {
-            NC_ERROR_REPLY(srs, NULL, "rule %s: can't find matching GEM port needed to create an OLT flow.\n",
+            NC_ERROR_REPLY(srs, NULL, "rule %s: can't find matching GEM port needed to create an OLT or ONU flow.\n",
                 rule->name);
         }
         else
         {
-            NC_LOG_DBG("rule %s: can't find matching GEM port needed to create an OLT flow.\n",
+            NC_LOG_DBG("rule %s: can't find matching GEM port needed to create an OLT or ONU flow.\n",
                 rule->name)
         }
         return BCM_ERR_NOENT;

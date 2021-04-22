@@ -45,15 +45,14 @@ static int _client_tx_task_handler(long data)
             continue;
 
         // Convert to gRPC and transmit
-        if (owner->OmciTxToVomci(*omci_packet) == BCM_ERR_OK)
+        if (owner->OmciTxToVomci(omci_packet) == BCM_ERR_OK)
         {
-            ++connection->packets_onu_to_vomci_sent;
+            ++connection->stats.packets_onu_to_vomci_sent;
         }
         else
         {
-            ++connection->packets_onu_to_vomci_disc;
+            ++connection->stats.packets_onu_to_vomci_disc;
         }
-        delete omci_packet;
     }
     self->destroyed = BCMOS_TRUE;
     return 0;
@@ -61,7 +60,7 @@ static int _client_tx_task_handler(long data)
 
 BcmPoltClient::BcmPoltClient(const tr451_client_endpoint *ep):
     GrpcProcessor(GrpcProcessor::processor_type::GRPC_PROCESSOR_TYPE_CLIENT, ep->name),
-    endpoint_(ep->name)
+    endpoint_(ep->name, ep->local_name)
 {
     connection_ = nullptr;
     listen_context_ = nullptr;
@@ -79,7 +78,7 @@ BcmPoltClient::~BcmPoltClient()
     BCM_POLT_LOG(INFO, "client '%s': Destroyed\n", endpoint_.name());
 }
 
-void BcmPoltClient::CancelListenForOmciTx()
+void BcmPoltClient::CancelListenForVomciTx()
 {
     if (listen_context_ != nullptr)
     {
@@ -97,7 +96,7 @@ void BcmPoltClient::Stop()
     if (!stopping)
     {
         stopping = true;
-        CancelListenForOmciTx();
+        CancelListenForVomciTx();
         Disconnected();
         GrpcProcessor::Stop();
         BCM_POLT_LOG(INFO, "client %s: Stopped\n", endpoint_.name());
@@ -149,15 +148,15 @@ bcmos_errno BcmPoltClient::Connect(const Endpoint *entry)
 // Send Hello
 bcmos_errno BcmPoltClient::Hello(const Endpoint *entry)
 {
-    hello_stub_ = ::tr451_vomci_function_sbi_service::OmciFunctionHelloSbi::NewStub(channel_);
+    hello_stub_ = ::tr451_vomci_sbi_service::v1::VomciHelloSbi::NewStub(channel_);
     ClientContext context;
     HelloVomciRequest hello_request;
     HelloVomciResponse hello_response;
     Status status;
 
-    OltHello *olt = new OltHello();
-    olt->set_olt_name(polt_name);
-    hello_request.set_allocated_olt(olt);
+    ::tr451_vomci_sbi_message::v1::Hello *olt = new ::tr451_vomci_sbi_message::v1::Hello();
+    olt->set_endpoint_name(endpoint_.name_for_hello());
+    hello_request.set_allocated_local_endpoint_hello(olt);
     status = hello_stub_->HelloVomci(&context, hello_request, &hello_response);
     if (!status.ok())
     {
@@ -166,31 +165,36 @@ bcmos_errno BcmPoltClient::Hello(const Endpoint *entry)
         return BCM_ERR_IO;
     }
     const char *vomci_name = nullptr;
-    if (hello_response.has_vomci_function())
-        vomci_name = hello_response.vomci_function().vomci_name().c_str();
+    if (hello_response.has_remote_endpoint_hello())
+        vomci_name = hello_response.remote_endpoint_hello().endpoint_name().c_str();
     if (vomci_name == nullptr || !*vomci_name)
         vomci_name = endpoint_.name();
     BCM_POLT_LOG(INFO, "client %s.%s: 'hello' exchange with the server at %s:%u completed: connected to vomci %s\n",
         endpoint_.name(), entry->name(), entry->host_name(), entry->port(), vomci_name);
     if (connection_ != nullptr)
         delete connection_;
-    connection_ = new VomciConnection(this, entry->name(), vomci_name);
+    connection_ = new VomciConnection(this, entry->name(), endpoint_.name_for_hello(), vomci_name);
     connection_->setConnected(true);
     return BCM_ERR_OK;
 }
 
 // Listen for OMCI messages from vOMCI
-void BcmPoltClient::ListenForOmciTx()
+void BcmPoltClient::ListenForVomciTx()
 {
-    CancelListenForOmciTx(); // cancel old call if any
+    CancelListenForVomciTx(); // cancel old call if any
     listen_context_ = new ClientContext();
     Empty request;
-    std::unique_ptr< ::grpc::ClientReaderInterface< ::tr451_vomci_function_sbi_message::OmciPacket>> reader(
-        message_stub_->ListenForOmciRx(listen_context_, request));
-        OmciPacket tx_packet;
-    while (connection_ != nullptr && reader->Read(&tx_packet))
+    std::unique_ptr< ::grpc::ClientReaderInterface<VomciMessage>> reader(
+        message_stub_->ListenForVomciRx(listen_context_, request));
+    VomciMessage tx_msg;
+    while (connection_ != nullptr && reader->Read(&tx_msg))
     {
-        OmciTxToOnu(tx_packet, connection_ ? connection_->peer() : nullptr);
+        if (!tx_msg.has_omci_packet_msg())
+        {
+            BCM_POLT_LOG(INFO, "%s: Received message is not a packet. Ignored\n", endpoint_.name());
+            continue;
+        }
+        OmciTxToOnu(tx_msg.omci_packet_msg(), connection_ ? connection_->peer() : nullptr);
     }
     reader->Finish();
 
@@ -248,7 +252,7 @@ bcmos_errno BcmPoltClient::Start()
             break;
 
         // Create stub interface for message exchange
-        message_stub_ = ::tr451_vomci_function_sbi_service::OmciFunctionMessageSbi::NewStub(channel_);
+        message_stub_ = ::tr451_vomci_sbi_service::v1::VomciMessageSbi::NewStub(channel_);
 
         // Create TX task
         bcmos_errno err;
@@ -267,7 +271,7 @@ bcmos_errno BcmPoltClient::Start()
         }
 
         // Now send ListenForOmciRx() request. It will block
-        ListenForOmciTx();
+        ListenForVomciTx();
 
         Disconnected();
 
@@ -277,12 +281,14 @@ bcmos_errno BcmPoltClient::Start()
 }
 
 // Forward message received from ONU to vOMCI
-bcmos_errno BcmPoltClient::OmciTxToVomci(OmciPacket &grpc_omci_packet)
+bcmos_errno BcmPoltClient::OmciTxToVomci(OmciPacket *grpc_omci_packet)
 {
     ClientContext context;
     ::google::protobuf::Empty response;
     Status status;
-    status = message_stub_->OmciTx(&context, grpc_omci_packet, &response);
+    VomciMessage msg;
+    msg.set_allocated_omci_packet_msg(grpc_omci_packet);
+    status = message_stub_->VomciTx(&context, msg, &response);
     return status.ok() ? BCM_ERR_OK: BCM_ERR_IO;
 }
 
@@ -324,8 +330,10 @@ bcmos_errno bcm_tr451_polt_grpc_client_create(const tr451_client_endpoint *endpo
                 endpoint->name, entry->name);
             return BCM_ERR_PARM;
         }
-        BCM_POLT_LOG(INFO, "Creating client %s: entry %s %s:%u\n",
-            endpoint->name, entry->name,
+        BCM_POLT_LOG(INFO, "Creating client %s: name_for_hello=%s  entry %s %s:%u\n",
+            endpoint->name,
+            endpoint->local_name ? endpoint->local_name : endpoint->name,
+            entry->name,
             entry->host_name ? entry->host_name : "any", entry->port);
     }
 

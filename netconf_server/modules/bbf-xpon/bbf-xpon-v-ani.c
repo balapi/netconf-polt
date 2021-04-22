@@ -30,6 +30,9 @@
 #include <onu_mgmt_model_funcs.h>
 #include <onu_mgmt_model_metadata.h>
 #include <bcmolt_utils.h>
+#ifdef TR451_VOMCI
+#include <bcm_tr451_polt.h>
+#endif
 
 //#include <sys/inotify.h>
 #include <libnetconf2/log.h>
@@ -666,6 +669,15 @@ static bcmos_errno xpon_v_ani_apply(sr_session_ctx_t *srs, xpon_v_ani *onu_info,
             }
             onu_info->pon_ni = onu_changes->pon_ni;
         }
+
+#ifdef TR451_VOMCI
+        if (XPON_PROP_IS_SET(onu_changes, v_ani, vomci_endpoint))
+        {
+            const char *endpoint_name = *onu_changes->vomci_endpoint ? onu_changes->vomci_endpoint : NULL;
+            xpon_v_ani_vomci_endpoint_set(cterm->hdr.name, key.onu_id, endpoint_name);
+        }
+#endif
+
     } while (0);
 
     if (err == BCM_ERR_OK && !onu_changes->hdr.being_deleted)
@@ -684,6 +696,13 @@ static bcmos_errno xpon_v_ani_apply(sr_session_ctx_t *srs, xpon_v_ani *onu_info,
         onu_info->cterm = cterm;
         if (onu_info->pon_ni < BCM_MAX_PONS_PER_OLT && onu_info->onu_id < XPON_MAX_ONUS_PER_PON)
             v_ani_array[onu_info->pon_ni][onu_info->onu_id] = onu_info;
+#ifdef TR451_VOMCI
+        if (XPON_PROP_IS_SET(onu_changes, v_ani, vomci_endpoint))
+        {
+            XPON_PROP_SET_PRESENT(onu_info, v_ani, vomci_endpoint);
+            strcpy(onu_info->vomci_endpoint, onu_changes->vomci_endpoint);
+        }
+#endif
     }
 
     bcmos_mutex_unlock(&onu_config_lock);
@@ -696,7 +715,7 @@ bcmos_errno xpon_v_ani_transaction(sr_session_ctx_t *srs, nc_transact *tr)
 {
     xpon_v_ani *onu_info = NULL;
     xpon_v_ani onu_changes = {};
-    char keyname[32];
+    char keyname[BBF_XPON_MAX_NAME_LENGTH];
     nc_transact_elem *elem;
     bcmos_errno err = BCM_ERR_OK;
     bcmos_bool was_added = BCMOS_FALSE;
@@ -831,6 +850,17 @@ bcmos_errno xpon_v_ani_transaction(sr_session_ctx_t *srs, nc_transact *tr)
             if (len)
                 XPON_PROP_SET(&onu_changes, v_ani, registration_id, reg_id);
         }
+#ifdef TR451_VOMCI
+        else if (!strcmp(leaf, "vomci-func-remote-endpoint-name"))
+        {
+            const char *endpoint_name = val->data.string_val;
+            XPON_PROP_SET_PRESENT(&onu_changes, v_ani, vomci_endpoint);
+            if (endpoint_name)
+                strncpy(onu_changes.vomci_endpoint, endpoint_name, sizeof(onu_changes.vomci_endpoint));
+            else
+                *onu_changes.vomci_endpoint = 0;
+        }
+#endif
     }
 
     /* Apply the new configuration */
@@ -857,41 +887,65 @@ bcmos_errno xpon_v_ani_transaction(sr_session_ctx_t *srs, nc_transact *tr)
     return err;
 }
 
+/* populate vomci status */
+#ifdef TR451_VOMCI
+static void xpon_v_ani_vomci_state_populate1(sr_session_ctx_t *session, const char *xpath,
+    struct lyd_node **parent, xpon_v_ani *v_ani)
+{
+    const struct ly_ctx *ctx = sr_get_context(sr_session_get_connection(session));
+    bbf_vomci_communication_status comm_status;
+    char counter[16];
+    const char *remote_endpoint;
+    uint64_t in_messages;
+    uint64_t out_messages;
+    uint64_t messages_error;
+    bcmos_errno err;
+    const char *status;
+
+    err = bcm_tr451_onu_status_get(v_ani->cterm->hdr.name, v_ani->onu_id,
+        &comm_status, &remote_endpoint, &in_messages, &out_messages, &messages_error);
+    if (err != BCM_ERR_OK)
+        return;
+
+    switch(comm_status)
+    {
+        case BBF_VOMCI_COMMUNICATION_STATUS_CONNECTION_ACTIVE:
+            status = "bbf-vomci-types:connection-active";
+            break;
+        case BBF_VOMCI_COMMUNICATION_STATUS_CONNECTION_INACTIVE:
+            status = "bbf-vomci-types:connection-inactive";
+            break;
+        case BBF_VOMCI_COMMUNICATION_STATUS_REMOTE_ENDPOINT_IS_NOT_ASSIGNED:
+            status = "bbf-vomci-types:remote-endpoint-is-not-assigned";
+            break;
+        case BBF_VOMCI_COMMUNICATION_STATUS_COMMUNICATION_FAILURE:
+            status = "bbf-vomci-types:vomci-communication-failure";
+            break;
+        case BBF_VOMCI_COMMUNICATION_STATUS_UNSPECIFIED_FAILURE:
+        default:
+            status = "bbf-vomci-types:unspecified-failure";
+            break;
+    }
+    *parent = nc_ly_sub_value_add(ctx, *parent, xpath, "bbf-olt-vomci:vomci-onu-state/vomci-func-remote-endpoint-name", remote_endpoint);
+    *parent = nc_ly_sub_value_add(ctx, *parent, xpath, "bbf-olt-vomci:vomci-onu-state/vomci-func-communication-status", status);
+    snprintf(counter, sizeof(counter), "%llu", (unsigned long long)in_messages);
+    *parent = nc_ly_sub_value_add(ctx, *parent, xpath, "bbf-olt-vomci:vomci-onu-state/in-messages", counter);
+    snprintf(counter, sizeof(counter), "%llu", (unsigned long long)out_messages);
+    *parent = nc_ly_sub_value_add(ctx, *parent, xpath, "bbf-olt-vomci:vomci-onu-state/out-messages", counter);
+    snprintf(counter, sizeof(counter), "%llu", (unsigned long long)messages_error);
+    *parent = nc_ly_sub_value_add(ctx, *parent, xpath, "bbf-olt-vomci:vomci-onu-state/messages-errors", counter);
+}
+#endif
+
 /* Populate a single v-ani */
 static int xpon_v_ani_state_populate1(sr_session_ctx_t *session, const char *xpath, struct lyd_node **parent,
     xpon_v_ani *v_ani)
 {
     const struct ly_ctx *ctx = sr_get_context(sr_session_get_connection(session));
+    char v_ani_xpath[BCM_MAX_XPATH_LENGTH] = {};
+    bcmos_bool entire_v_ani = (*xpath && xpath[strlen(xpath) - 1] == ']');
 
-    if (strstr(xpath, "bbf-xponvani:v-ani/onu-wl-protected"))
-    {
-        /* not supported for now */
-    }
-    else if (strstr(xpath, "bbf-xponvani:v-ani/onu-present-on-this-olt"))
-    {
-        if (v_ani->cpair)
-        {
-            *parent = nc_ly_sub_value_add(ctx, *parent, xpath,
-                "onu-present-on-this-channel-pair", v_ani->cpair->hdr.name);
-        }
-        if (v_ani->cterm)
-        {
-            *parent = nc_ly_sub_value_add(ctx, *parent, xpath,
-                "onu-present-on-this-channel-termination", v_ani->cpair->hdr.name);
-        }
-    }
-    else if (strstr(xpath, "bbf-xponvani:v-ani"))
-    {
-        if (v_ani->onu_id < XPON_MAX_ONUS_PER_PON)
-        {
-            char onu_id[16];
-            snprintf(onu_id, sizeof(onu_id), "%u", v_ani->onu_id);
-            *parent = nc_ly_sub_value_add(ctx, *parent, xpath, "onu-id", onu_id);
-            *parent = nc_ly_sub_value_add(ctx, *parent, xpath, "management-tcont-alloc-id", onu_id);
-            *parent = nc_ly_sub_value_add(ctx, *parent, xpath, "management-gemport-id", onu_id);
-        }
-    }
-    else
+    if (entire_v_ani || strstr(xpath, "-status"))
     {
         *parent = nc_ly_sub_value_add(ctx, *parent, xpath, "admin-status",
             (XPON_PROP_IS_SET(v_ani, v_ani, admin_state) &&
@@ -900,6 +954,37 @@ static int xpon_v_ani_state_populate1(sr_session_ctx_t *session, const char *xpa
 
         *parent = nc_ly_sub_value_add(ctx, *parent, xpath, "oper-status",
             v_ani->registered ? "up" : "down");
+    }
+
+    if (entire_v_ani)
+        snprintf(v_ani_xpath, sizeof(v_ani_xpath) - 1, "%s/bbf-xponvani:v-ani", xpath);
+    else
+        strncpy(v_ani_xpath, xpath, sizeof(v_ani_xpath) - 1);
+
+    if (entire_v_ani || strstr(xpath, "v-ani"))
+    {
+        if (v_ani->cpair)
+        {
+            *parent = nc_ly_sub_value_add(ctx, *parent, v_ani_xpath,
+                "onu-present-on-this-olt/onu-present-on-this-channel-pair", v_ani->cpair->hdr.name);
+        }
+        if (v_ani->cterm)
+        {
+            *parent = nc_ly_sub_value_add(ctx, *parent, v_ani_xpath,
+                "onu-present-on-this-olt/onu-present-on-this-channel-termination", v_ani->cterm->hdr.name);
+        }
+        if (v_ani->onu_id < XPON_MAX_ONUS_PER_PON)
+        {
+            char id[16];
+            snprintf(id, sizeof(id), "%u", v_ani->onu_id);
+            *parent = nc_ly_sub_value_add(ctx, *parent, v_ani_xpath, "onu-id", id);
+#ifdef TR451_VOMCI
+            if (v_ani->cterm != NULL)
+            {
+                xpon_v_ani_vomci_state_populate1(session, v_ani_xpath, parent, v_ani);
+            }
+#endif
+        }
     }
 
     return SR_ERR_OK;
@@ -911,7 +996,7 @@ int xpon_v_ani_state_get_cb(sr_session_ctx_t *session, const char *xpath, struct
     xpon_obj_hdr *hdr, *hdr_tmp;
     xpon_v_ani *v_ani;
     int sr_rc = SR_ERR_OK;
-    char keyname[32];
+    char keyname[BBF_XPON_MAX_NAME_LENGTH];
 
     NC_LOG_DBG("xpath=%s\n", xpath);
     if ((strstr(xpath, "bbf-xpon") || strstr(xpath, "bbf-xponani")) && !strstr(xpath, "bbf-xponvani"))

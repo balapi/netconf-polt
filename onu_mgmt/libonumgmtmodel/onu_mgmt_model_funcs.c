@@ -701,19 +701,39 @@ bcmos_bool bcmonu_mgmt_flow_action_validate(const bcmonu_mgmt_flow_action *obj, 
     }
     if (_BCMONU_MGMT_FIELD_MASK_BIT_IS_SET(obj->presence_mask, BCMONU_MGMT_FLOW_ACTION_ID_O_PCP))
     {
-        /* obj->o_pcp can't be invalid. */
+        if (obj->o_pcp > 7)
+        {
+            *err = BCM_ERR_RANGE;
+            bcmolt_string_append(err_details, "o_pcp: %u is greater than the maximum value of 7\n", obj->o_pcp);
+            return BCMOS_FALSE;
+        }
     }
     if (_BCMONU_MGMT_FIELD_MASK_BIT_IS_SET(obj->presence_mask, BCMONU_MGMT_FLOW_ACTION_ID_O_VID))
     {
-        /* obj->o_vid can't be invalid. */
+        if (obj->o_vid > 4095U)
+        {
+            *err = BCM_ERR_RANGE;
+            bcmolt_string_append(err_details, "o_vid: %u is greater than the maximum value of 4095\n", obj->o_vid);
+            return BCMOS_FALSE;
+        }
     }
     if (_BCMONU_MGMT_FIELD_MASK_BIT_IS_SET(obj->presence_mask, BCMONU_MGMT_FLOW_ACTION_ID_I_PCP))
     {
-        /* obj->i_pcp can't be invalid. */
+        if (obj->i_pcp > 7)
+        {
+            *err = BCM_ERR_RANGE;
+            bcmolt_string_append(err_details, "i_pcp: %u is greater than the maximum value of 7\n", obj->i_pcp);
+            return BCMOS_FALSE;
+        }
     }
     if (_BCMONU_MGMT_FIELD_MASK_BIT_IS_SET(obj->presence_mask, BCMONU_MGMT_FLOW_ACTION_ID_I_VID))
     {
-        /* obj->i_vid can't be invalid. */
+        if (obj->i_vid > 4095U)
+        {
+            *err = BCM_ERR_RANGE;
+            bcmolt_string_append(err_details, "i_vid: %u is greater than the maximum value of 4095\n", obj->i_vid);
+            return BCMOS_FALSE;
+        }
     }
     return BCMOS_TRUE;
 }
@@ -738,19 +758,39 @@ bcmos_bool bcmonu_mgmt_flow_match_validate(const bcmonu_mgmt_flow_match *obj, bc
     }
     if (_BCMONU_MGMT_FIELD_MASK_BIT_IS_SET(obj->presence_mask, BCMONU_MGMT_FLOW_MATCH_ID_O_PCP))
     {
-        /* obj->o_pcp can't be invalid. */
+        if (obj->o_pcp > 7)
+        {
+            *err = BCM_ERR_RANGE;
+            bcmolt_string_append(err_details, "o_pcp: %u is greater than the maximum value of 7\n", obj->o_pcp);
+            return BCMOS_FALSE;
+        }
     }
     if (_BCMONU_MGMT_FIELD_MASK_BIT_IS_SET(obj->presence_mask, BCMONU_MGMT_FLOW_MATCH_ID_O_VID))
     {
-        /* obj->o_vid can't be invalid. */
+        if (obj->o_vid > 4095U)
+        {
+            *err = BCM_ERR_RANGE;
+            bcmolt_string_append(err_details, "o_vid: %u is greater than the maximum value of 4095\n", obj->o_vid);
+            return BCMOS_FALSE;
+        }
     }
     if (_BCMONU_MGMT_FIELD_MASK_BIT_IS_SET(obj->presence_mask, BCMONU_MGMT_FLOW_MATCH_ID_I_PCP))
     {
-        /* obj->i_pcp can't be invalid. */
+        if (obj->i_pcp > 7)
+        {
+            *err = BCM_ERR_RANGE;
+            bcmolt_string_append(err_details, "i_pcp: %u is greater than the maximum value of 7\n", obj->i_pcp);
+            return BCMOS_FALSE;
+        }
     }
     if (_BCMONU_MGMT_FIELD_MASK_BIT_IS_SET(obj->presence_mask, BCMONU_MGMT_FLOW_MATCH_ID_I_VID))
     {
-        /* obj->i_vid can't be invalid. */
+        if (obj->i_vid > 4095U)
+        {
+            *err = BCM_ERR_RANGE;
+            bcmolt_string_append(err_details, "i_vid: %u is greater than the maximum value of 4095\n", obj->i_vid);
+            return BCMOS_FALSE;
+        }
     }
     if (_BCMONU_MGMT_FIELD_MASK_BIT_IS_SET(obj->presence_mask, BCMONU_MGMT_FLOW_MATCH_ID_O_UNTAGGED))
     {
@@ -804,11 +844,21 @@ bcmos_bool bcmonu_mgmt_igmp_us_action_validate(const bcmonu_mgmt_igmp_us_action 
     }
     if (_BCMONU_MGMT_FIELD_MASK_BIT_IS_SET(obj->presence_mask, BCMONU_MGMT_IGMP_US_ACTION_ID_PCP))
     {
-        /* obj->pcp can't be invalid. */
+        if (obj->pcp > 7)
+        {
+            *err = BCM_ERR_RANGE;
+            bcmolt_string_append(err_details, "pcp: %u is greater than the maximum value of 7\n", obj->pcp);
+            return BCMOS_FALSE;
+        }
     }
     if (_BCMONU_MGMT_FIELD_MASK_BIT_IS_SET(obj->presence_mask, BCMONU_MGMT_IGMP_US_ACTION_ID_VID))
     {
-        /* obj->vid can't be invalid. */
+        if (obj->vid > 4095U)
+        {
+            *err = BCM_ERR_RANGE;
+            bcmolt_string_append(err_details, "vid: %u is greater than the maximum value of 4095\n", obj->vid);
+            return BCMOS_FALSE;
+        }
     }
     return BCMOS_TRUE;
 }

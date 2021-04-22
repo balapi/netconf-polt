@@ -47,8 +47,6 @@ bcmos_errno bcm_tr451_channel_termination_mapper_get_id_by_name(const char *name
 
 /* Debug functions */
 void bcm_tr451_omci_rx_from_onu(bcmolt_devid device_id, bcmolt_msg *msg);
-void bcm_tr451_stats_get(const char **endpoint_name, uint32_t *omci_sent,
-   uint32_t *omci_recv, uint32_t *send_errors);
 
 #ifdef __cplusplus
 }

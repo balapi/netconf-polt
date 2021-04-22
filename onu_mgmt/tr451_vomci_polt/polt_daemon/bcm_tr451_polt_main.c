@@ -63,7 +63,6 @@ static int print_help(char *cmd)
 #ifndef BCM_OPEN_SOURCE_SIM
     fprintf(stderr, "\t-device_address IP:port\tOLT Device address (for UDP communication)\n");
 #endif
-    fprintf(stderr, "\t-polt_name name\t\tSet pOLT name\n");
 #if defined(DEV_LOG_SYSLOG)
     fprintf(stderr, "\t-syslog\t\t\tLog to syslog. This is the default if -d is not specified\n");
 #endif
@@ -205,13 +204,6 @@ static int bcm_polt_start(void)
             log_syslog = BCMOS_TRUE;
         }
 #endif
-        else if (!strcmp(polt_argv[i], "-polt_name"))
-        {
-            ++i;
-            if (i >= polt_argc)
-                return print_help(polt_argv[0]);
-            polt_init_parms.polt_name = polt_argv[i];
-        }
         else if (!strcmp(polt_argv[i], "-log"))
         {
             ++i;

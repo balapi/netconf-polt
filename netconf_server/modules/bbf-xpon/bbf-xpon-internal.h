@@ -38,6 +38,8 @@
 #include <libnetconf2/log.h>
 #include <bcmolt_netconf_module_utils.h>
 
+#define BBF_XPON_MAX_NAME_LENGTH    64
+
 extern sr_subscription_ctx_t *sr_ctx;
 
 /* Object type */
@@ -388,6 +390,7 @@ struct xpon_v_ani
     bcmolt_bin_str_36 registration_id;
     bcmolt_onu_rate onu_rate;
     xpon_tm_root tm_root;
+    char vomci_endpoint[BBF_XPON_MAX_NAME_LENGTH];
 
     bcmos_bool registered;
     bcmos_bool omci_ready;
@@ -411,6 +414,7 @@ typedef enum
     xpon_v_ani_prop_id_protection_cpair,
     xpon_v_ani_prop_id_onu_rate,
     xpon_v_ani_prop_id_tm_root,
+    xpon_v_ani_prop_id_vomci_endpoint,
 } xpon_v_ani_prop_id;
 
 /* ani info record */
@@ -740,7 +744,7 @@ struct xpon_qos_policy
 {
     xpon_obj_hdr hdr;
     uint32_t num_classifiers;
-#define XPON_MAX_QOS_CLASSIFIERS_PER_QOS_POLICY         8
+#define XPON_MAX_QOS_CLASSIFIERS_PER_QOS_POLICY         16
     xpon_qos_classifier *classifier[XPON_MAX_QOS_CLASSIFIERS_PER_QOS_POLICY];
     xpon_qos_policy_profile *profile;
 };
