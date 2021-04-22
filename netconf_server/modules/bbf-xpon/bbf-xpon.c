@@ -167,8 +167,8 @@ static int bbf_xpon_interface_change_cb(sr_session_ctx_t *srs, const char *modul
     sr_change_iter_t *sr_iter = NULL;
     sr_change_oper_t sr_oper;
     sr_val_t *sr_old_val = NULL, *sr_new_val = NULL;
-    char keyname[32];
-    char prev_keyname[32] = "";
+    char keyname[BBF_XPON_MAX_NAME_LENGTH];
+    char prev_keyname[BBF_XPON_MAX_NAME_LENGTH] = "";
     nc_transact transact;
     int sr_rc;
     bcmos_errno err = BCM_ERR_OK;
@@ -258,6 +258,8 @@ static int bbf_xpon_interface_change_cb(sr_session_ctx_t *srs, const char *modul
     sr_free_change_iter(sr_iter);
 
     nc_config_unlock();
+
+    NC_LOG_DBG("OUT: err='%s'\n", bcmos_strerror(err));
 
     return nc_bcmos_errno_to_sr_errno(err);
 }
@@ -423,7 +425,7 @@ static bcmos_errno bbf_xpon_subscribe(sr_session_ctx_t *srs)
 #endif
 
     /* subscribe to events */
-    sr_rc = sr_module_change_subscribe(srs, IETF_INTERFACES_MODULE_NAME, NULL,
+    sr_rc = sr_module_change_subscribe(srs, IETF_INTERFACES_MODULE_NAME, BBF_XPON_INTERFACE_PATH_BASE,
             bbf_xpon_interface_change_cb, NULL, 0, BCM_SR_MODULE_CHANGE_SUBSCR_FLAGS,
             &sr_ctx_intf);
     if (SR_ERR_OK == sr_rc)

@@ -43,8 +43,9 @@ extern "C"
 
 #include <tr451_polt_vendor_specific.h>
 
-#include <tr451_vomci_function_sbi_message.pb.h>
-using tr451_vomci_function_sbi_message::OmciPacket;
+#include <tr451_vomci_sbi_message.pb.h>
+using tr451_vomci_sbi_message::v1::OmciPacket;
+using tr451_vomci_sbi_message::v1::OnuHeader;
 
 /** OmciPacket that can be enqueued */
 class OmciPacketEntry: public OmciPacket {

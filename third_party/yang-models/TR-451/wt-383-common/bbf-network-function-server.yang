@@ -1,7 +1,7 @@
-module bbf-nf-server {
+module bbf-network-function-server {
   yang-version 1.1;
-  namespace "urn:bbf:yang:bbf-nf-server";
-  prefix bbf-nf-server;
+  namespace "urn:bbf:yang:bbf-network-function-server";
+  prefix bbf-nfs;
 
   import ietf-yang-types {
     prefix yang;
@@ -28,10 +28,9 @@ module bbf-nf-server {
      WA Director: Bruno Cornaglia, Vodafone";
   description
     "This module contains a collection of YANG definitions needed to
-     communicate with endpoints of network functions as described
-     in TR-451.
+     communicate with endpoints of network functions.
 
-     Copyright (c) 2019-2020, Broadband Forum
+     Copyright (c) 2019-2021, Broadband Forum
 
      Redistribution and use in source and binary forms, with or
      without modification, are permitted provided that the following
@@ -74,7 +73,7 @@ module bbf-nf-server {
      This version of this YANG module is part of TR-451; see
      the TR itself for full legal notices.";
 
-  revision 2019-10-09 {
+  revision 2021-02-19 {
     description
       "Initial revision.";
     reference
@@ -82,7 +81,6 @@ module bbf-nf-server {
   }
 
   // Groupings
-
   grouping nf-server-grouping {
     description
       "Top-level grouping for network function server configuration.";
@@ -94,15 +92,13 @@ module bbf-nf-server {
         type uint16;
         units "seconds";
         default "3600";
-        // one hour
         description
-          "Specifies the maximum number of seconds that a
-           session may remain idle. A session will be
-           dropped if it is idle for an interval longer than this
-           number of seconds.  If set to zero, then the server
-           will never drop a session because it is idle.  Sessions
-           that have a notification subscription active are never
-           dropped.";
+          "The maximum number of seconds that a session may remain 
+           idle. A session will be dropped if it is idle for an 
+           interval longer than this number of seconds. If set to 
+           zero, then the server will never drop a session because 
+           it is idle. Sessions that have a notification subscription 
+           active are never dropped.";
       }
       list listen-endpoint {
         key "name";
@@ -125,8 +121,17 @@ module bbf-nf-server {
                  connections.";
               container grpc-server-parameters {
                 description
-                  "A wrapper around the gRPC server parameters
-                   to avoid name collisions.";
+                  "A wrapper around the gRPC server parameters to 
+                   avoid name collisions.";
+                leaf local-endpoint-name {
+                  type string;
+                  description
+                    "The name that this entity will use when 
+                     reporting the entity as an endpoint.
+                     For example, see section 5.6.2.1 Hello
+                     vOMCI service in TR-451 for how this parameter
+                     is used for vOMCI communication.";
+                }
                 uses tcps:tcp-server-grouping {
                   refine "local-port" {
                     default "8443";
@@ -140,50 +145,55 @@ module bbf-nf-server {
             }
           }
         }
-        notification remote-endpoint-status-change {
+        container remote-endpoints {
           description
-            "A notification traceable to a server listen-endpoint and
-            a remote endpoint associated with the listen-endpoint.
-            This notification is sent when remote-endpoint is
-            connected or disconnected to/from the listen-endpoint.";
-          leaf remote-endpoint {
-            type leafref {
-                path "../../../remote-endpoints/name";
-                require-instance "false";
+            "Remote endpoints that are currently connected to the
+             server.";
+          list remote-endpoint {
+            key "name";
+            config false;
+            description
+              "List of currently connected remote endpoints.";
+            leaf name {
+              type string;
+              description
+                "Identity of the remote endpoint as provided when the
+                 connection was established.";
             }
-            mandatory true;
-            description
-              "remote-endpoint that was connected/disconnected.";
           }
-          leaf connected {
-            type boolean;
-            mandatory true;
+          notification remote-endpoint-status-change {
             description
-              "New remote-endpoint status.";
+              "A notification traceable to a server listen-endpoint 
+               and a remote endpoint associated with the 
+               listen-endpoint.This notification is sent when 
+               remote-endpoint is connected or disconnected to/from 
+               the listen-endpoint.";
+            leaf remote-endpoint {
+              type leafref {
+                path "../../../remote-endpoints/remote-endpoint/name";
+                require-instance "false";
+              }
+              mandatory true;
+              description
+                "The remote-endpoint that was connected or
+                 disconnected.";
+            }
+            leaf connected {
+              type boolean;
+              mandatory true;
+              description
+                "New remote-endpoint status.";
+            }
+            leaf remote-endpoint-state-last-change {
+              type yang:date-and-time;
+              mandatory true;
+              description
+                "The system date and time when the remote-endpoint was
+                connected or disconnected.";
+            }
           }
-          leaf remote-endpoint-state-last-change {
-            type yang:date-and-time;
-            mandatory true;
-            description
-              "The system date and time when the remote-endpoint was
-              connected or disconnected.";
-          }
-        }
-      }
-      list remote-endpoints {
-        key "name";
-        config false;
-        description
-          "List of currently connected remote endpoints.";
-        leaf name {
-          type string;
-          description
-            "Identity of the remote endpoint as provided when the
-             connection was established.";
         }
       }
     }
-  }
-
-  // grouping nf-server-grouping
+  } // grouping nf-server-grouping
 }

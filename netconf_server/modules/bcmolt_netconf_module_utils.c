@@ -410,11 +410,11 @@ struct lyd_node *nc_ly_sub_value_add(
         xpath, string_val ? string_val : "NULL", (result && result->schema) ? result->schema->name : "NULL");
     if (result == NULL)
     {
-        NC_LOG_ERR("Failed to add attribute %s. Error %s\n", xpath, ly_errmsg(ctx));
+        NC_LOG_ERR("Error '%s'. Failed to add attribute %s.\n", ly_errmsg(ctx), xpath);
     }
     if (xpath != xpath_buf)
         free(xpath);
-    return result;
+    return result ? result : parent;
 }
 
 /* Add value to array of values.

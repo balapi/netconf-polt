@@ -1,0 +1,16 @@
+Release 3.10, branch iternovsky/feature/OBBAA-355-pOLT-Simulator-allignment-with-WT-451-YANG-changes
+Created 22 April 2021
+
+- third_party/yang_models/TR-451 YANG models updated as per WT-451 bitbucket develop and WT-451_vOMCI-Specification_Rev-26
+- command line parameter -polt_name has been removed
+- local identity for hello exchange is taken from
+  client: remote-endpoint/client-transport/grpc/local-endpoint-name if set, remote-endpoint/name otherwise
+  server: listen-endpoint/grpc/local-endpoint-name if set, listen-endpoint/name otherwise
+- added support for v-ani augmentations defined in bbf-olt-vomci.yang. Explicit setting of
+  /if:interfaces-state/if:interface/bbf-xponvani:v-ani/vomci-onu/vomci-func-remote-endpoint-name
+  takes precedence over endpoint filters
+- added support for per-onu counters in-messages, out-messages, messages-errors
+- added support for /if:interfaces-state/if:interface/bbf-xponvani:v-ani/vomci-onu-state/... operational data
+
+Other bug fixes and enhancements, 1 notable enhancement is that now daemon_attach utility supports line editing
+and tab completion, exactly as if the daemon is running in the foregraound.

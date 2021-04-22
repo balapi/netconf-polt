@@ -1,13 +1,13 @@
-module bbf-nf-endpoint-filter {
+module bbf-voltmf {
   yang-version 1.1;
-  namespace "urn:bbf:yang:bbf-nf-endpoint-filter";
-  prefix bbf-nf-epf;
+  namespace "urn:bbf:yang:bbf-voltmf";
+  prefix bbf-voltmf;
 
-  import bbf-vomci-types {
-    prefix bbf-vomci-types;
+  import bbf-device-aggregation {
+    prefix bbf-dev-agg;
   }
-  import bbf-xpon-types {
-    prefix bbf-xpon-types;
+  import bbf-voltmf-entity {
+    prefix bbf-voltmf-entity;
   }
 
   organization
@@ -27,11 +27,10 @@ module bbf-nf-endpoint-filter {
 
      WA Director: Bruno Cornaglia, Vodafone";
   description
-    "This module contains a collection of YANG definitions needed to
-     communicate with endpoints of network functions as described
-     in TR-451.
+    "This module contains a collection of YANG definitions needed
+     for vOLTMF functionality as described in TR-451.
 
-     Copyright (c) 2019-2020, Broadband Forum
+     Copyright (c) 2019-2021, Broadband Forum
 
      Redistribution and use in source and binary forms, with or
      without modification, are permitted provided that the following
@@ -74,46 +73,22 @@ module bbf-nf-endpoint-filter {
      This version of this YANG module is part of TR-451; see
      the TR itself for full legal notices.";
 
-  revision 2019-10-09 {
+  revision 2021-02-07 {
     description
       "Initial revision.";
     reference
-      "TR-451: Section 5.2.1 vOMCI Function Connectivity";
+      "TR-451: Section 5.4 vOLT Management Function Description
+               Section 5.5 vOLTMF to vOMCI Function Interface";
   }
 
-  // Groupings
-
-  grouping onu-criteria-grouping {
+  augment "/bbf-dev-agg:device-aggregation/bbf-dev-agg:device" {
     description
-      "The choice allows to specify combinations of ONU criteria
-       values or allows to indicate any ONU.";
-    choice onu-criterion {
-      default "any-onu";
+      "The management plane augmentation of for ONU devices.";
+    container vomci-onu-management {
       description
-        "ONU selection criterion values";
-      case any-onu {
-        leaf any-onu {
-          type empty;
-          description
-            "Identifies any ONU";
-        }
-      }
-      case onu-vendor {
-        leaf onu-vendor {
-          type bbf-vomci-types:onu-vendor-id;
-          description
-            "ONU vendor as defined in the TC layer ONU-ID.";
-        }
-      }
-      case onu-serial-number {
-        leaf onu-serial-number {
-          type bbf-xpon-types:onu-serial-number;
-          description
-            "ONU serial number as defined in the TC layer
-             ONU serial number.";
-        }
-      }
+        "The ONU management data needed for vOMCI solutions.";
+      uses bbf-voltmf-entity:vomci-onu-config;
+      uses bbf-voltmf-entity:vomci-onu-state;
     }
-    //choice
   }
 }

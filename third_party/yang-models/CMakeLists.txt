@@ -187,14 +187,21 @@ list(APPEND _IMPORT_MODELS
     ${_TR_451_DIR}/standard/ietf-tcp-common.yang
     ${_TR_451_DIR}/standard/ietf-tcp-server.yang
     ${_TR_451_DIR}/standard/ietf-tcp-client.yang
-    ${_TR_451_DIR}/common/bbf-grpc-client.yang
-    ${_TR_451_DIR}/common/bbf-nf-client.yang
-    ${_TR_451_DIR}/common/bbf-nf-endpoint-filter.yang
-    ${_TR_451_DIR}/common/bbf-nf-server.yang
-    ${_TR_451_DIR}/polt/bbf-polt-vomci.yang)
+    ${_TR_451_DIR}/common/bbf-vomci-entity.yang
+    ${_TR_451_DIR}/common/bbf-voltmf-entity.yang
+    ${_TR_451_DIR}/common/bbf-omci-message-retransmission.yang
+    ${_TR_451_DIR}/common/bbf-network-function-endpoint-filter.yang
+    ${_TR_451_DIR}/wt-383-common/bbf-device-types.yang
+    ${_TR_451_DIR}/wt-383-common/bbf-network-function-types.yang
+    ${_TR_451_DIR}/wt-383-common/bbf-grpc-client.yang
+    ${_TR_451_DIR}/wt-383-common/bbf-network-function-server.yang
+    ${_TR_451_DIR}/wt-383-common/bbf-network-function-client.yang
+    ${_TR_451_DIR}/types/bbf-vomci-types.yang
+    ${_TR_451_DIR}/olt/bbf-olt-vomci.yang)
 set(ietf-tcp-client-features local-binding-supported)
-set(bbf-polt-vomci-features nf-client-supported nf-server-supported)
-list(APPEND _DIRS ${_TR_451_DIR}/standard ${_TR_451_DIR}/common ${_TR_451_DIR}/types)
+set(bbf-olt-vomci-features nf-client-supported nf-server-supported)
+set(bbf-network-function-client-features grpc-client-supported)
+list(APPEND _DIRS ${_TR_451_DIR}/standard ${_TR_451_DIR}/common ${_TR_451_DIR}/types ${_TR_451_DIR}/wt-383-common)
 
 unset(_SEARCH_DIRS)
 foreach(_DIR ${_DIRS})

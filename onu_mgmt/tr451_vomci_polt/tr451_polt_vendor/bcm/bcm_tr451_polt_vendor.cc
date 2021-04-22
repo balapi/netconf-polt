@@ -273,20 +273,25 @@ bcmos_errno bcm_packet_grpc_to_bcmolt(const OmciPacket *grpc_packet, bcmolt_onu_
     bcmos_errno err;
     char *endptr = NULL;
 
+    if (!grpc_packet->has_header())
+    {
+        BCM_POLT_LOG(ERROR, "OmciPacket->header() is not set\n");
+        return BCM_ERR_PARM;
+    }
+
     // Map channel termination name to pon_ni
     err = bcm_tr451_channel_termination_mapper_get_id_by_name(
-        grpc_packet->chnl_term_name().c_str(), &key.pon_ni);
+        grpc_packet->header().chnl_term_name().c_str(), &key.pon_ni);
     if (err != BCM_ERR_OK)
     {
         BCM_POLT_LOG(ERROR, "Can't translate channel-term \"%s\" to pon_ni\n",
-            grpc_packet->chnl_term_name().c_str());
+            grpc_packet->header().chnl_term_name().c_str());
         return err;
     }
-    key.onu_id = (uint16_t)strtoul(grpc_packet->onu_id().c_str(), &endptr, 0);
-    if ((endptr && *endptr) || key.onu_id >= TR451_POLT_MAX_ONUS_PER_PON)
+    key.onu_id = (uint16_t)grpc_packet->header().onu_id();
+    if (key.onu_id >= TR451_POLT_MAX_ONUS_PER_PON)
     {
-        BCM_POLT_LOG(ERROR, "onu_id %s is insane\n",
-            grpc_packet->onu_id().c_str());
+        BCM_POLT_LOG(ERROR, "onu_id %u is insane\n", key.onu_id);
         return BCM_ERR_PARM;
     }
 
@@ -317,8 +322,12 @@ bcmos_errno bcm_packet_bcmolt_to_grpc(const bcmolt_onu_omci_packet *bcm_packet, 
             bcm_packet->data.buffer.len);
         return BCM_ERR_PARM;
     }
-    grpc_packet->set_chnl_term_name(cterm_name);
-    grpc_packet->set_onu_id(std::to_string(bcm_packet->key.onu_id));
+    OnuHeader* header = new OnuHeader();
+    if (header == NULL)
+        return BCM_ERR_NOMEM;
+    header->set_chnl_term_name(cterm_name);
+    header->set_onu_id(bcm_packet->key.onu_id);
+    grpc_packet->set_allocated_header(header);
     grpc_packet->set_payload(bcm_packet->data.buffer.arr, bcm_packet->data.buffer.len - 4); // Strip CRC/MIC
     return BCM_ERR_OK;
 }

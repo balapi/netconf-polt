@@ -1,22 +1,22 @@
 /*
  *  <:copyright-BRCM:2016-2020:Apache:standard
- *  
+ *
  *   Copyright (c) 2016-2020 Broadcom. All Rights Reserved
- *  
+ *
  *   The term “Broadcom” refers to Broadcom Inc. and/or its subsidiaries
- *  
+ *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
  *   You may obtain a copy of the License at
- *  
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *   Unless required by applicable law or agreed to in writing, software
  *   distributed under the License is distributed on an "AS IS" BASIS,
  *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
- *  
+ *
  *  :>
  *
  *****************************************************************************/
@@ -34,6 +34,9 @@
 #define OMCI_SVC_GAL_ETHERNET_PROFILE_MAX_GEM_PAYLOAD_SIZE 4095
 
 #define OMCI_SVC_MAC_BRIDGE_SERVICE_PROFILE_DYNAMIC_FILTERING_AGEING_TIME 300
+#define OMCI_SVC_MAC_BRIDGE_SERVICE_PROFILE_MAX_AGE                       0x1e00 /* 30s in units of 1/256s */
+#define OMCI_SVC_MAC_BRIDGE_SERVICE_PROFILE_HELLO_TIME                    0x0500 /* 5s in units of 1/256 */
+#define OMCI_SVC_MAC_BRIDGE_SERVICE_PROFILE_FORWARD_DELAY                 0x0500 /* 5s in units of 1/256 */
 /* Instances above 4096 should have no conflicts with ANI side instances (Outer VID=0-4095 or no action=4096). */
 #define OMCI_SVC_MAC_BRIDGE_PORT_CONFIG_DATA_UNI_INSTANCE_BASE 4097
 
@@ -180,7 +183,7 @@ bcmos_errno omci_svc_onu_set(bcmonu_mgmt_onu_cfg *onu, bcmonu_mgmt_complete_cb c
     }
 
 
-    /* For now no need to find any any stored config for the onu */
+    /* For now no need to find any stored config for the onu */
 
     input_tpid = BCMONU_MGMT_FIELD_IS_SET(&onu->data, onu_cfg_data, input_tpid) ? onu->data.input_tpid : onu_context->mib.input_tpid;
     output_tpid = BCMONU_MGMT_FIELD_IS_SET(&onu->data, onu_cfg_data, output_tpid) ? onu->data.output_tpid : onu_context->mib.output_tpid;
@@ -218,7 +221,25 @@ bcmos_errno omci_svc_onu_set(bcmonu_mgmt_onu_cfg *onu, bcmonu_mgmt_complete_cb c
     /* Update the current status */
     onu_context->admin_state = admin_state;
     /* store the onu cfg in current context for FSM to access it */
+#if 0
     memcpy(&onu_context->onu_cfg, onu, sizeof(bcmonu_mgmt_onu_cfg));
+#else
+    /* copy onu to onu_context_cfg, because onu is an arg on stack */
+    if (NULL != onu_context->onu_cfg)
+    {
+        memcpy(onu_context->onu_cfg, onu, sizeof(bcmonu_mgmt_onu_cfg));
+    }
+    else
+    {
+        onu_context->onu_cfg = bcmos_calloc(sizeof(bcmonu_mgmt_onu_cfg));
+        if (NULL == onu_context->onu_cfg)
+        {
+            OMCI_SVC_LOG(ERROR, olt_id, key, &onu->hdr.hdr, "memory alloc failed for onu_context->onu_cfg\n");
+            return BCM_ERR_NOMEM;
+        }
+        memcpy(onu_context->onu_cfg, onu, sizeof(bcmonu_mgmt_onu_cfg));
+    }
+#endif
 
 
     OMCI_SVC_LOG(INFO, olt_id, key, &onu->hdr.hdr, "ONU SET request (admin_state='%s') (current oper_status='%s')\n",
@@ -364,7 +385,7 @@ bcmos_errno omci_svc_onu_clear(bcmonu_mgmt_onu_cfg *onu, bcmonu_mgmt_complete_cb
 static void omci_svc_state_onu_inactive_event_activate(bcmonu_mgmt_onu_key *key, omci_svc_onu *onu_context, void *context)
 {
     bcmos_errno rc;
-    bcmolt_oltid olt_id = onu_context->onu_cfg.hdr.hdr.olt_id;
+    bcmolt_oltid olt_id = onu_context->onu_cfg->hdr.hdr.olt_id;
 
     rc = omci_svc_omci_activate_req(olt_id, key->pon_ni, key->onu_id);
     if (rc != BCM_ERR_OK)
@@ -378,7 +399,7 @@ static void omci_svc_state_onu_inactive_event_activate(bcmonu_mgmt_onu_key *key,
 
 static void omci_svc_state_onu_inactive_event_deactivate(bcmonu_mgmt_onu_key *key, omci_svc_onu *onu_context, void *context)
 {
-    bcmolt_oltid olt_id = onu_context->onu_cfg.hdr.hdr.olt_id;
+    bcmolt_oltid olt_id = onu_context->onu_cfg->hdr.hdr.olt_id;
 
     /* Before clearing a ONU, we first deactivate it, so OF-PAL may call omci_svc_onu_state_changed() twice. We should ignore the 2nd time. */
     OMCI_SVC_LOG(DEBUG, olt_id, key, NULL, "ONU already inactive, ignoring\n");
@@ -396,7 +417,7 @@ static void omci_svc_state_activating_event_start(bcmonu_mgmt_onu_key *key, omci
 
 static void omci_svc_state_activating_event_success(bcmonu_mgmt_onu_key *key, omci_svc_onu *onu_context, void *context)
 {
-    bcmolt_oltid olt_id = onu_context->onu_cfg.hdr.hdr.olt_id;
+    bcmolt_oltid olt_id = onu_context->onu_cfg->hdr.hdr.olt_id;
     omci_svc_onu_sm_run_cb(olt_id, OMCI_SVC_EVENT_ID_START, key, NULL);
 }
 
@@ -411,7 +432,7 @@ static void omci_svc_state_wait_for_link_up_event_start(bcmonu_mgmt_onu_key *key
 
 static void omci_svc_state_wait_for_link_up_event_link_up(bcmonu_mgmt_onu_key *key, omci_svc_onu *onu_context, void *context)
 {
-    bcmolt_oltid olt_id = onu_context->onu_cfg.hdr.hdr.olt_id;
+    bcmolt_oltid olt_id = onu_context->onu_cfg->hdr.hdr.olt_id;
     omci_svc_onu_sm_run_cb(olt_id, OMCI_SVC_EVENT_ID_START, key, NULL);
 }
 
@@ -423,7 +444,7 @@ static void omci_svc_state_mib_reset_event_is_entered(bcmonu_mgmt_onu_key *key, 
 static void omci_svc_state_mib_reset_event_start(bcmonu_mgmt_onu_key *key, omci_svc_onu *onu_context, void *context)
 {
     bcmos_errno rc;
-    bcmolt_oltid olt_id = onu_context->onu_cfg.hdr.hdr.olt_id;
+    bcmolt_oltid olt_id = onu_context->onu_cfg->hdr.hdr.olt_id;
 
     rc = omci_svc_omci_mib_reset_req(olt_id, key->pon_ni, key->onu_id);
     if (rc != BCM_ERR_OK)
@@ -435,7 +456,7 @@ static void omci_svc_state_mib_reset_event_start(bcmonu_mgmt_onu_key *key, omci_
 
 static void omci_svc_state_mib_reset_event_success(bcmonu_mgmt_onu_key *key, omci_svc_onu *onu_context, void *context)
 {
-    bcmolt_oltid olt_id = onu_context->onu_cfg.hdr.hdr.olt_id;
+    bcmolt_oltid olt_id = onu_context->onu_cfg->hdr.hdr.olt_id;
     omci_svc_onu_sm_run_cb(olt_id, OMCI_SVC_EVENT_ID_START, key, NULL);
 }
 
@@ -447,7 +468,7 @@ static void omci_svc_state_mib_upload_event_is_entered(bcmonu_mgmt_onu_key *key,
 static void omci_svc_state_mib_upload_event_start(bcmonu_mgmt_onu_key *key, omci_svc_onu *onu_context, void *context)
 {
     bcmos_errno rc;
-    bcmolt_oltid olt_id = onu_context->onu_cfg.hdr.hdr.olt_id;
+    bcmolt_oltid olt_id = onu_context->onu_cfg->hdr.hdr.olt_id;
 
     rc = omci_svc_omci_mib_upload_req(olt_id, key->pon_ni, key->onu_id);
     if (rc != BCM_ERR_OK)
@@ -463,6 +484,7 @@ static void omci_svc_onu_mib_flush(bcmonu_mgmt_onu_key *key, omci_svc_onu *onu_c
     omci_svc_tcont *tcont_iter, *tcont_tmp;
     omci_svc_priority_queue *priority_queue_iter, *priority_queue_tmp;
     omci_svc_o_vid *o_vid_iter, *o_vid_tmp;
+    omci_svc_o_vid_uni *o_vid_uni_iter, *o_vid_uni_tmp;
     omci_svc_gem_port *gem_port_iter, *gem_port_tmp;
     omci_svc_mac_bridge_port *mac_bridge_port_iter, *mac_bridge_port_tmp;
 
@@ -511,6 +533,14 @@ static void omci_svc_onu_mib_flush(bcmonu_mgmt_onu_key *key, omci_svc_onu *onu_c
         bcmos_free(o_vid_iter);
     }
 
+    /* ovid+uni entries */
+    DLIST_FOREACH_SAFE(o_vid_uni_iter, &onu_context->mib.o_vid_unis, next, o_vid_uni_tmp)
+    {
+        memset(o_vid_uni_iter, 0, sizeof(*o_vid_uni_iter));
+        DLIST_REMOVE(o_vid_uni_iter, next);
+        bcmos_free(o_vid_uni_iter);
+    }
+
     /* GEM ports */
     DLIST_FOREACH_SAFE(gem_port_iter, &onu_context->mib.gem_ports, next, gem_port_tmp)
     {
@@ -525,6 +555,9 @@ static void omci_svc_onu_mib_flush(bcmonu_mgmt_onu_key *key, omci_svc_onu *onu_c
         TAILQ_INSERT_TAIL(&onu_context->mib.free_mac_bridge_ports, mac_bridge_port_iter, next);
         mac_bridge_port_iter->entity_id = 0;
     }
+
+    /* reset the vid+uni entity id generator */
+    onu_context->o_vid_uni_entity_id_gen = 0;
 }
 
 static void omci_svc_state_mib_upload_event_init_success(bcmonu_mgmt_onu_key *key, omci_svc_onu *onu_context, void *context)
@@ -534,9 +567,9 @@ static void omci_svc_state_mib_upload_event_init_success(bcmonu_mgmt_onu_key *ke
 
 void omci_svc_mib_upload_add_uni(bcmonu_mgmt_onu_key *key, omci_svc_onu *onu_context, uint16_t entity_id, bcmonu_mgmt_uni_type type)
 {
-    bcmolt_oltid olt_id = onu_context->onu_cfg.hdr.hdr.olt_id;
+    bcmolt_oltid olt_id = onu_context->onu_cfg->hdr.hdr.olt_id;
 
-    if (onu_context->mib.num_of_unis == BCMONU_MGMT_ONU_CFG_DATA_UNIS_LENGTH - 1)
+    if (onu_context->mib.num_of_unis > BCMONU_MGMT_ONU_CFG_DATA_UNIS_LENGTH)
     {
         OMCI_SVC_LOG(WARNING, olt_id, key, NULL, "ONU has more than %u UNIs, UNI index=%u with entity ID=%u is ignored\n", BCMONU_MGMT_ONU_CFG_DATA_UNIS_LENGTH,
             entity_id & OMCI_SVC_ETH_UNI_PORT_ID_MASK, entity_id);
@@ -563,7 +596,7 @@ void omci_svc_mib_upload_add_uni(bcmonu_mgmt_onu_key *key, omci_svc_onu *onu_con
 
 void omci_svc_mib_upload_add_tcont(bcmonu_mgmt_onu_key *key, omci_svc_onu *onu_context, uint16_t entity_id)
 {
-    bcmolt_oltid olt_id = onu_context->onu_cfg.hdr.hdr.olt_id;
+    bcmolt_oltid olt_id = onu_context->onu_cfg->hdr.hdr.olt_id;
 
     if (onu_context->mib.num_of_tconts == BCMONU_MGMT_ONU_CFG_DATA_AGG_PORTS_LENGTH - 1)
         OMCI_SVC_LOG(WARNING, olt_id, key, NULL, "ONU has more than %u TCONTs, TCONT with entity ID=%u is ignored\n", BCMONU_MGMT_ONU_CFG_DATA_AGG_PORTS_LENGTH, entity_id);
@@ -587,7 +620,7 @@ void omci_svc_mib_upload_add_tcont(bcmonu_mgmt_onu_key *key, omci_svc_onu *onu_c
 
 void omci_svc_mib_upload_add_priority_queue(bcmonu_mgmt_onu_key *key, omci_svc_onu *onu_context, uint16_t entity_id, uint16_t port)
 {
-    bcmolt_oltid olt_id = onu_context->onu_cfg.hdr.hdr.olt_id;
+    bcmolt_oltid olt_id = onu_context->onu_cfg->hdr.hdr.olt_id;
     bcmos_bool is_us = entity_id & OMCI_SVC_PRIORITY_QUEUE_ENTITY_ID_US_MASK;
 
     if ((is_us && onu_context->mib.num_of_us_priority_queues == BCMONU_MGMT_ONU_CFG_DATA_US_PRIORITY_QUEUES_LENGTH - 1) ||
@@ -633,7 +666,7 @@ static void omci_svc_state_mib_upload_event_more(bcmonu_mgmt_onu_key *key, omci_
 
 static bcmos_errno omci_svc_mib_upload_validate(bcmonu_mgmt_onu_key *key, omci_svc_onu *onu_context)
 {
-    bcmolt_oltid olt_id = onu_context->onu_cfg.hdr.hdr.olt_id;
+    bcmolt_oltid olt_id = onu_context->onu_cfg->hdr.hdr.olt_id;
     omci_svc_priority_queue *priority_queue_iter;
 
     /* Validate that ONU has at least one UNI (PPTP/VEIP). */
@@ -714,7 +747,7 @@ static bcmos_errno omci_svc_mib_upload_validate(bcmonu_mgmt_onu_key *key, omci_s
 static void omci_svc_state_mib_upload_event_last(bcmonu_mgmt_onu_key *key, omci_svc_onu *onu_context, void *context)
 {
     bcmos_errno rc;
-    bcmolt_oltid olt_id = onu_context->onu_cfg.hdr.hdr.olt_id;
+    bcmolt_oltid olt_id = onu_context->onu_cfg->hdr.hdr.olt_id;
 
     omci_svc_omci_mib_upload_analyze(key, onu_context, context);
 
@@ -727,7 +760,6 @@ static void omci_svc_state_mib_upload_event_last(bcmonu_mgmt_onu_key *key, omci_
 
     omci_svc_onu_sm_run_cb(olt_id, OMCI_SVC_EVENT_ID_START, key, NULL);
 }
-
 static void omci_svc_state_create_gal_ethernet_profile_event_is_entered(bcmonu_mgmt_onu_key *key, omci_svc_onu *onu_context, void *context)
 {
     *(bcmos_bool *)context = BCMOS_TRUE;
@@ -735,20 +767,20 @@ static void omci_svc_state_create_gal_ethernet_profile_event_is_entered(bcmonu_m
 
 static void omci_svc_state_create_gal_ethernet_profile_event_start(bcmonu_mgmt_onu_key *key, omci_svc_onu *onu_context, void *context)
 {
-    bcmolt_oltid olt_id = onu_context->onu_cfg.hdr.hdr.olt_id;
+    bcmolt_oltid olt_id = onu_context->onu_cfg->hdr.hdr.olt_id;
     omci_svc_omci_gal_eth_prof_me_create(olt_id, key->pon_ni, key->onu_id, 1, 1,
         OMCI_SVC_OMCI_ATTR_ID_MAX_GEM_PAYLOAD_SIZE, OMCI_SVC_GAL_ETHERNET_PROFILE_MAX_GEM_PAYLOAD_SIZE);
 }
 
 static void omci_svc_state_create_gal_ethernet_profile_event_success(bcmonu_mgmt_onu_key *key, omci_svc_onu *onu_context, void *context)
 {
-    bcmolt_oltid olt_id = onu_context->onu_cfg.hdr.hdr.olt_id;
+    bcmolt_oltid olt_id = onu_context->onu_cfg->hdr.hdr.olt_id;
     omci_svc_onu_sm_run_cb(olt_id, OMCI_SVC_EVENT_ID_START, key, NULL);
 }
 
 static void omci_svc_ext_vlan_tag_oper_cfg_data_create(bcmonu_mgmt_onu_key *key, omci_svc_onu *onu_context, omci_svc_uni *uni)
 {
-    bcmolt_oltid olt_id = onu_context->onu_cfg.hdr.hdr.olt_id;
+    bcmolt_oltid olt_id = onu_context->onu_cfg->hdr.hdr.olt_id;
     omci_svc_omci_ext_vlan_tag_oper_config_data_me_create(olt_id, key->pon_ni, key->onu_id, uni->uni.entity_id, 2,
         OMCI_SVC_OMCI_ATTR_ID_ASSOC_TYPE, uni->uni.type == BCMONU_MGMT_UNI_TYPE_PPTP ? OMCI_SVC_OMCI_EXT_VLAN_ASSOC_TYPE_ETH_FLOW_TP : OMCI_SVC_OMCI_EXT_VLAN_ASSOC_TYPE_VIRTUAL_ETH_INTF,
         OMCI_SVC_OMCI_ATTR_ID_ASSOC_ME_PTR, uni->uni.entity_id);
@@ -772,7 +804,7 @@ static void omci_svc_state_create_ext_vlan_tag_oper_cfg_data_event_start(bcmonu_
 static void omci_svc_state_create_ext_vlan_tag_oper_cfg_data_event_success(bcmonu_mgmt_onu_key *key, omci_svc_onu *onu_context, void *context)
 {
     omci_svc_uni *uni_iter = onu_context->iter;
-    bcmolt_oltid olt_id = onu_context->onu_cfg.hdr.hdr.olt_id;
+    bcmolt_oltid olt_id = onu_context->onu_cfg->hdr.hdr.olt_id;
 
     uni_iter = TAILQ_NEXT(uni_iter, next);
     onu_context->iter = uni_iter;
@@ -784,11 +816,11 @@ static void omci_svc_state_create_ext_vlan_tag_oper_cfg_data_event_success(bcmon
 
 static void omci_svc_ext_vlan_tag_oper_cfg_data_set(bcmonu_mgmt_onu_key *key, omci_svc_onu *onu_context, omci_svc_uni *uni)
 {
-    bcmolt_oltid olt_id = onu_context->onu_cfg.hdr.hdr.olt_id;
+    bcmolt_oltid olt_id = onu_context->onu_cfg->hdr.hdr.olt_id;
     omci_svc_omci_ext_vlan_tag_oper_config_data_me_set(olt_id, key->pon_ni, key->onu_id, uni->uni.entity_id, 3,
         OMCI_SVC_OMCI_ATTR_ID_INPUT_TPID, onu_context->mib.input_tpid,
         OMCI_SVC_OMCI_ATTR_ID_OUTPUT_TPID, onu_context->mib.output_tpid,
-        OMCI_SVC_OMCI_ATTR_ID_DS_MODE, onu_context->onu_cfg.data.downstream_mode);
+        OMCI_SVC_OMCI_ATTR_ID_DS_MODE, onu_context->onu_cfg->data.downstream_mode);
 }
 
 static void omci_svc_state_set_ext_vlan_tag_oper_cfg_data_event_is_entered(bcmonu_mgmt_onu_key *key, omci_svc_onu *onu_context, void *context)
@@ -809,7 +841,7 @@ static void omci_svc_state_set_ext_vlan_tag_oper_cfg_data_event_start(bcmonu_mgm
 static void omci_svc_state_set_ext_vlan_tag_oper_cfg_data_event_success(bcmonu_mgmt_onu_key *key, omci_svc_onu *onu_context, void *context)
 {
     omci_svc_uni *uni_iter = onu_context->iter;
-    bcmolt_oltid olt_id = onu_context->onu_cfg.hdr.hdr.olt_id;
+    bcmolt_oltid olt_id = onu_context->onu_cfg->hdr.hdr.olt_id;
 
     uni_iter = TAILQ_NEXT(uni_iter, next);
     onu_context->iter = uni_iter;
@@ -823,17 +855,22 @@ static void omci_svc_mac_bridge_service_profile_create(bcmolt_oltid olt_id, bcmo
 {
     BCM_LOG(DEBUG, omci_svc_log_id, "omci_svc_mac_bridge_service_profile_create : uni=%d\n", uni->uni.entity_id);
 
-    omci_svc_omci_mac_bridge_svc_prof_me_create(olt_id, key->pon_ni, key->onu_id, uni->uni.entity_id, 10,
+    omci_svc_omci_mac_bridge_svc_prof_me_create(olt_id, key->pon_ni, key->onu_id, uni->uni.entity_id, 8,
         OMCI_SVC_OMCI_ATTR_ID_MAC_BRIDGE_SVC_PROF_PORT_SPANNING_TREE_IND, 0,
         OMCI_SVC_OMCI_ATTR_ID_LEARNING_IND, 0,
+
+        /** @todo not sure what this will be ??? */
         OMCI_SVC_OMCI_ATTR_ID_PORT_BRIDGING_IND, 0,
         OMCI_SVC_OMCI_ATTR_ID_PRI, 0,
-        OMCI_SVC_OMCI_ATTR_ID_MAX_AGE, 0,
-        OMCI_SVC_OMCI_ATTR_ID_HELLO_TIME, 0,
-        OMCI_SVC_OMCI_ATTR_ID_FORWARD_DELAY, 0,
-        OMCI_SVC_OMCI_ATTR_ID_UNKNOWN_MAC_ADDR_DISCARD, 0,
-        OMCI_SVC_OMCI_ATTR_ID_MAC_BRIDGE_SVC_PROF_MAC_LEARNING_DEPTH, 0,
-        OMCI_SVC_OMCI_ATTR_ID_DYNAMIC_FILTERING_AGEING_TIME, OMCI_SVC_MAC_BRIDGE_SERVICE_PROFILE_DYNAMIC_FILTERING_AGEING_TIME);
+        OMCI_SVC_OMCI_ATTR_ID_MAX_AGE, OMCI_SVC_MAC_BRIDGE_SERVICE_PROFILE_MAX_AGE,
+        OMCI_SVC_OMCI_ATTR_ID_HELLO_TIME, OMCI_SVC_MAC_BRIDGE_SERVICE_PROFILE_HELLO_TIME,
+        OMCI_SVC_OMCI_ATTR_ID_FORWARD_DELAY, OMCI_SVC_MAC_BRIDGE_SERVICE_PROFILE_FORWARD_DELAY,
+        OMCI_SVC_OMCI_ATTR_ID_UNKNOWN_MAC_ADDR_DISCARD, 0
+#ifdef OMCI_SVC_ENABLE_OPTIONAL_ATTRIBUTES_IN_MAC_BRIDGE_SVC_PROFILE
+        ,OMCI_SVC_OMCI_ATTR_ID_MAC_BRIDGE_SVC_PROF_MAC_LEARNING_DEPTH, 0,
+        OMCI_SVC_OMCI_ATTR_ID_DYNAMIC_FILTERING_AGEING_TIME, OMCI_SVC_MAC_BRIDGE_SERVICE_PROFILE_DYNAMIC_FILTERING_AGEING_TIME
+#endif
+     );
 }
 
 static void omci_svc_state_create_mac_bridge_service_profile_event_is_entered(bcmonu_mgmt_onu_key *key, omci_svc_onu *onu_context, void *context)
@@ -844,7 +881,7 @@ static void omci_svc_state_create_mac_bridge_service_profile_event_is_entered(bc
 static void omci_svc_state_create_mac_bridge_service_profile_event_start(bcmonu_mgmt_onu_key *key, omci_svc_onu *onu_context, void *context)
 {
     omci_svc_uni *uni_iter;
-    bcmolt_oltid olt_id = onu_context->onu_cfg.hdr.hdr.olt_id;
+    bcmolt_oltid olt_id = onu_context->onu_cfg->hdr.hdr.olt_id;
 
     /* We have one MAC Bridge Service Profile ME per each UNI, so we need to traverse UNIs. */
     uni_iter = TAILQ_FIRST(&onu_context->mib.unis);
@@ -855,7 +892,7 @@ static void omci_svc_state_create_mac_bridge_service_profile_event_start(bcmonu_
 static void omci_svc_state_create_mac_bridge_service_profile_event_success(bcmonu_mgmt_onu_key *key, omci_svc_onu *onu_context, void *context)
 {
     omci_svc_uni *uni_iter = onu_context->iter;
-    bcmolt_oltid olt_id = onu_context->onu_cfg.hdr.hdr.olt_id;
+    bcmolt_oltid olt_id = onu_context->onu_cfg->hdr.hdr.olt_id;
 
     uni_iter = TAILQ_NEXT(uni_iter, next);
     onu_context->iter = uni_iter;
@@ -867,7 +904,7 @@ static void omci_svc_state_create_mac_bridge_service_profile_event_success(bcmon
 
 static void omci_svc_mac_bridge_port_cfg_data_create(bcmonu_mgmt_onu_key *key, omci_svc_onu *onu_context, omci_svc_uni *uni)
 {
-    bcmolt_oltid olt_id = onu_context->onu_cfg.hdr.hdr.olt_id;
+    bcmolt_oltid olt_id = onu_context->onu_cfg->hdr.hdr.olt_id;
 
     omci_svc_omci_mac_bridge_port_config_data_me_create(olt_id, key->pon_ni, key->onu_id,
         OMCI_SVC_MAC_BRIDGE_PORT_CONFIG_DATA_UNI_INSTANCE_BASE + (uni->uni.entity_id & OMCI_SVC_ETH_UNI_PORT_ID_MASK), 10,
@@ -901,7 +938,7 @@ static void omci_svc_state_create_mac_bridge_port_cfg_data_event_start(bcmonu_mg
 static void omci_svc_state_create_mac_bridge_port_cfg_data_event_success(bcmonu_mgmt_onu_key *key, omci_svc_onu *onu_context, void *context)
 {
     omci_svc_uni *uni_iter = onu_context->iter;
-    bcmolt_oltid olt_id = onu_context->onu_cfg.hdr.hdr.olt_id;
+    bcmolt_oltid olt_id = onu_context->onu_cfg->hdr.hdr.olt_id;
 
     uni_iter = TAILQ_NEXT(uni_iter, next);
     onu_context->iter = uni_iter;
@@ -915,7 +952,7 @@ static void omci_svc_multicast_operations_profile_create(bcmonu_mgmt_onu_key *ke
 {
     bcm_omci_mcast_operations_profile_ds_igmp_and_multicast_tci ds_igmp_and_mcast_tci;
     char ds_igmp_and_mcast_tci_hex_str[3 + BCM_OMCI_CFG_DATA_DS_IGMP_AND_MULTICAST_TCI_LEN * 2]; /* 3 bytes as a hexstring: 0xAABBCC */
-    bcmolt_oltid olt_id = onu_context->onu_cfg.hdr.hdr.olt_id;
+    bcmolt_oltid olt_id = onu_context->onu_cfg->hdr.hdr.olt_id;
 
     /* Write default values that may be overwritten once getting a multicast flow. */
     ds_igmp_and_mcast_tci.control_type = BCM_OMCI_MCAST_OPERATIONS_PROFILE_DS_IGMP_AND_MULTICAST_TCI_CONTROL_TYPE_TRANSPARENT;
@@ -923,7 +960,7 @@ static void omci_svc_multicast_operations_profile_create(bcmonu_mgmt_onu_key *ke
 
     sprintf(ds_igmp_and_mcast_tci_hex_str, "0x%02x%04x", ds_igmp_and_mcast_tci.control_type, ds_igmp_and_mcast_tci.tci);
     omci_svc_omci_mcast_operations_profile_me_create(olt_id, key->pon_ni, key->onu_id, uni->uni.entity_id, 11,
-        OMCI_SVC_OMCI_ATTR_ID_IGMP_VERSION, OMCI_SVC_OMCI_IGMP_VERSION_V3,
+        OMCI_SVC_OMCI_ATTR_ID_IGMP_VERSION, OMCI_SVC_OMCI_MLD_VERSION_V2,
         OMCI_SVC_OMCI_ATTR_ID_IGMP_FUNC, OMCI_SVC_OMCI_IGMP_FUNC_TRANSPARENT_IGMP_SNOOPING,
         OMCI_SVC_OMCI_ATTR_ID_IMMEDIATE_LEAVE, BCMOS_TRUE, /* This will also be compliant with TR-247 test case 6.3.9. */
         OMCI_SVC_OMCI_ATTR_ID_US_IGMP_TCI, 0, /* This has no meaning if IGMP tag control is 0. */
@@ -954,7 +991,7 @@ static void omci_svc_state_create_multicast_operations_profile_event_start(bcmon
 static void omci_svc_state_create_multicast_operations_profile_event_success(bcmonu_mgmt_onu_key *key, omci_svc_onu *onu_context, void *context)
 {
     omci_svc_uni *uni_iter = onu_context->iter;
-    bcmolt_oltid olt_id = onu_context->onu_cfg.hdr.hdr.olt_id;
+    bcmolt_oltid olt_id = onu_context->onu_cfg->hdr.hdr.olt_id;
 
     uni_iter = TAILQ_NEXT(uni_iter, next);
     onu_context->iter = uni_iter;
@@ -966,7 +1003,7 @@ static void omci_svc_state_create_multicast_operations_profile_event_success(bcm
 
 static void omci_svc_multicast_subscriber_config_info_create(bcmonu_mgmt_onu_key *key, omci_svc_onu *onu_context, omci_svc_uni *uni)
 {
-    bcmolt_oltid olt_id = onu_context->onu_cfg.hdr.hdr.olt_id;
+    bcmolt_oltid olt_id = onu_context->onu_cfg->hdr.hdr.olt_id;
 
     /* The standard requires for the entity ID that "Through an identical ID, this managed entity is implicitly linked to an instance of the MAC bridge port configuration data". */
     omci_svc_omci_mcast_subscriber_config_info_me_create(olt_id, key->pon_ni, key->onu_id,
@@ -995,7 +1032,7 @@ static void omci_svc_state_create_multicast_subscriber_config_info_event_start(b
 static void omci_svc_state_create_multicast_subscriber_config_info_event_success(bcmonu_mgmt_onu_key *key, omci_svc_onu *onu_context, void *context)
 {
     omci_svc_uni *uni_iter = onu_context->iter;
-    bcmolt_oltid olt_id = onu_context->onu_cfg.hdr.hdr.olt_id;
+    bcmolt_oltid olt_id = onu_context->onu_cfg->hdr.hdr.olt_id;
 
     uni_iter = TAILQ_NEXT(uni_iter, next);
     onu_context->iter = uni_iter;
@@ -1014,7 +1051,7 @@ static void omci_svc_state_up_sequence_end_event_start(bcmonu_mgmt_onu_key *key,
 {
     bcmos_errno rc;
     bcmonu_mgmt_onu_cfg *onu_cfg;
-    bcmolt_oltid olt_id = onu_context->onu_cfg.hdr.hdr.olt_id;
+    bcmolt_oltid olt_id = onu_context->onu_cfg->hdr.hdr.olt_id;
     onu_context->state = OMCI_SVC_ONU_STATE_ID_ACTIVE_WORKING;
     onu_context->oper_status = BCMONU_MGMT_STATUS_UP;
     OMCI_SVC_LOG(INFO, olt_id, key, NULL, "ONU added successfully (is_up=true)\n");
@@ -1023,7 +1060,7 @@ static void omci_svc_state_up_sequence_end_event_start(bcmonu_mgmt_onu_key *key,
     if (BCM_ERR_OK == onu_context->last_err)
     {
         /* update sm cfg DB */
-        onu_cfg = &onu_context->onu_cfg;
+        onu_cfg = onu_context->onu_cfg;
         rc = omci_svc_sm_cfg_db_update_entry(onu_cfg);
         if (BCM_ERR_OK != rc)
             OMCI_SVC_LOG(ERROR, olt_id, key, &onu_cfg->hdr.hdr, "ONU cfg DB update Failed\n");
@@ -1056,7 +1093,7 @@ static void omci_svc_state_any_event_deactivate(bcmonu_mgmt_onu_key *key, omci_s
      * We should change state before trying to deactivate the ONU, because the ONU deactivation might be synchronous, and thus we don't want to get OMCI_SVC_EVENT_ID_DEACTIVATE in
      * OMCI_SVC_ONU_STATE_ID_ACTIVE_WORKING state. */
     onu_context->state = OMCI_SVC_ONU_STATE_ID_DEACTIVATING;
-    bcmolt_oltid olt_id = onu_context->onu_cfg.hdr.hdr.olt_id;
+    bcmolt_oltid olt_id = onu_context->onu_cfg->hdr.hdr.olt_id;
 
     bcmos_errno rc;
     rc = omci_svc_omci_deactivate_req(olt_id, key->pon_ni, key->onu_id);
@@ -1077,7 +1114,7 @@ static void omci_svc_state_any_event_deactivate(bcmonu_mgmt_onu_key *key, omci_s
 /** @brief this is no-op handling.  Just meant to check if FSM should stay in deactivating state or move on */
 static void omci_svc_state_deactivating_event_start(bcmonu_mgmt_onu_key *key, omci_svc_onu *onu_context, void *context)
 {
-    bcmolt_oltid olt_id = onu_context->onu_cfg.hdr.hdr.olt_id;
+    bcmolt_oltid olt_id = onu_context->onu_cfg->hdr.hdr.olt_id;
 
     OMCI_SVC_LOG(ERROR, olt_id, key, NULL, " *** omci_svc_state_deactivating_event_start onu=%p, context=%p\n", onu_context, context);
 }
@@ -1090,7 +1127,7 @@ static void omci_svc_state_deactivating_event_is_entered(bcmonu_mgmt_onu_key *ke
 
 static void omci_svc_state_deactivating_event_success(bcmonu_mgmt_onu_key *key, omci_svc_onu *onu_context, void *context)
 {
-    bcmolt_oltid olt_id = onu_context->onu_cfg.hdr.hdr.olt_id;
+    bcmolt_oltid olt_id = onu_context->onu_cfg->hdr.hdr.olt_id;
     omci_svc_onu_sm_run_cb(olt_id, OMCI_SVC_EVENT_ID_START, key, NULL);
 }
 
@@ -1103,7 +1140,7 @@ static void omci_svc_state_down_sequence_end_event_start(bcmonu_mgmt_onu_key *ke
 {
     bcmos_errno rc = BCM_ERR_OK;
     bcmonu_mgmt_onu_cfg *onu_cfg;
-    bcmolt_oltid olt_id = onu_context->onu_cfg.hdr.hdr.olt_id;
+    bcmolt_oltid olt_id = onu_context->onu_cfg->hdr.hdr.olt_id;
 
     /* Down sequence end. */
     OMCI_SVC_LOG(INFO, olt_id, key, NULL, "ONU deleted successfully (is_up=false)\n");
@@ -1113,14 +1150,13 @@ static void omci_svc_state_down_sequence_end_event_start(bcmonu_mgmt_onu_key *ke
     /* update cfg DB first, since notify may do a GET on the onu */
     if (BCM_ERR_OK == onu_context->last_err)
     {
-        onu_cfg = &onu_context->onu_cfg;
+        onu_cfg = onu_context->onu_cfg;
         if (BCMOS_TRUE == onu_context->is_clear)
         {
             /* clear entry from sm cfg DB */
             rc = omci_svc_sm_cfg_db_clear_entry(onu_cfg);
             if (BCM_ERR_OK != rc)
                 OMCI_SVC_LOG(ERROR, olt_id, key, &onu_cfg->hdr.hdr, "ONU cfg DB clear Failed\n");
-            onu_context->is_clear = BCMOS_FALSE;
         }
         else
         {
@@ -1144,6 +1180,12 @@ static void omci_svc_state_down_sequence_end_event_start(bcmonu_mgmt_onu_key *ke
         omci_onu_state_changed(key);
     }
 
+    if (BCMOS_TRUE == onu_context->is_clear)
+    {
+        /* clear the onu_cfg from onu_context as well */
+        bcmos_free(onu_context->onu_cfg);
+        onu_context->onu_cfg = NULL;
+    }
 }
 
 static omci_svc_onu_sm_cb omci_svc_onu_state_machine[OMCI_SVC_ONU_STATE_ID__NUM_OF][OMCI_SVC_EVENT_ID__NUM_OF] =

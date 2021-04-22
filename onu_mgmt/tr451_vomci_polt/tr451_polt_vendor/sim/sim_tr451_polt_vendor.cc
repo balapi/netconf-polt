@@ -115,9 +115,11 @@ bcmos_errno sim_tr451_vendor_packet_received_from_onu(const char *cterm_name, ui
         cterm_name, onu_id, length,
         data[0], data[1], data[2], data[3],
         data[4], data[5], data[6], data[7]);
+    OnuHeader* header = new OnuHeader();
+    header->set_chnl_term_name(cterm_name);
+    header->set_onu_id(onu_id);
     OmciPacketEntry *grpc_packet = new OmciPacketEntry();
-    grpc_packet->set_chnl_term_name(cterm_name);
-    grpc_packet->set_onu_id(std::to_string(onu_id));
+    grpc_packet->set_allocated_header(header);
     grpc_packet->set_payload(data, length);
     vendor_event_cfg.tr451_omci_rx_cb(vendor_event_cfg.user_handle, grpc_packet);
     return BCM_ERR_OK;
@@ -134,8 +136,8 @@ static bcmos_errno tr451_vendor_omci_send_to_onu_sim(const OmciPacket &packet)
     }
 
     tr451_onu_sim_packet_header *hdr = (tr451_onu_sim_packet_header *)tr451_onu_sim_tx_buf;
-    strncpy(hdr->cterm_name, packet.chnl_term_name().c_str(), sizeof(hdr->cterm_name));
-    hdr->onu_id = htons(atoi(packet.onu_id().c_str()));
+    strncpy(hdr->cterm_name, packet.header().chnl_term_name().c_str(), sizeof(hdr->cterm_name));
+    hdr->onu_id = packet.header().onu_id();
     memcpy((uint8_t *)(hdr + 1), packet.payload().c_str(), length);
 
     int rc;
@@ -185,8 +187,8 @@ bcmos_errno tr451_vendor_omci_send_to_onu(const OmciPacket &packet)
     const string *p_payload = &packet.payload();
     const uint8_t *data = (const uint8_t *)p_payload->c_str();
 
-    BCM_POLT_LOG(DEBUG, "TX to ONU: cterm=%s onu_id=%s length=%lu OMCI_HDR=%02x%02x%02x%02x %02x%02x%02x%02x\n",
-        packet.chnl_term_name().c_str(), packet.onu_id().c_str(), p_payload->length(),
+    BCM_POLT_LOG(DEBUG, "TX to ONU: cterm=%s onu_id=%u length=%lu OMCI_HDR=%02x%02x%02x%02x %02x%02x%02x%02x\n",
+        packet.header().chnl_term_name().c_str(), packet.header().onu_id(), p_payload->length(),
         data[0], data[1], data[2], data[3],
         data[4], data[5], data[6], data[7]);
 
@@ -212,8 +214,8 @@ bcmos_errno tr451_vendor_omci_send_to_onu(const OmciPacket &packet)
             msg_type |= 0x20;
             payload[2] = msg_type;
             err = sim_tr451_vendor_packet_received_from_onu(
-                packet.chnl_term_name().c_str(),
-                (uint16_t)strtoul(packet.onu_id().c_str(), NULL, 0),
+                packet.header().chnl_term_name().c_str(),
+                (uint16_t)packet.header().onu_id(),
                 (const uint8_t *)payload.c_str(),
                 payload.length());
             vendor_rx_skipped = 0;

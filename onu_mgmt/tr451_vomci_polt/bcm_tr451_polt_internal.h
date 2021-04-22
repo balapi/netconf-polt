@@ -39,9 +39,9 @@
 #include <grpcpp/create_channel.h>
 #include <grpcpp/security/credentials.h>
 
-#include <tr451_vomci_function_sbi_message.pb.h>
-#include <tr451_vomci_function_sbi_service.pb.h>
-#include <tr451_vomci_function_sbi_service.grpc.pb.h>
+#include <tr451_vomci_sbi_message.pb.h>
+#include <tr451_vomci_sbi_service.pb.h>
+#include <tr451_vomci_sbi_service.grpc.pb.h>
 
 #include <bcm_tr451_polt.h>
 #include <tr451_polt_vendor.h>
@@ -63,10 +63,11 @@ using grpc::ClientContext;
 using google::protobuf::Empty;
 using std::string;
 
-using tr451_vomci_function_sbi_message::OltHello;
-using tr451_vomci_function_sbi_message::HelloVomciRequest;
-using tr451_vomci_function_sbi_message::HelloVomciResponse;
-using tr451_vomci_function_sbi_message::OmciPacket;
+using tr451_vomci_sbi_message::v1::Hello;
+using tr451_vomci_sbi_message::v1::HelloVomciRequest;
+using tr451_vomci_sbi_message::v1::HelloVomciResponse;
+using tr451_vomci_sbi_message::v1::VomciMessage;
+using tr451_vomci_sbi_message::v1::OmciPacket;
 
 // Endpoint as provisioned over TR-451 YANG
 class Endpoint {
@@ -91,7 +92,10 @@ class Endpoint {
 class ClientEndpoint
 {
     public:
-        ClientEndpoint(const char *name) : name_(name) { STAILQ_INIT(&entry_list_); }
+        ClientEndpoint(const char *name, const char *name_for_hello) :
+            name_(name), name_for_hello_(name_for_hello ? name_for_hello : "") {
+            STAILQ_INIT(&entry_list_);
+        }
         ~ClientEndpoint() {
             Endpoint *ep;
             while ((ep = STAILQ_FIRST(&entry_list_)) != nullptr) {
@@ -107,9 +111,22 @@ class ClientEndpoint
             return prev ? STAILQ_NEXT(prev, next) : STAILQ_FIRST(&entry_list_);
         }
         const char *name() const { return name_.c_str(); }
+        const char *name_for_hello() const { return name_for_hello_.length() ? name_for_hello_.c_str() : name_.c_str(); }
     private:
         string name_;
+        string name_for_hello_;
         STAILQ_HEAD(, Endpoint) entry_list_;
+};
+
+// Server endpoint as provisioned via TR-451 YANG
+class ServerEndpoint : public Endpoint
+{
+    public:
+        ServerEndpoint(const tr451_endpoint *ep, const char *name_for_hello) :
+            Endpoint(ep), name_for_hello_(name_for_hello ? name_for_hello : "") {}
+        const char *name_for_hello() const { return name_for_hello_.length() ? name_for_hello_.c_str() : name(); }
+    private:
+        string name_for_hello_;
 };
 
 // The base class for both BcmPoltServer and BcmPoltClient
@@ -144,6 +161,17 @@ class GrpcProcessor {
         bcmos_task task_;
 };
 
+class VomciConnectionStats
+{
+    public:
+        uint32_t packets_onu_to_vomci_recv;
+        uint32_t packets_onu_to_vomci_sent;
+        uint32_t packets_onu_to_vomci_disc;
+        uint32_t packets_vomci_to_onu_recv;
+        uint32_t packets_vomci_to_onu_sent;
+        uint32_t packets_vomci_to_onu_disc;
+};
+
 // Logical "connection"
 // Multiple logical connections can be multiplexed over a single underlying transport connection
 class VomciConnection
@@ -151,6 +179,7 @@ class VomciConnection
     public:
         VomciConnection(GrpcProcessor *parent,
             const string &endpoint,
+            const string &local_name,
             const string &vomci_name,
             const string &vomci_address = string());
         ~VomciConnection();
@@ -158,9 +187,15 @@ class VomciConnection
         const char *name() const { return name_.c_str(); }
         const char *peer() const { return peer_.c_str(); }
         const char *endpoint() const { return endpoint_.c_str(); }
+        const char *local_name() const { return local_name_.length() ? local_name_.c_str() : endpoint_.c_str(); }
+        const char *remote_endpoint_name() {
+            /* Remote endpoint name is 'loca; for client connection and 'remote' for server connection */
+            return (parent_->type() == GrpcProcessor::processor_type::GRPC_PROCESSOR_TYPE_SERVER) ?
+                name() : parent_->name();
+        }
         bool isConnected() { return connected_; };
         void setConnected(bool connected);
-        void OmciRxFromOnu(OmciPacketEntry *omci_packet);
+        bool OmciRxFromOnu(OmciPacketEntry *omci_packet);
         bcmos_errno WaitForPacketFromOnu(uint32_t poll_timeout = TR451_OMCI_PACKET_POLL_TIMEOUT) {
             return bcmos_sem_wait(&omci_ind_sem, poll_timeout);
         }
@@ -171,12 +206,7 @@ class VomciConnection
         void UpdateOnuAssignmentsDisconnected();
 
         // Debug counters
-        uint32_t packets_onu_to_vomci_recv;
-        uint32_t packets_onu_to_vomci_sent;
-        uint32_t packets_onu_to_vomci_disc;
-        uint32_t packets_vomci_to_onu_recv;
-        uint32_t packets_vomci_to_onu_sent;
-        uint32_t packets_vomci_to_onu_disc;
+        VomciConnectionStats stats;
 
         // List maintenance
         STAILQ_ENTRY(VomciConnection) next;
@@ -186,6 +216,7 @@ class VomciConnection
         const string name_;
         const string peer_;
         const string endpoint_;
+        const string local_name_;
         bool connected_;
         bcmos_mutex conn_lock_;
         STAILQ_HEAD(, OmciPacketEntry) omci_ind_list;
@@ -209,7 +240,7 @@ class BcmPoltServer : public GrpcProcessor
         virtual ~BcmPoltServer();
         bcmos_errno Start() override;
         void Stop() override;
-        const Endpoint *endpoint() { return &endpoint_; }
+        const ServerEndpoint *endpoint() { return &endpoint_; }
         VomciConnection *connection_by_name(const string &vomci_name) {
             return vomci_connection_get_by_name(vomci_name.c_str(), this);
         }
@@ -221,7 +252,7 @@ class BcmPoltServer : public GrpcProcessor
 
     private:
         class OmciServiceHello final :
-            public ::tr451_vomci_function_sbi_service::OmciFunctionHelloSbi::Service
+            public ::tr451_vomci_sbi_service::v1::VomciHelloSbi::Service
         {
         public:
             OmciServiceHello(BcmPoltServer *parent) : parent_ (parent) {}
@@ -235,25 +266,25 @@ class BcmPoltServer : public GrpcProcessor
         };
 
         class OmciServiceMessage final :
-            public ::tr451_vomci_function_sbi_service::OmciFunctionMessageSbi::Service
+            public ::tr451_vomci_sbi_service::v1::VomciMessageSbi::Service
         {
         public:
             OmciServiceMessage(BcmPoltServer *parent) : parent_ (parent) {}
             BcmPoltServer *parent() { return parent_; }
 
         private:
-            Status ListenForOmciRx(ServerContext* context,
+            Status ListenForVomciRx(ServerContext* context,
                 const Empty* request,
-                ServerWriter<OmciPacket>* writer) override;
+                ServerWriter<VomciMessage>* writer) override;
 
-            Status OmciTx(ServerContext* context, const OmciPacket* request, Empty* response) override;
+            Status VomciTx(ServerContext* context, const VomciMessage* request, Empty* response) override;
 
             BcmPoltServer *parent_;
         };
 
         OmciServiceHello hello_service_;
         OmciServiceMessage message_service_;
-        Endpoint endpoint_;
+        ServerEndpoint endpoint_;
         std::unique_ptr<Server> *p_server_;
 };
 
@@ -268,7 +299,7 @@ class BcmPoltClient : public GrpcProcessor
         virtual ~BcmPoltClient();
         bcmos_errno Start() override;
         void Stop() override;
-        bcmos_errno OmciTxToVomci(OmciPacket &grpc_omci_packet);
+        bcmos_errno OmciTxToVomci(OmciPacket *grpc_omci_packet);
         const ClientEndpoint *endpoint() { return &endpoint_; }
         void Disconnected();
         VomciConnection *connection() { return connection_; }
@@ -276,10 +307,10 @@ class BcmPoltClient : public GrpcProcessor
     private:
         bcmos_errno Connect(const Endpoint *entry);
         bcmos_errno Hello(const Endpoint *entry);
-        void ListenForOmciTx();
-        void CancelListenForOmciTx();
-        std::unique_ptr<::tr451_vomci_function_sbi_service::OmciFunctionHelloSbi::Stub> hello_stub_;
-        std::unique_ptr<::tr451_vomci_function_sbi_service::OmciFunctionMessageSbi::Stub> message_stub_;
+        void ListenForVomciTx();
+        void CancelListenForVomciTx();
+        std::unique_ptr<::tr451_vomci_sbi_service::v1::VomciHelloSbi::Stub> hello_stub_;
+        std::unique_ptr<::tr451_vomci_sbi_service::v1::VomciMessageSbi::Stub> message_stub_;
         std::shared_ptr<Channel> channel_;
         ClientEndpoint endpoint_;
         bcmos_task tx_task_;
@@ -300,9 +331,6 @@ BcmPoltClient *bcm_polt_client_get_by_name(const char *name);
 
 bool bcm_tr451_auth_data(string &priv_key, string &my_cert, string &peer_cert);
 
-void bcm_tr451_stats_get(const char **endpoint_name, uint32_t *omci_sent,
-   uint32_t *omci_recv, uint32_t *send_errors);
-
-extern const char *polt_name;
+void bcm_tr451_stats_get(const char **endpoint_name, const char **peer_name, VomciConnectionStats *stats);
 
 #endif

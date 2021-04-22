@@ -16,7 +16,7 @@ bcm_module_cflags(PUBLIC -Wno-redundant-decls -Wno-switch-default
 bcm_module_cflags(PUBLIC -std=c++11)
 bcm_module_protoc_srcs(
     ${_ALL_PB_CC}
-    tr451_vomci_function_sbi_service.grpc.pb.cc
+    tr451_vomci_sbi_service.grpc.pb.cc
     )
 
 # Generate C++ files from .proto
