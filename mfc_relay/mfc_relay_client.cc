@@ -7,7 +7,7 @@
 #include <iomanip>
 #include <grpc++/grpc++.h>
 #include "control_relay_service.grpc.pb.h"
-#include <mfc_relay_client_internal.h>
+#include <mfc_relay_client.h>
 #include "../netconf_server/modules/bbf-xpon/bbf-types.h"
 
 using grpc::Server;
@@ -31,19 +31,17 @@ using control_relay_service::ControlRelayPacket;
 using control_relay_service::ControlRelayHelloService;
 using control_relay_service::ControlRelayPacketService;
 
-extern "C" uint32_t find_flowid_by_up_stream_packet (uint16_t intf_id, const bbf_match_criteria *match);
-extern "C" uint32_t find_flowid_by_down_stream_packet (uint16_t intf_id, const bbf_match_criteria *match);
+extern "C" uint32_t find_flow_id_by_sub_interface (const char *name, const bbf_match_criteria *match);
+
 
 char ga1Ipaddressandport[25]={0};
 char ga1Temp[25]={0};
 int golt = 0;
 
-/*SIVA*/ 
 bool stopping;
     static bcm_mfc_grpc_client_connect_disconnect_cb mfc_client_conn_discon_cb;
     static void *mfc_client_conn_discon_cb_data;
 tGlobMfcConfig gGlobalMfcConfig;
-/* SIVA */
 
 #define MFC_DEBUG_WANTED 0
 void Mfc_tx(bcmolt_access_control_receive_eth_packet *eth_packet);
@@ -114,6 +112,8 @@ void parse_packet (uint8_t *packet, uint32_t length, bbf_match_criteria *match, 
         BBF_DOT1Q_TAG_PROP_SET(&match->vlan_tag_match.tags[0], vlan_id, (vlan & 0xfff));
         BBF_DOT1Q_TAG_PROP_SET(&match->vlan_tag_match.tags[0], pbit, (vlan >> 13));
         offset += 2;
+        match->vlan_tag_match.num_tags = 1;
+        match->vlan_tag_match.tag_match_types[0] = BBF_VLAN_TAG_MATCH_TYPE_VLAN_TAGGED; 
     }
     if (is_vlan_tpid(ntohs(*(const uint16_t *)(packet + offset))))
     {
@@ -123,6 +123,8 @@ void parse_packet (uint8_t *packet, uint32_t length, bbf_match_criteria *match, 
         BBF_DOT1Q_TAG_PROP_SET(&match->vlan_tag_match.tags[1], vlan_id, (vlan & 0xfff));
         BBF_DOT1Q_TAG_PROP_SET(&match->vlan_tag_match.tags[1], pbit, (vlan >> 13));
         offset += 2;
+        match->vlan_tag_match.num_tags = 2;
+        match->vlan_tag_match.tag_match_types[1] = BBF_VLAN_TAG_MATCH_TYPE_VLAN_TAGGED; 
     }
     *ethtype = ntohs(*(const uint16_t *)(packet + offset));
 }
@@ -130,12 +132,12 @@ bcmos_errno bcm_packet_grpc_to_olt(const ControlRelayPacket *grpc_packet, bcmolt
 {
      char RxPkt[1500]={0};
      char temp[2];
+     char sub_intf_name[100] = {0};
      uint8_t RxPktInHex[1500]={0};
      int u1Byte = 0,pktlen=0,len = 0;
      const uint8_t *ip_hdr;
      const uint8_t *payload = NULL;
      char *endptr = NULL;
-     uint16_t interface_id = 0;
      uint16_t flowtype = 0;
      uint16_t ethtype = 0;
      //const  interface_info *iface = NULL;
@@ -149,7 +151,8 @@ bcmos_errno bcm_packet_grpc_to_olt(const ControlRelayPacket *grpc_packet, bcmolt
      strncpy (RxPkt, grpc_packet->packet().c_str(), len);
 
      flowtype = atoi(grpc_packet->originating_rule().c_str());
-     interface_id = atoi(grpc_packet->device_interface().c_str());
+     strcpy (sub_intf_name, grpc_packet->device_interface().c_str());
+
      for (u1Byte = 0 ; u1Byte <= len-2; u1Byte = u1Byte+2)
      {
          sprintf(temp, "%c%c", RxPkt[u1Byte], RxPkt[u1Byte+1]);
@@ -161,59 +164,38 @@ bcmos_errno bcm_packet_grpc_to_olt(const ControlRelayPacket *grpc_packet, bcmolt
      packet_out_buffer.arr = RxPktInHex;
 
      parse_packet(RxPktInHex,grpc_packet->packet().size(), &match, &ethtype);
-     if (flowtype == BCMOLT_FLOW_TYPE_UPSTREAM)
+     flow_key.flow_id = find_flow_id_by_sub_interface (sub_intf_name, &match);
+     if (flow_key.flow_id == 0)
      {
-         flow_key.flow_id = find_flowid_by_up_stream_packet(interface_id, &match);
-         if (flow_key.flow_id == 0)
-         {
 #if MFC_DEBUG_WANTED
-             printf("\n === Interface Not present === \n");
+         printf("\n === No Matching Flow ID present === \n");
 #endif
-         }
-
+        return BCM_ERR_PARM;
+     }
+     if (flowtype == BCMOLT_FLOW_TYPE_DOWNSTREAM)
+         flow_key.flow_type = BCMOLT_FLOW_TYPE_DOWNSTREAM;
+     else
          flow_key.flow_type = BCMOLT_FLOW_TYPE_UPSTREAM;
 #if MFC_DEBUG_WANTED
-         printf("\n ====== DownStream BAL FLOW_ID %d interface %d ======\n",flow_key.flow_id,interface_id);
+     printf("\n ====== FLOW_ID %d interface %s Flow_type = %s ======\n",flow_key.flow_id, sub_intf_name, bcmolt_enum_stringval(bcmolt_flow_type_string_table, flow_key.flow_type));
 #endif
-     }
-     else
+
+     BCMOLT_OPER_INIT(&packet_out, flow, send_eth_packet, flow_key);
+     BCMOLT_MSG_FIELD_SET(&packet_out, buffer, packet_out_buffer);
+     BCMOLT_MSG_FIELD_SET(&packet_out, inject_type, BCMOLT_INJECT_TYPE_INJECT_AT_INGRESS);
+
+     err = bcmolt_oper_submit(golt, &packet_out.hdr);
+     if (err != BCM_ERR_OK)
      {
-         flow_key.flow_id = find_flowid_by_down_stream_packet(interface_id, &match);
-         if (flow_key.flow_id == 0)
-         {
 #if MFC_DEBUG_WANTED
-             printf("\n === Interface Not present === \n");
+         printf("\n Failed to Forward the Packet\n");
 #endif
-         }
-         flow_key.flow_type = BCMOLT_FLOW_TYPE_DOWNSTREAM;
-#if MFC_DEBUG_WANTED
-         printf("\n ====== UpStream BAL FLOW_ID %d interface %d ======\n",flow_key.flow_id,interface_id);
-#endif
-     }
-
-     if (flow_key.flow_id != 0)
-     {
-         BCMOLT_OPER_INIT(&packet_out, flow, send_eth_packet, flow_key);
-
-         BCMOLT_MSG_FIELD_SET(&packet_out, buffer, packet_out_buffer);
-         BCMOLT_MSG_FIELD_SET(&packet_out, inject_type, BCMOLT_INJECT_TYPE_INJECT_AT_INGRESS);
-
-         err = bcmolt_oper_submit(golt, &packet_out.hdr);
-         if (err != BCM_ERR_OK)
-         {
-             return err;
-         }
-         else
-         {
-#if MFC_DEBUG_WANTED
-             printf("\n Packet forwarded: %d bytes\n", pktlen);
-#endif
-         }
+         return err;
      }
      else
      {
 #if MFC_DEBUG_WANTED
-         printf("\n Packet Not forwarded: %d bytes Invalid Bal flow id\n", pktlen);
+         printf("\n Packet forwarded: %d bytes\n", pktlen);
 #endif
      }
      return BCM_ERR_OK;
@@ -392,7 +374,6 @@ static int Listening_task_handler(long data)
         {
             while(!ready && !stopping)
             {
-                /*SIVA*/
                 memset (ga1Temp, 0, 25);
                 sprintf (ga1Temp,"%s:%d",gGlobalMfcConfig.a1Ipaddress, gGlobalMfcConfig.port);
 #if MFC_DEBUG_WANTED
@@ -499,11 +480,14 @@ bcmos_errno bcm_mfc_relay_init(int olt)
 #if MFC_DEBUG_WANTED
     	std::cout << "==== Subscription failed  ====\n";
 #endif
+        return err;
     }
+
+    bcm_mfc_relay_cli_init ();
+
     return BCM_ERR_OK;
 }
 
-/*SIVA*/
 bcmos_errno
 bcm_mfc_relay_start ()
 {

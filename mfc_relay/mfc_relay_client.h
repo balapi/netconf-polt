@@ -31,6 +31,7 @@ bcmos_errno
 bcm_mfc_grpc_client_edit_config (const char * endpoint_name, const char * access_point_name,uint16_t
                         port,const char * host_name);
 bcmos_errno bcm_mfc_grpc_client_enable_disable(bcmos_bool enable);
+void bcm_mfc_relay_cli_init();
 
 #ifdef __cplusplus
 }

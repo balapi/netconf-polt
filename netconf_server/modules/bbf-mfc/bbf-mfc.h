@@ -27,7 +27,7 @@
 #include <bcmos_system.h>
 #include <libyang/libyang.h>
 #include <sysrepo.h>
-#include <mfc_relay_client_internal.h>
+#include <mfc_relay_client.h>
 
 #define BBF_POLT_MFC_MODULE_NAME          "bbf-obbaa-mfc-conf"
 #define BBF_NF_CLIENT_MODULE_NAME           "bbf-nf-client"

@@ -1,4 +1,4 @@
-# CMCC vOMCI : API definition
+# MFC Relay
 #if(MFC)
 bcm_module_name(mfc_relay_polt)
 bcm_module_dependencies(PRIVATE grpc protobuf)
