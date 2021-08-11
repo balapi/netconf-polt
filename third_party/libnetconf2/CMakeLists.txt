@@ -7,6 +7,7 @@ bcm_make_normal_option(NETOPEER2_VERSION_2X BOOL "Use libyang,sysrepo,libnetconf
 
 if(NETCONF_TOOLS_FROM_DEVEL)
     set(_VERSION "devel")
+    set(NETOPEER2_VERSION_2X y CACHE BOOL "Use libyang,sysrepo,libnetconf2,netopeer2 v2.x packages" FORCE)
 elseif(NETOPEER2_VERSION_2X)
     set(_VERSION "2.0.1")
 else()

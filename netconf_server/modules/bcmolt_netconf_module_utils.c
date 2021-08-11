@@ -257,7 +257,14 @@ void nc_error_reply(sr_session_ctx_t *srs, const char *xpath, const char *format
     va_end(args);
     if (msg && n > 0)
     {
+#ifdef SYSREPO_LIBYANG_V2
+        if (xpath != NULL)
+            sr_session_set_error_message(srs, "xpath=%s\n%s", xpath, msg);
+        else
+            sr_session_set_error_message(srs, "%s", msg);
+#else
         sr_set_error(srs, xpath, msg);
+#endif
         free(msg);
     }
 }
@@ -397,22 +404,36 @@ struct lyd_node *nc_ly_sub_value_add(
 {
     char xpath_buf[256];
     char *xpath = xpath_buf;
-    struct lyd_node *result;
+    struct lyd_node *result = NULL;
 
-    if (snprintf(xpath, sizeof(xpath_buf), "%s/%s", xpath_base, value_name) > sizeof(xpath_buf) - 1)
+    if (value_name != NULL)
     {
-        if (asprintf(&xpath, "%s/%s", xpath_base, value_name) <= 0)
-            return parent;
+        if (snprintf(xpath, sizeof(xpath_buf), "%s/%s", xpath_base, value_name) > sizeof(xpath_buf) - 1)
+        {
+            if (asprintf(&xpath, "%s/%s", xpath_base, value_name) <= 0)
+                return parent;
+        }
     }
+    else
+    {
+        xpath = (char *)(long)xpath_base;
+    }
+#ifdef SYSREPO_LIBYANG_V2
+    lyd_new_path(parent, ctx, xpath, (void *)(long)string_val,
+        LYD_NEW_PATH_CANON_VALUE, &result);
+#else
     result = lyd_new_path(parent, ctx, xpath, (void *)(long)string_val, LYD_ANYDATA_CONSTSTRING, 0);
+#endif
     NC_LOG_DBG("lyd_new_path(%s, ctx, \"%s\", \"%s\", 0, 0) -> %s\n",
         (parent && parent->schema) ? parent->schema->name : "NULL",
-        xpath, string_val ? string_val : "NULL", (result && result->schema) ? result->schema->name : "NULL");
+        xpath,
+        string_val ? string_val : "NULL",
+        (result && result->schema) ? result->schema->name : "NULL");
     if (result == NULL)
     {
         NC_LOG_ERR("Error '%s'. Failed to add attribute %s.\n", ly_errmsg(ctx), xpath);
     }
-    if (xpath != xpath_buf)
+    if (xpath != xpath_buf && xpath != xpath_base)
         free(xpath);
     return result ? result : parent;
 }
@@ -662,13 +683,21 @@ const struct lyd_node *nc_ly_get_sibling_or_parent_node(const struct lyd_node *n
     n = nc_ly_get_sibling_node(node, name);
     if (n != NULL)
         return n;
+#ifdef SYSREPO_LIBYANG_V2
+    parent = lyd_parent(node);
+#else
     parent = node->parent;
+#endif
     if (parent && !strcmp(parent->schema->name, name))
         return parent;
     while (parent && n == NULL)
     {
         n = nc_ly_get_sibling_node(parent, name);
+#ifdef SYSREPO_LIBYANG_V2
+        parent = lyd_parent(parent);
+#else
         parent = parent->parent;
+#endif
     }
 
     return n;
@@ -683,6 +712,14 @@ void nc_sr_error_save(sr_session_ctx_t *srs, char **xpath, char **message)
 
     *xpath = NULL;
     *message = NULL;
+#ifdef SYSREPO_LIBYANG_V2
+    sr_session_get_error(srs, &sr_err_info);
+    if (sr_err_info != NULL && sr_err_info->err_count)
+    {
+        if (sr_err_info->err[0].message)
+            *message = bcmos_strdup(sr_err_info->err[0].message);
+    }
+#else
     sr_get_error(srs, &sr_err_info);
     if (sr_err_info != NULL && sr_err_info->err != NULL)
     {
@@ -691,14 +728,84 @@ void nc_sr_error_save(sr_session_ctx_t *srs, char **xpath, char **message)
         if (sr_err_info->err->message)
             *message = bcmos_strdup(sr_err_info->err->message);
     }
+#endif
 }
 
 void nc_sr_error_restore(sr_session_ctx_t *srs, char *xpath, char *message)
 {
     if (message != NULL)
+    {
+#ifdef SYSREPO_LIBYANG_V2
+        if (xpath != NULL)
+            sr_session_set_error_message(srs, "xpath=%s\n%s", xpath, message);
+        else
+            sr_session_set_error_message(srs, "%s", message);
+#else
         sr_set_error(srs, xpath, message);
+#endif
+    }
     if (xpath != NULL)
         bcmos_free(xpath);
     if (message != NULL)
         bcmos_free(message);
+}
+
+/*
+ * Send notification
+ */
+bcmos_errno nc_sr_event_notif_send(sr_session_ctx_t *srs, struct lyd_node *notif, const char *notif_xpath)
+{
+    int sr_rc;
+
+    sr_rc = sr_event_notif_send_tree(srs, notif
+#ifdef SYSREPO_LIBYANG_V2
+                , 0, 0
+#endif
+            );
+    if (sr_rc != SR_ERR_OK)
+    {
+        NC_LOG_ERR("Failed to sent %s notification. Error '%s'\n",
+            notif_xpath, sr_strerror(sr_rc));
+    }
+    return nc_sr_errno_to_bcmos_errno(sr_rc);
+}
+
+/*
+ * Modules
+ */
+const struct lys_module *nc_ly_ctx_load_module(struct ly_ctx *ly_ctx, const char *module_name,
+    const char *version, const char **features, bcmos_bool log_error)
+{
+    const struct lys_module *mod;
+
+#ifdef SYSREPO_LIBYANG_V2
+    mod = ly_ctx_load_module(ly_ctx, module_name, version, features);
+#else
+    mod = ly_ctx_get_module(ly_ctx, module_name, version, 1);
+    if (mod == NULL)
+        mod = ly_ctx_load_module(ly_ctx, module_name, version);
+#endif
+    if (mod == NULL)
+    {
+        if (log_error)
+            NC_LOG_ERR("Can't load schema '%s'. Error '%s'\n", module_name, ly_errmsg(ly_ctx));
+        return NULL;
+    }
+
+#ifndef SYSREPO_LIBYANG_V2
+    if (features != NULL)
+    {
+        for( ; *features; features++)
+        {
+            if (lys_features_enable(mod, *features))
+            {
+                NC_LOG_ERR("%s: can't enable feature %s\n", module_name, *features);
+                mod = NULL;
+                break;
+            }
+        }
+    }
+#endif
+
+    return mod;
 }

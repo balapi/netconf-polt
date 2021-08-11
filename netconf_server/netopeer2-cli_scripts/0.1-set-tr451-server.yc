@@ -24,7 +24,7 @@
          <resulting-endpoint>vomci0</resulting-endpoint>
       </rule>
       <rule>
-         <bbf-polt-vomci:name>any-onu</name>
+         <name>any-onu</name>
          <priority>100</priority>
          <flexible-match>
             <any-onu/>

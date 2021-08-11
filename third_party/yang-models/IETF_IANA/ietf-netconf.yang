@@ -49,11 +49,16 @@ module ietf-netconf {
      This version of this YANG module is part of RFC 6241; see
      the RFC itself for full legal notices.";
 
+  revision 2013-09-29 {
+    description
+      "Updated to include NACM attributes";
+    reference
+      "RFC 6536: sec 3.2.5 and 3.2.8";
+  }
+
   revision 2011-06-01 {
     description
-      "Initial revision;
-       2013-09-29: Updated to include NACM attributes, 
-       as specified in RFC 6536: sec 3.2.5 and 3.2.8";
+      "Initial revision";
     reference
       "RFC 6241: Network Configuration Protocol";
   }

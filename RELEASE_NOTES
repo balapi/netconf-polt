@@ -1,3 +1,9 @@
+devel snapshot, compatible with balapi 3.8.x.x
+Created 12 August 2021
+- restored support for the "old-style" onu-state-change notifications required for OB-BAA 4.1, OLT Adapter 1.0
+- added support for netopeer2 package version 2.x. In the moment only devel is supported, official 2.x releases are unstable
+- various minor bug fixes
+
 Release 3.8.8.8, compatible with balapi 3.8.x.x
 Created 11 August 2021
 

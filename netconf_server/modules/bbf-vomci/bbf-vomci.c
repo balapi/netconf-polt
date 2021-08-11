@@ -49,14 +49,18 @@ static const char* bbf_polt_vomci_features[] = {
 #define  CLIENT_REMOTE_ENDPOINT_XPATH "client-parameters/nf-initiate/remote-endpoints"
 
 /* Data store change indication callback */
-static int bbf_polt_vomci_server_change_cb(sr_session_ctx_t *srs, const char *module_name,
-    const char *xpath, sr_event_t event, uint32_t request_id, void *private_ctx)
+static int bbf_polt_vomci_server_change_cb(sr_session_ctx_t *srs,
+#ifdef SYSREPO_LIBYANG_V2
+    uint32_t sub_id,
+#endif
+    const char *module_name, const char *xpath,
+    sr_event_t event, uint32_t request_id, void *private_ctx)
 {
     sr_change_iter_t *sr_iter = NULL;
     sr_change_oper_t sr_oper;
     const struct lyd_node *node;
     const char *prev_val, *prev_list;
-    bool prev_dflt;
+    NC_SR_GET_CHANGE_TREE_NEXT_PREF_DFLT_TYPE prev_dflt;
     tr451_server_endpoint server_ep = {};
     char qualified_xpath[BCM_MAX_XPATH_LENGTH];
     int sr_rc;
@@ -94,8 +98,7 @@ static int bbf_polt_vomci_server_change_cb(sr_session_ctx_t *srs, const char *mo
         if (!strcmp(node_name, "enabled"))
         {
             bcm_tr451_polt_grpc_server_enable_disable(
-                (sr_oper != SR_OP_DELETED) &&
-                 ((const struct lyd_node_leaf_list *)node)->value.bln);
+                (sr_oper != SR_OP_DELETED) && NC_LYD_DATA_NODE_BOOL_VAL(node));
             continue;
         }
 
@@ -116,7 +119,7 @@ static int bbf_polt_vomci_server_change_cb(sr_session_ctx_t *srs, const char *mo
                     continue;
                 }
                 NC_LOG_DBG("Handling listen-endpoint[%s]\n", endpoint_name_node->schema->name);
-                endpoint_name = ((const struct lyd_node_leaf_list *)endpoint_name_node)->value.string;
+                endpoint_name = NC_LYD_DATA_NODE_STRING_VAL(endpoint_name_node);
                 if (server_ep.endpoint.name != NULL && strcmp(server_ep.endpoint.name, endpoint_name))
                 {
                     err = bcm_tr451_polt_grpc_server_create(&server_ep);
@@ -124,17 +127,17 @@ static int bbf_polt_vomci_server_change_cb(sr_session_ctx_t *srs, const char *mo
                 }
                 server_ep.endpoint.name = endpoint_name;
                 if (!strcmp(node_name, "local-port"))
-                    server_ep.endpoint.port = ((const struct lyd_node_leaf_list *)node)->value.uint16;
+                    server_ep.endpoint.port = NC_LYD_DATA_NODE_VAL(node)->uint16;
                 else if (!strcmp(node_name, "local-address"))
-                    server_ep.endpoint.host_name = ((const struct lyd_node_leaf_list *)node)->value_str;
+                    server_ep.endpoint.host_name = NC_LYD_DATA_NODE_STRING_VAL(node);
                 else if (!strcmp(node_name, "local-endpoint-name"))
-                    server_ep.local_name = ((const struct lyd_node_leaf_list *)node)->value_str;
+                    server_ep.local_name = NC_LYD_DATA_NODE_STRING_VAL(node);
             }
         }
         else
         {
             const struct lyd_node *endpoint_node;
-            const char *entity_name = ((const struct lyd_node_leaf_list *)node)->value.string;
+            const char *entity_name = NC_LYD_DATA_NODE_STRING_VAL(node);
 
             /* Deleted */
             if (!strcmp(node_name, "name"))
@@ -161,14 +164,18 @@ static int bbf_polt_vomci_server_change_cb(sr_session_ctx_t *srs, const char *mo
 }
 
 /* Data store change indication callback */
-static int bbf_polt_vomci_client_change_cb(sr_session_ctx_t *srs, const char *module_name,
-    const char *xpath, sr_event_t event, uint32_t request_id, void *private_ctx)
+static int bbf_polt_vomci_client_change_cb(sr_session_ctx_t *srs,
+#ifdef SYSREPO_LIBYANG_V2
+    uint32_t sub_id,
+#endif
+    const char *module_name, const char *xpath,
+    sr_event_t event, uint32_t request_id, void *private_ctx)
 {
     sr_change_iter_t *sr_iter = NULL;
     sr_change_oper_t sr_oper;
     const struct lyd_node *node;
     const char *prev_val, *prev_list;
-    bool prev_dflt;
+    NC_SR_GET_CHANGE_TREE_NEXT_PREF_DFLT_TYPE prev_dflt;
     tr451_client_endpoint *client_ep = NULL;
     tr451_endpoint entry = {};
     char qualified_xpath[BCM_MAX_XPATH_LENGTH];
@@ -207,8 +214,7 @@ static int bbf_polt_vomci_client_change_cb(sr_session_ctx_t *srs, const char *mo
         if (!strcmp(node_name, "enabled"))
         {
             bcm_tr451_polt_grpc_client_enable_disable(
-                (sr_oper != SR_OP_DELETED) &&
-                 ((const struct lyd_node_leaf_list *)node)->value.bln);
+                (sr_oper != SR_OP_DELETED) && NC_LYD_DATA_NODE_BOOL_VAL(node));
             continue;
         }
 
@@ -238,8 +244,8 @@ static int bbf_polt_vomci_client_change_cb(sr_session_ctx_t *srs, const char *mo
                 }
                 NC_LOG_DBG("Handling remote-endpoint[%s]/access-points[%s]\n",
                     endpoint_name_node->schema->name, access_name_node->schema->name);
-                endpoint_name = ((const struct lyd_node_leaf_list *)endpoint_name_node)->value.string;
-                access_point_name = ((const struct lyd_node_leaf_list *)access_name_node)->value.string;
+                endpoint_name = NC_LYD_DATA_NODE_STRING_VAL(endpoint_name_node);
+                access_point_name = NC_LYD_DATA_NODE_STRING_VAL(access_name_node);
                 if (client_ep != NULL && strcmp(client_ep->name, endpoint_name))
                 {
                     err = bcm_tr451_polt_grpc_client_create(client_ep);
@@ -257,9 +263,9 @@ static int bbf_polt_vomci_client_change_cb(sr_session_ctx_t *srs, const char *mo
                 }
                 entry.name = access_point_name;
                 if (!strcmp(node_name, "remote-port"))
-                    entry.port = ((const struct lyd_node_leaf_list *)node)->value.uint16;
+                    entry.port = NC_LYD_DATA_NODE_VAL(node)->uint16;
                 else if (!strcmp(node_name, "remote-address"))
-                    entry.host_name = ((const struct lyd_node_leaf_list *)node)->value_str;
+                    entry.host_name = NC_LYD_DATA_NODE_STRING_VAL(node);
             }
             else if (!strcmp(node_name, "local-endpoint-name"))
             {
@@ -271,7 +277,7 @@ static int bbf_polt_vomci_client_change_cb(sr_session_ctx_t *srs, const char *mo
                 }
                 NC_LOG_DBG("Handling remote-endpoint[%s]/grpc/local-endpoint-name\n",
                     endpoint_name_node->schema->name);
-                endpoint_name = ((const struct lyd_node_leaf_list *)endpoint_name_node)->value.string;
+                endpoint_name = NC_LYD_DATA_NODE_STRING_VAL(endpoint_name_node);
                 if (client_ep != NULL && strcmp(client_ep->name, endpoint_name))
                 {
                     err = bcm_tr451_polt_grpc_client_create(client_ep);
@@ -281,14 +287,14 @@ static int bbf_polt_vomci_client_change_cb(sr_session_ctx_t *srs, const char *mo
                 {
                     client_ep = bcm_tr451_client_endpoint_alloc(endpoint_name);
                 }
-                client_ep->local_name = ((const struct lyd_node_leaf_list *)node)->value_str;
+                client_ep->local_name = NC_LYD_DATA_NODE_STRING_VAL(node);
             }
         }
         else
         {
             const struct lyd_node *endpoint_node;
             const struct lyd_node *access_node;
-            const char *entity_name = ((const struct lyd_node_leaf_list *)node)->value.string;
+            const char *entity_name = NC_LYD_DATA_NODE_STRING_VAL(node);
 
             /* Deleted */
             if (!strcmp(node_name, "name"))
@@ -329,14 +335,18 @@ static int bbf_polt_vomci_client_change_cb(sr_session_ctx_t *srs, const char *mo
 }
 
 /* Data store change indication callback */
-static int bbf_polt_vomci_filter_change_cb(sr_session_ctx_t *srs, const char *module_name,
-    const char *xpath, sr_event_t event, uint32_t request_id, void *private_ctx)
+static int bbf_polt_vomci_filter_change_cb(sr_session_ctx_t *srs,
+#ifdef SYSREPO_LIBYANG_V2
+    uint32_t sub_id,
+#endif
+    const char *module_name, const char *xpath,
+    sr_event_t event, uint32_t request_id, void *private_ctx)
 {
     sr_change_iter_t *sr_iter = NULL;
     sr_change_oper_t sr_oper;
     const struct lyd_node *node;
     const char *prev_val, *prev_list;
-    bool prev_dflt;
+    NC_SR_GET_CHANGE_TREE_NEXT_PREF_DFLT_TYPE prev_dflt;
     tr451_polt_filter filter = {};
     const char *filter_endpoint_name = NULL;
     char qualified_xpath[BCM_MAX_XPATH_LENGTH];
@@ -388,7 +398,7 @@ static int bbf_polt_vomci_filter_change_cb(sr_session_ctx_t *srs, const char *mo
                     NC_LOG_ERR("can't find nf-endpoint-filter/rule\n");
                     continue;
                 }
-                rule_name = ((const struct lyd_node_leaf_list *)filter_name_node)->value.string;
+                rule_name = NC_LYD_DATA_NODE_STRING_VAL(filter_name_node);
                 /* Filter rule changed ? */
                 if (filter.name && strcmp(filter.name, rule_name))
                 {
@@ -401,19 +411,19 @@ static int bbf_polt_vomci_filter_change_cb(sr_session_ctx_t *srs, const char *mo
                 }
                 filter.name = rule_name;
                 if (!strcmp(node_name, "priority"))
-                    filter.priority = ((const struct lyd_node_leaf_list *)node)->value.uint16;
+                    filter.priority = NC_LYD_DATA_NODE_VAL(node)->uint16;
                 else if (!strcmp(node_name, "resulting-endpoint"))
-                    filter_endpoint_name = ((const struct lyd_node_leaf_list *)node)->value_str;
+                    filter_endpoint_name = NC_LYD_DATA_NODE_STRING_VAL(node);
                 else if (!strcmp(node_name, "any-onu"))
                     filter.type = TR451_FILTER_TYPE_ANY;
                 else if (!strcmp(node_name, "onu-vendor"))
                 {
                     filter.type = TR451_FILTER_TYPE_VENDOR_ID;
-                    strncpy((char *)&filter.serial_number[0], ((const struct lyd_node_leaf_list *)node)->value.string, 4);
+                    strncpy((char *)&filter.serial_number[0], NC_LYD_DATA_NODE_STRING_VAL(node), 4);
                 }
                 else if (!strcmp(node_name, "onu-serial-number"))
                 {
-                    const char *serial_number = ((const struct lyd_node_leaf_list *)node)->value.string;
+                    const char *serial_number = NC_LYD_DATA_NODE_STRING_VAL(node);
                     if (serial_number == NULL || strlen(serial_number) < 6)
                     {
                         NC_LOG_ERR("invalid onu-serial-number: NULL or too short\n");
@@ -446,40 +456,14 @@ static int bbf_polt_vomci_filter_change_cb(sr_session_ctx_t *srs, const char *mo
 
 bcmos_errno bbf_polt_vomci_module_init(sr_session_ctx_t *srs, struct ly_ctx *ly_ctx)
 {
-
-    bcmos_errno err = BCM_ERR_INTERNAL;
     const struct lys_module *bbf_polt_mod;
-    int i;
 
-    do  {
-        /* make sure that ietf-interfaces module is loaded */
-        bbf_polt_mod = ly_ctx_get_module(ly_ctx, BBF_POLT_VOMCI_MODULE_NAME, NULL, 1);
-        if (bbf_polt_mod == NULL)
-        {
-            bbf_polt_mod = ly_ctx_load_module(ly_ctx, BBF_POLT_VOMCI_MODULE_NAME, NULL);
-            if (bbf_polt_mod == NULL)
-            {
-                NC_LOG_ERR(BBF_POLT_VOMCI_MODULE_NAME ": can't find the schema in sysrepo\n");
-                break;
-            }
-        }
+    bbf_polt_mod = nc_ly_ctx_load_module(ly_ctx, BBF_POLT_VOMCI_MODULE_NAME,
+        NULL, bbf_polt_vomci_features, BCMOS_TRUE);
+    if (bbf_polt_mod == NULL)
+        return BCM_ERR_INTERNAL;
 
-        /* Enable all relevant features are enabled in sysrepo */
-        for (i = 0; bbf_polt_vomci_features[i]; i++)
-        {
-            if (lys_features_enable(bbf_polt_mod, bbf_polt_vomci_features[i]))
-            {
-                NC_LOG_ERR("%s: can't enable feature %s\n", BBF_POLT_VOMCI_MODULE_NAME, bbf_polt_vomci_features[i]);
-                break;
-            }
-        }
-        if (bbf_polt_vomci_features[i])
-            break;
-
-        err = BCM_ERR_OK;
-    } while (0);
-
-    return err;
+    return BCM_ERR_OK;
 }
 
 static char *_get_date_time_string(char *buf, uint32_t buf_size)
@@ -500,59 +484,47 @@ static void _server_connect_disconnect_cb(void *data, const char *server_name,
     const struct ly_ctx *ctx = sr_get_context(sr_session_get_connection(session));
     struct lyd_node *notif = NULL;
     char notif_xpath[200];
-    char node_xpath[256];
     char date_time_string[64];
-    int sr_rc;
 
     do
     {
         snprintf(notif_xpath, sizeof(notif_xpath)-1,
             "%s[name='%s']/remote-endpoints/remote-endpoint-status-change",
             BBF_POLT_VOMCI_SERVER_LISTEN_ENDPOINTS_PATH, server_name);
-        notif = lyd_new_path(NULL, ctx, notif_xpath, NULL, 0, 0);
+        notif = nc_ly_sub_value_add(ctx, NULL, notif_xpath, NULL, NULL);
         if (notif == NULL)
         {
             NC_LOG_ERR("Failed to create notification %s.\n", notif_xpath);
             break;
         }
-
-        snprintf(node_xpath, sizeof(node_xpath)-1, "%s/remote-endpoint", notif_xpath);
-        if (lyd_new_path(notif, NULL, node_xpath, (void *)(long)client_name, 0, 0) == NULL)
+        if (nc_ly_sub_value_add(ctx, notif, notif_xpath, "remote-endpoint", client_name) == NULL)
         {
             NC_LOG_ERR("Failed to add 'remote-endpoint' node to notification %s.\n", notif_xpath);
             break;
         }
 
-        snprintf(node_xpath, sizeof(node_xpath)-1, "%s/connected", notif_xpath);
-        if (lyd_new_path(notif, NULL, node_xpath, is_connected ? "true" : "false", 0, 0) == NULL)
+        if (nc_ly_sub_value_add(ctx, notif, notif_xpath, "connected", is_connected ? "true" : "false") == NULL)
         {
             NC_LOG_ERR("Failed to add 'connected' node to notification %s.\n", notif_xpath);
             break;
         }
 
-        snprintf(node_xpath, sizeof(node_xpath)-1, "%s/remote-endpoint-state-last-change", notif_xpath);
-        if (lyd_new_path(notif, NULL, node_xpath,
-                _get_date_time_string(date_time_string, sizeof(date_time_string)), 0, 0) == NULL)
+        if (nc_ly_sub_value_add(ctx, notif, notif_xpath, "remote-endpoint-state-last-change",
+            _get_date_time_string(date_time_string, sizeof(date_time_string))) == NULL)
         {
             NC_LOG_ERR("Failed to add 'remote-endpoint-state-last-change' node to notification %s.\n", notif_xpath);
             break;
         }
 
-        sr_rc = sr_event_notif_send_tree(session, notif);
-        if (sr_rc != SR_ERR_OK)
-        {
-            NC_LOG_ERR("Failed to sent %s notification. Error '%s'\n",
-                notif_xpath, sr_strerror(sr_rc));
+        if (nc_sr_event_notif_send(session, notif, notif_xpath) != BCM_ERR_OK)
             break;
-        }
 
         NC_LOG_DBG("Sent %s notification: remote_endpoint %s: %sconnected\n",
             notif_xpath, client_name, is_connected ? "" : "dis");
 
     } while (0);
 
-    if (notif != NULL)
-        lyd_free_withsiblings(notif);
+    nc_sr_event_notif_free(notif);
 }
 
 /* Client endpoint connected/disconnected notification */
@@ -563,64 +535,56 @@ static void _client_connect_disconnect_cb(void *data, const char *remote_endpoin
     const struct ly_ctx *ctx = sr_get_context(sr_session_get_connection(session));
     struct lyd_node *notif = NULL;
     char notif_xpath[200];
-    char node_xpath[256];
     char date_time_string[64];
-    int sr_rc;
 
     do
     {
         snprintf(notif_xpath, sizeof(notif_xpath)-1,
             "%s/remote-endpoint[name='%s']/remote-endpoint-status-change",
             BBF_POLT_VOMCI_CLIENT_REMOTE_ENDPOINTS_PATH, remote_endpoint_name);
-        notif = lyd_new_path(NULL, ctx, notif_xpath, NULL, 0, 0);
+        notif = nc_ly_sub_value_add(ctx, NULL, notif_xpath, NULL, NULL);
         if (notif == NULL)
         {
             NC_LOG_ERR("Failed to create notification %s.\n", notif_xpath);
             break;
         }
 
-        snprintf(node_xpath, sizeof(node_xpath)-1, "%s/access-point", notif_xpath);
-        if (lyd_new_path(notif, NULL, node_xpath, (void *)(long)access_point_name, 0, 0) == NULL)
+        if (nc_ly_sub_value_add(ctx, notif, notif_xpath, "access-point", access_point_name) == NULL)
         {
             NC_LOG_ERR("Failed to add 'access-point' node to notification %s.\n", notif_xpath);
             break;
         }
 
-        snprintf(node_xpath, sizeof(node_xpath)-1, "%s/connected", notif_xpath);
-        if (lyd_new_path(notif, NULL, node_xpath, is_connected ? "true" : "false", 0, 0) == NULL)
+        if (nc_ly_sub_value_add(ctx, notif, notif_xpath, "connected", is_connected ? "true" : "false") == NULL)
         {
             NC_LOG_ERR("Failed to add 'connected' node to notification %s.\n", notif_xpath);
             break;
         }
 
-        snprintf(node_xpath, sizeof(node_xpath)-1, "%s/remote-endpoint-state-last-change", notif_xpath);
-        if (lyd_new_path(notif, NULL, node_xpath,
-                _get_date_time_string(date_time_string, sizeof(date_time_string)), 0, 0) == NULL)
+        if (nc_ly_sub_value_add(ctx, notif, notif_xpath, "remote-endpoint-state-last-change",
+                _get_date_time_string(date_time_string, sizeof(date_time_string))) == NULL)
         {
             NC_LOG_ERR("Failed to add 'remote-endpoint-state-last-change' node to notification %s.\n", notif_xpath);
             break;
         }
 
-        sr_rc = sr_event_notif_send_tree(session, notif);
-        if (sr_rc != SR_ERR_OK)
-        {
-            NC_LOG_ERR("Failed to sent %s notification. Error '%s'\n",
-                notif_xpath, sr_strerror(sr_rc));
+        if (nc_sr_event_notif_send(session, notif, notif_xpath) != BCM_ERR_OK)
             break;
-        }
 
         NC_LOG_DBG("Sent %s notification: remote_endpoint %s, access_point %s: %sconnected\n",
             notif_xpath, remote_endpoint_name, access_point_name, is_connected ? "" : "dis");
 
     } while (0);
 
-    if (notif != NULL)
-        lyd_free_withsiblings(notif);
+    nc_sr_event_notif_free(notif);
 }
 
 /* Get server/remote-endpoints list */
-static int _server_remote_endpoints_get_cb(sr_session_ctx_t *session, const char *module_name,
-    const char *xpath, const char *request_path, uint32_t request_id,
+static int _server_remote_endpoints_get_cb(sr_session_ctx_t *session,
+#ifdef SYSREPO_LIBYANG_V2
+    uint32_t sub_id,
+#endif
+    const char *module_name, const char *xpath, const char *request_path, uint32_t request_id,
     struct lyd_node **parent, void *private_data)
 {
     const struct ly_ctx *ctx = sr_get_context(sr_session_get_connection(session));

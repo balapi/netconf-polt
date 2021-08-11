@@ -120,8 +120,11 @@ static bcmos_errno _forwarder_apply(sr_session_ctx_t *srs, const char *xpath,
 }
 
 /* Data store change indication callback */
-static int bbf_xpon_forwarder_change_cb(sr_session_ctx_t *srs, const char *module_name,
-    const char *xpath, sr_event_t event, uint32_t request_id, void *private_ctx)
+static int bbf_xpon_forwarder_change_cb(sr_session_ctx_t *srs,
+#ifdef SYSREPO_LIBYANG_V2
+    uint32_t sub_id,
+#endif
+    const char *module_name, const char *xpath, sr_event_t event, uint32_t request_id, void *private_ctx)
 {
     sr_change_iter_t *sr_iter = NULL;
     sr_change_oper_t sr_oper;
@@ -507,8 +510,11 @@ uint32_t xpon_fwd_port_num_of(xpon_forwarder *fwd)
  */
 
 /* Data store change indication callback */
-static int bbf_xpon_fwd_db_change_cb(sr_session_ctx_t *srs, const char *module_name,
-    const char *xpath, sr_event_t event, uint32_t request_id, void *private_ctx)
+static int bbf_xpon_fwd_db_change_cb(sr_session_ctx_t *srs,
+#ifdef SYSREPO_LIBYANG_V2
+    uint32_t sub_id,
+#endif
+    const char *module_name, const char *xpath, sr_event_t event, uint32_t request_id, void *private_ctx)
 {
     sr_change_iter_t *sr_iter = NULL;
     sr_change_oper_t sr_oper;
@@ -690,8 +696,11 @@ void xpon_fwd_db_delete(xpon_fwd_db *obj)
  */
 
 /* Data store change indication callback */
-static int bbf_xpon_fwd_split_horizon_prof_change_cb(sr_session_ctx_t *srs, const char *module_name,
-    const char *xpath, sr_event_t event, uint32_t request_id, void *private_ctx)
+static int bbf_xpon_fwd_split_horizon_prof_change_cb(sr_session_ctx_t *srs,
+#ifdef SYSREPO_LIBYANG_V2
+    uint32_t sub_id,
+#endif
+    const char *module_name, const char *xpath, sr_event_t event, uint32_t request_id, void *private_ctx)
 {
     sr_change_iter_t *sr_iter = NULL;
     sr_change_oper_t sr_oper;
