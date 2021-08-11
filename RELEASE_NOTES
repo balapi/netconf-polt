@@ -1,6 +1,7 @@
-Release 3.10, branch iternovsky/feature/OBBAA-355-pOLT-Simulator-allignment-with-WT-451-YANG-changes
-Created 22 April 2021
+Release 3.8.8.8, compatible with balapi 3.8.x.x
+Created 11 August 2021
 
+- yang models aligned with OB-BAA OLT Adapeter 1.0 and 2.0
 - third_party/yang_models/TR-451 YANG models updated as per WT-451 bitbucket develop and WT-451_vOMCI-Specification_Rev-26
 - command line parameter -polt_name has been removed
 - local identity for hello exchange is taken from

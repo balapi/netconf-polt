@@ -38,6 +38,18 @@ static hash_table *object_hash;
 static uint16_t number_of_pons;
 static bcmolt_topology_map olt_topology_maps[BCM_MAX_PONS_PER_OLT];
 
+typedef struct xpon_scheduled_request xpon_scheduled_request;
+struct xpon_scheduled_request
+{
+    bcmolt_msg *msg;
+    bbf_xpon_request_type type;
+    bcmos_timer timer;
+    TAILQ_ENTRY(xpon_scheduled_request) next;
+};
+
+static TAILQ_HEAD(, xpon_scheduled_request) scheduled_request_list;
+static bcmos_mutex scheduled_request_lock;
+
 /*
  * Protection lock
  */
@@ -888,10 +900,158 @@ bcmos_errno xpon_default_tm_qmp_create(bcmolt_tm_qmp_id id)
     return xpon_tm_qmp_create(BCM_DEFAULT_TM_QMP_ID, BCMOLT_TM_QUEUE_SET_ID_QSET_NOT_USE, pbit_to_queue_map);
 }
 
+/*
+ * Scheduled request support
+ */
+
+/* Free scheduled request */
+static void xpon_scheduled_request_free(xpon_scheduled_request *req)
+{
+    bcmolt_msg_free(req->msg);
+    bcmos_free(req);
+}
+
+static bcmos_timer_rc xpon_sched_req_handler(bcmos_timer *timer, long data)
+{
+    xpon_scheduled_request *req = (xpon_scheduled_request *)data;
+    bcmos_errno err;
+
+    bcmos_mutex_lock(&scheduled_request_lock);
+    TAILQ_REMOVE(&scheduled_request_list, req, next);
+    bcmos_mutex_unlock(&scheduled_request_lock);
+
+    switch(req->type)
+    {
+        case BBF_XPON_REQUEST_TYPE_CFG:
+            err = bcmolt_cfg_set(netconf_agent_olt_id(), (bcmolt_cfg *)req->msg);
+            break;
+
+        case BBF_XPON_REQUEST_TYPE_OPER:
+            err = bcmolt_oper_submit(netconf_agent_olt_id(), (bcmolt_oper *)req->msg);
+            break;
+
+        default:
+            NC_LOG_ERR("Scheduled request type %d is insane\n", req->type);
+            err = BCM_ERR_INTERNAL;
+    }
+    if (err != BCM_ERR_OK)
+    {
+        NC_LOG_ERR("Scheduled request failed, error '%s'\n", bcmos_strerror(err));
+    }
+    else
+    {
+        NC_LOG_DBG("Scheduled request executed successfully\n");
+    }
+    xpon_scheduled_request_free(req);
+
+    return BCMOS_TIMER_OK;
+}
+
+/* Scheduled request support */
+static bcmos_errno xpon_scheduled_request_submit(bcmolt_msg *msg, bbf_xpon_request_type type, uint32_t delay)
+{
+    xpon_scheduled_request *req;
+    bcmolt_msg *copy = NULL;
+    bcmos_timer_parm tp = {
+        .name = "sched_req",
+        .handler = xpon_sched_req_handler,
+        .owner = BCMOS_MODULE_ID_NETCONF_SERVER
+    };
+    bcmos_errno err;
+
+    err = bcmolt_msg_clone(&copy, msg);
+    if (err != BCM_ERR_OK)
+    {
+        NC_LOG_ERR("bcmolt_msg_clone() failed. '%s'\n", bcmos_strerror(err));
+        return err;
+    }
+    req = bcmos_calloc(sizeof(*req));
+    if (req == NULL)
+    {
+        bcmolt_msg_free(copy);
+        return BCM_ERR_NOMEM;
+    }
+    req->msg = copy;
+    req->type = type;
+
+    tp.data = (long)req;
+    err = bcmos_timer_create(&req->timer, &tp);
+    if (err != BCM_ERR_OK)
+    {
+        NC_LOG_ERR("bcmos_timer_create() failed. err='%s'\n", bcmos_strerror(err));
+        bcmolt_msg_free(copy);
+        bcmos_free(req);
+        return err;
+    }
+    bcmos_mutex_lock(&scheduled_request_lock);
+    TAILQ_INSERT_TAIL(&scheduled_request_list, req, next);
+    bcmos_mutex_unlock(&scheduled_request_lock);
+    bcmos_timer_start(&req->timer, delay);
+
+    return BCM_ERR_OK;
+}
+
+bcmos_errno xpon_cfg_set_and_schedule_if_failed(sr_session_ctx_t *srs, bcmolt_cfg *cfg, uint32_t delay,
+    bcmos_errno test_err, const char *test_text)
+{
+    bcmos_errno err;
+
+    err = bcmolt_cfg_set(netconf_agent_olt_id(), cfg);
+    if (err != BCM_ERR_OK)
+    {
+        if (err == test_err &&
+            (test_text == NULL || strstr(cfg->hdr.err_text, test_text) != NULL))
+        {
+            err = xpon_scheduled_request_submit(&cfg->hdr, BBF_XPON_REQUEST_TYPE_CFG, delay);
+            if (err != BCM_ERR_OK)
+            {
+                NC_ERROR_REPLY(srs, NULL, "bcmolt_cfg_set() failed. Error '%s'-'%s'\n",
+                    bcmos_strerror(cfg->hdr.err), cfg->hdr.err_text);
+            }
+            else
+            {
+                NC_LOG_DBG("bcmolt_cfg_set() failed. Error '%s'-'%s'. Scheduled to be retried in %u ms\n",
+                    bcmos_strerror(cfg->hdr.err), cfg->hdr.err_text, delay / 1000);
+            }
+        }
+    }
+    return err;
+}
+
+bcmos_errno xpon_oper_submit_and_schedule_if_failed(sr_session_ctx_t *srs, bcmolt_oper *oper, uint32_t delay,
+    bcmos_errno test_err, const char *test_text)
+{
+    bcmos_errno err;
+
+    err = bcmolt_oper_submit(netconf_agent_olt_id(), oper);
+    if (err != BCM_ERR_OK)
+    {
+        if (err == test_err &&
+            (test_text == NULL || strstr(oper->hdr.err_text, test_text) != NULL))
+        {
+            err = xpon_scheduled_request_submit(&oper->hdr, BBF_XPON_REQUEST_TYPE_OPER, delay);
+            if (err != BCM_ERR_OK)
+            {
+                NC_ERROR_REPLY(srs, NULL, "bcmolt_oper_submit() failed. Error '%s'-'%s'\n",
+                    bcmos_strerror(oper->hdr.err), oper->hdr.err_text);
+            }
+            else
+            {
+                NC_LOG_DBG("bcmolt_oper_submit() failed. Error '%s'-'%s'. Scheduled to be retried in %u ms\n",
+                    bcmos_strerror(oper->hdr.err), oper->hdr.err_text, delay / 1000);
+            }
+        }
+    }
+    return err;
+}
+
 bcmos_errno bcmolt_xpon_utils_init(void)
 {
     bcmos_errno err;
     err = bcmos_mutex_create(&xpon_lock, 0, "xpon_lock");
+    if (err != BCM_ERR_OK)
+        return err;
+    err = bcmos_mutex_create(&scheduled_request_lock, 0, "xpon_sched_req_lock");
     if (err != BCM_ERR_OK)
         return err;
 
@@ -901,17 +1061,34 @@ bcmos_errno bcmolt_xpon_utils_init(void)
     if (object_hash == NULL)
         return BCM_ERR_NOMEM;
 
+    TAILQ_INIT(&scheduled_request_list);
+
     return err;
 }
 
 
 void bcmolt_xpon_utils_exit(void)
 {
+    xpon_scheduled_request *req, *req_tmp;
+
     if (object_hash)
     {
         hash_table_clear(object_hash);
         //hash_table_destroy(&interface_hash);
     }
 
+    TAILQ_FOREACH_SAFE(req, &scheduled_request_list, next, req_tmp)
+    {
+        bcmos_timer_stop(&req->timer);
+    }
+
+    bcmos_mutex_lock(&scheduled_request_lock);
+    while (!TAILQ_EMPTY(&scheduled_request_list))
+    {
+        req = TAILQ_FIRST(&scheduled_request_list);
+        TAILQ_REMOVE(&scheduled_request_list, req, next);
+        xpon_scheduled_request_free(req);
+    }
+    bcmos_mutex_destroy(&scheduled_request_lock);
     bcmos_mutex_destroy(&xpon_lock);
 }

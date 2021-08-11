@@ -137,7 +137,7 @@ static bcmos_errno tr451_vendor_omci_send_to_onu_sim(const OmciPacket &packet)
 
     tr451_onu_sim_packet_header *hdr = (tr451_onu_sim_packet_header *)tr451_onu_sim_tx_buf;
     strncpy(hdr->cterm_name, packet.header().chnl_term_name().c_str(), sizeof(hdr->cterm_name));
-    hdr->onu_id = packet.header().onu_id();
+    hdr->onu_id = htons(packet.header().onu_id());
     memcpy((uint8_t *)(hdr + 1), packet.payload().c_str(), length);
 
     int rc;
@@ -213,6 +213,8 @@ bcmos_errno tr451_vendor_omci_send_to_onu(const OmciPacket &packet)
             msg_type &= ~0x40;
             msg_type |= 0x20;
             payload[2] = msg_type;
+            for (int i=8; i<48; i++)
+                payload[i] = 0;
             err = sim_tr451_vendor_packet_received_from_onu(
                 packet.header().chnl_term_name().c_str(),
                 (uint16_t)packet.header().onu_id(),

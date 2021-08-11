@@ -699,7 +699,7 @@ static void _dhcr_recv_eth_packet(bcmolt_oltid olt, bcmolt_msg *msg)
         }
         else
         {
-            ret = dhcp_relay_recv_upstream(eth_packet->data.interface_ref.intf_id,
+            ret = dhcp_relay_recv_downstream(eth_packet->data.interface_ref.intf_id,
                 eth_packet->data.buffer.arr, eth_packet->data.buffer.len,
                 out_buf, &out_len, &iface);
             flow_key.flow_type = BCMOLT_FLOW_TYPE_DOWNSTREAM;
@@ -922,7 +922,6 @@ static bcmos_errno interface_remove_from_access_control(dhcp_relay_interface *if
  */
 static bcmos_errno _dhcp_relay_interface_delete(dhcp_relay_interface *iface, bcmos_bool update_acl)
 {
-    STAILQ_REMOVE_SAFE(&dhcp_relay_interface_list, iface, dhcp_relay_interface, next);
     if (update_acl)
     {
         interface_remove_from_access_control(iface, STAILQ_EMPTY(&dhcp_relay_interface_list));

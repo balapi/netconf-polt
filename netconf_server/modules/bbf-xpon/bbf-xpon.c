@@ -33,9 +33,7 @@ sr_subscription_ctx_t *sr_ctx;
 static sr_subscription_ctx_t *sr_ctx_intf;
 
 static const char* ietf_interfaces_features[] = {
-    "arbitrary-names",
-    "pre-provisioning",
-    "if-mib",
+    "*",
     NULL
 };
 
@@ -60,16 +58,12 @@ static const char* l2_forwarding_features[] = {
 };
 
 static const char* ietf_hardware_features[] = {
-    "entity-mib",
-    "hardware-state",
+    "*",
     NULL
 };
 
 static const char* bbf_hardware_features[] = {
-    "additional-hardware-configuration",
-    "model-name-configuration",
-    "interface-hardware-reference",
-    "hardware-component-reset",
+    "*",
     NULL
 };
 
@@ -160,14 +154,15 @@ static bcmos_errno bbf_xpon_apply_transaction(sr_session_ctx_t *srs, nc_transact
     return err;
 }
 
-/* Data store change indication callback */
-static int bbf_xpon_interface_change_cb(sr_session_ctx_t *srs, const char *module_name,
-    const char *xpath, sr_event_t event, uint32_t request_id, void *private_ctx)
+/* Data store change/rollback handler */
+static int bbf_xpon_interface_change_or_rollback(sr_session_ctx_t *srs, const char *module_name,
+    const char *xpath, sr_event_t event, uint32_t request_id, void *private_ctx, const char *stop_rollback_at)
 {
+    bcmos_bool is_rollback = (stop_rollback_at != NULL);
     sr_change_iter_t *sr_iter = NULL;
     sr_change_oper_t sr_oper;
     sr_val_t *sr_old_val = NULL, *sr_new_val = NULL;
-    char keyname[BBF_XPON_MAX_NAME_LENGTH];
+    char keyname[BBF_XPON_MAX_NAME_LENGTH]="";
     char prev_keyname[BBF_XPON_MAX_NAME_LENGTH] = "";
     nc_transact transact;
     int sr_rc;
@@ -175,7 +170,14 @@ static int bbf_xpon_interface_change_cb(sr_session_ctx_t *srs, const char *modul
 
     nc_config_lock();
 
-    NC_LOG_INFO("module=%s xpath=%s event=%d\n", module_name, xpath, event);
+    if (is_rollback)
+    {
+        NC_LOG_INFO("Rolling back module=%s xpath=%s: stop at %s\n", module_name, xpath, stop_rollback_at);
+    }
+    else
+    {
+        NC_LOG_INFO("module=%s xpath=%s event=%d\n", module_name, xpath, event);
+    }
 
     /* We only handle CHANGE and ABORT events.
      * Since there is no way to reserve resources in advance and no way to fail the APPLY event,
@@ -222,15 +224,29 @@ static int bbf_xpon_interface_change_cb(sr_session_ctx_t *srs, const char *modul
             continue;
         }
 
+        /* Swap old_val and new_val in case of rollback */
+        if (is_rollback)
+        {
+            if (!strcmp(keyname, stop_rollback_at))
+                break;
+            sr_val = sr_new_val;
+            sr_new_val = sr_old_val;
+            sr_old_val = sr_val;
+            sr_val = sr_new_val ? sr_new_val : sr_old_val;
+        }
+
         /* Handle transaction if key changed */
         if (strcmp(keyname, prev_keyname) && *prev_keyname)
         {
             err = bbf_xpon_apply_transaction(srs, &transact, prev_keyname);
+            if (err != BCM_ERR_OK)
+            {
+                strcpy(keyname, prev_keyname);
+                break;
+            }
             nc_transact_init(&transact, event);
             strcpy(prev_keyname, keyname);
             *keyname = 0;
-            if (err != BCM_ERR_OK)
-                break;
         }
         else
         {
@@ -251,17 +267,36 @@ static int bbf_xpon_interface_change_cb(sr_session_ctx_t *srs, const char *modul
             err = nc_transact_add(&transact, &sr_old_val, &sr_new_val);
         }
     }
-    if (*keyname)
+    if (*keyname && err == BCM_ERR_OK)
+    {
         err = bbf_xpon_apply_transaction(srs, &transact, keyname);
+        strcpy(prev_keyname, keyname);
+    }
 
     nc_sr_free_value_pair(&sr_old_val, &sr_new_val);
     sr_free_change_iter(sr_iter);
 
+    if (err != BCM_ERR_OK && event != SR_EV_ABORT)
+    {
+        /* Rollback if error */
+        char *err_xpath, *err_message;
+        nc_sr_error_save(srs, &err_xpath, &err_message);
+        bbf_xpon_interface_change_or_rollback(srs, module_name, xpath, event, request_id, private_ctx, keyname);
+        nc_sr_error_restore(srs, err_xpath, err_message);
+    }
+
+    NC_LOG_DBG("OUT: rollback=%d err='%s'\n", is_rollback, bcmos_strerror(err));
+
     nc_config_unlock();
 
-    NC_LOG_DBG("OUT: err='%s'\n", bcmos_strerror(err));
-
     return nc_bcmos_errno_to_sr_errno(err);
+}
+
+/* Data store change indication callback */
+static int bbf_xpon_interface_change_cb(sr_session_ctx_t *srs, const char *module_name,
+    const char *xpath, sr_event_t event, uint32_t request_id, void *private_ctx)
+{
+    return bbf_xpon_interface_change_or_rollback(srs, module_name, xpath, event, request_id, private_ctx, NULL);
 }
 
 /* Get interface from the local DB. If not found, try to create and populate info from operational data */

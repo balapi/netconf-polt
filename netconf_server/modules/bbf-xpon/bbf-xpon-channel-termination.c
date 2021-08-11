@@ -227,7 +227,6 @@ static bcmos_errno xpon_cterm_apply(sr_session_ctx_t *srs,
         {
             NC_ERROR_REPLY(srs, NULL, "channel-termination %s: other chennel-termination %s refers to the same pon_id %u\n",
                 cterm->hdr.name, cterm_by_id_array[key.pon_ni]->hdr.name, key.pon_ni);
-            cterm_by_id_array[key.pon_ni] = cterm;
             err = BCM_ERR_PARM;
             break;
         }

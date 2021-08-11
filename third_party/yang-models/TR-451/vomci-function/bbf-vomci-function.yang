@@ -132,6 +132,12 @@ module bbf-vomci-function {
         "The name of the ONU that is the target of the
          alignment result.";
     }
+    leaf datastore-tag {
+      type string;
+      description
+        "The datastore tag associated with the ONU's configuration
+         data kept by the vOMCI function.";
+    }
     leaf alignment-status {
       type bbf-vomcit:onu-alignment-status;
       description
@@ -141,8 +147,8 @@ module bbf-vomci-function {
   
   notification onu-alarm-misalignment {
     description
-      "The vOMCI function a gap in the OMCI alarm 
-        message’s sequence number.";
+      "The vOMCI function dectected a gap in the OMCI alarm 
+        message's sequence number.";
     leaf event-time {
       type yang:date-and-time;
       description
@@ -222,7 +228,6 @@ module bbf-vomci-function {
         description
           "The unique name of the ONU.";
       }
-      uses bbf-vomci-ent:vomci-onu-header;
     }
   }
 
@@ -268,6 +273,7 @@ module bbf-vomci-function {
               "The remote endpoint name to use for transmitting
                YANG messages toward the vOLTMF.";
           }
+          uses bbf-vomci-ent:vomci-onu-header;
         }
       }
   

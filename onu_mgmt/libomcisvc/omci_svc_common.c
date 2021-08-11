@@ -38,6 +38,9 @@ typedef struct
 {
     bcmos_bool is_initialized;
     uint32_t max_num_of_pons;             /* value stored from OLT topo query through bal api call */
+    /** @todo aspen pon_family pon_sub_family not needed for bcm omci stack */
+//    bcmbal_pon_family pon_family;         /* value stored from OLT topo query through bal api call */
+//    bcmbal_pon_sub_family pon_sub_family; /* value stored from OLT topo query through bal api call */
     omci_svc_topo_pon_context_t *logical_pons; /** array of pointers */
 } omci_svc_topo_context_t;
 

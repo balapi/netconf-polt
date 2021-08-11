@@ -67,10 +67,16 @@ bcmos_errno xpon_cpart_get_by_name(const char *name, xpon_channel_partition **p_
 /* Remove channel partition object */
 void xpon_cpart_delete(xpon_channel_partition *cpart)
 {
+    xpon_channel_pair *cpair, *cpair_tmp;
     STAILQ_REMOVE_SAFE(&cpart_list, &cpart->hdr, xpon_obj_hdr, next);
     NC_LOG_INFO("channel-partition %s deleted\n", cpart->hdr.name);
     if (cpart->channel_group_ref != NULL && cpart->channel_group_ref->hdr.created_by_forward_reference)
         xpon_cgroup_delete(cpart->channel_group_ref);
+    STAILQ_FOREACH_SAFE(cpair, &cpart->cpair_list, next, cpair_tmp)
+    {
+        STAILQ_REMOVE_SAFE(&cpart->cpair_list, cpair, xpon_channel_pair, next);
+        cpair->channel_partition_ref = NULL;
+    }
     xpon_object_delete(&cpart->hdr);
 }
 

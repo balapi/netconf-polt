@@ -7,8 +7,10 @@ bcm_make_normal_option(NETOPEER_SSH_PORT STRING "Default SSH port netopeer liste
 
 if(NETCONF_TOOLS_FROM_DEVEL)
     set(_VERSION "devel")
+elseif(NETOPEER2_VERSION_2X)
+    set(_VERSION "2.0.0")
 else()
-    set(_VERSION "1.1.53")
+    set(_VERSION "1.1.76")
 endif()
 
 # Netopeer2 consists from multiple components
@@ -40,12 +42,13 @@ set(_SYSREPOCFG_EXECUTABLE ${CMAKE_BINARY_DIR}/fs/bin/sysrepotool.sh ${_SYSREPO_
 
 # Server
 bcm_3rdparty_module_name(netopeer2-server ${NETOPEER2_VERSION})
-bcm_3rdparty_add_dependencies(libyang libnetconf2 libssh sysrepo)
+bcm_3rdparty_add_dependencies(libyang libnetconf2 libssh sysrepo yang-models)
 bcm_3rdparty_add_build_options(-DSYSREPOCTL="${_SYSREPO_TOOLS_DIR}/sysrepoctl")
 bcm_3rdparty_add_build_options(-DSYSREPOCFG="${_SYSREPO_TOOLS_DIR}/sysrepocfg")
 bcm_3rdparty_add_build_options(-DOPENSSL="${_SYSREPO_TOOLS_DIR}/openssl")
 bcm_3rdparty_add_build_options(-DPIDFILE_PREFIX=/tmp)
 bcm_3rdparty_add_build_options(-DBUILD_TESTS:bool=OFF -DVALGRIND_TESTS:bool=OFF)
+bcm_3rdparty_add_build_options(-DINSTALL_MODULES=OFF)
 #bcm_3rdparty_add_build_options(-DGENERATE_HOSTKEY=OFF)
 bcm_3rdparty_add_build_options(-DLIBNETCONF2_ENABLED_SSH:bool=ON)
 bcm_3rdparty_add_build_options(-DPOLL_IO_TIMEOUT=100)

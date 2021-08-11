@@ -140,25 +140,20 @@ bcmos_errno omci_svc_olt_init(bcmolt_oltid olt_id)
 
     /** query topology for OLT */
     rc = omci_svc_query_pon_topology(olt_id, &max_pon_for_olt);
-    if (BCM_ERR_OK != rc)
-    {
+        if (BCM_ERR_OK != rc)
+        {
         BCM_LOG(ERROR, omci_svc_log_id, "Failed to query Topology for OLT id=%u, error:%s\n",
                 olt_id, bcmos_strerror(rc));
-        return rc;
-    }
-    else
-    {
-        BCM_LOG(INFO, omci_svc_log_id, "query Topology for OLT id=%u, max_pon_for_olt=%d\n", 
-                olt_id, max_pon_for_olt);
-    }
+            return rc;
+        }
 
     rc = omci_svc_topo_init_context(olt_id, max_pon_for_olt);
-    if (BCM_ERR_OK != rc)
-    {
+        if (BCM_ERR_OK != rc)
+        {
         BCM_LOG(ERROR, omci_svc_log_id, "Failed to initialize omci svc topo context for OLT id=%u, error:%s\n",
                 olt_id, bcmos_strerror(rc));
-        return rc;
-    }
+            return rc;
+        }
 
         /** initialize DB for each logical pon present in Topology */
         for (logical_pon_id=0; logical_pon_id < max_pon_for_olt; logical_pon_id++)
@@ -175,7 +170,7 @@ bcmos_errno omci_svc_olt_init(bcmolt_oltid olt_id)
 
             for (onu_id=0; onu_id < OMCI_SVC_PON_TOPO_MAX_ONUS_PER_PON; onu_id++)
             {
-                omci_svc_onu *onu_context = OMCI_SVC_ONU_TOPO_CONTEXT(olt_id, logical_pon_id, onu_id);
+            omci_svc_onu *onu_context = OMCI_SVC_ONU_TOPO_CONTEXT(olt_id, logical_pon_id, onu_id);
 
                 onu_context->state = OMCI_SVC_ONU_STATE_ID_INACTIVE;
                 onu_context->admin_state = BCMONU_MGMT_ADMIN_STATE_DOWN;
