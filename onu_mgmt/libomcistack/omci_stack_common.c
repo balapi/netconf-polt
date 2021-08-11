@@ -1,22 +1,22 @@
 /*
  *  <:copyright-BRCM:2016-2020:Apache:standard
- *
+ *  
  *   Copyright (c) 2016-2020 Broadcom. All Rights Reserved
- *
+ *  
  *   The term “Broadcom” refers to Broadcom Inc. and/or its subsidiaries
- *
+ *  
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
  *   You may obtain a copy of the License at
- *
+ *  
  *       http://www.apache.org/licenses/LICENSE-2.0
- *
+ *  
  *   Unless required by applicable law or agreed to in writing, software
  *   distributed under the License is distributed on an "AS IS" BASIS,
  *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
- *
+ *  
  *  :>
  *
  *****************************************************************************/
@@ -221,14 +221,6 @@ bcmos_bool bcm_omci_presence_mask_check(const bcm_omci_me_hdr *me_hdr, bcm_omci_
             /* "Set-by-create" and only "set-by-create" attributes must be present */
             if (fields_mask != BCM_OMCI_OBJ_ATTR_SET_BY_CREATE_MASK(me_hdr->obj_type))
             {
-                /* Don't have to set optional attributes */
-                if ((fields_mask & ~BCM_OMCI_OBJ_ATTR_SET_BY_CREATE_MASK(me_hdr->obj_type)) == 0 &&
-                    (~fields_mask & BCM_OMCI_OBJ_ATTR_MANDATORY_MASK(me_hdr->obj_type)) == 0)
-                {
-                    break;
-                }
-
-                /* Definitly an error */
                 if (~fields_mask & BCM_OMCI_OBJ_ATTR_SET_BY_CREATE_MASK(me_hdr->obj_type))
                 {
                     *err_attr_id = ffs(~fields_mask & BCM_OMCI_OBJ_ATTR_SET_BY_CREATE_MASK(me_hdr->obj_type)) - 1;

@@ -189,7 +189,7 @@ bcmos_errno xpon_cpair_transaction(sr_session_ctx_t *srs, nc_transact *tr)
         if (XPON_PROP_IS_SET(&cpair_tmp, cpair, channel_partition_ref))
         {
             if (cpair->channel_partition_ref != NULL)
-                STAILQ_REMOVE(&cpair->channel_partition_ref->cpair_list, cpair, xpon_channel_pair, next);
+                STAILQ_REMOVE_SAFE(&cpair->channel_partition_ref->cpair_list, cpair, xpon_channel_pair, next);
             if (cpair_tmp.channel_partition_ref != NULL)
                 STAILQ_INSERT_TAIL(&cpair_tmp.channel_partition_ref->cpair_list, cpair, next);
         }

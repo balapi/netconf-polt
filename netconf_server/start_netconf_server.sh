@@ -1,5 +1,5 @@
 #!/bin/bash
-
+#set -x
 START_DIR=`dirname $0`
 cd $START_DIR
 export SYSREPO_REPOSITORY_PATH=`pwd`/sysrepo
@@ -15,16 +15,27 @@ else
 fi
 
 NETCONF_PARMS=""
-if ! $PS | grep netopeer2\-server | grep -v grep > /dev/null; then
-    echo "netopeer2-server is NOT running. Please start it first"
-    exit -1
+# Kill the old netopeer2-server instance unless it is running in the foreground (ie, was started separately)
+if $PS | grep netopeer2\-server | grep -v grep | grep '\-d' > /dev/null; then
+    echo "netopeer2-server is running in the foreground. Keeping the running instance"
+else
+    # Kill stale netopeer2-server instance if any
+    killall netopeer2-server 2> /dev/null
+    echo "Starting netopeer2-server in the background"
+    `pwd`/bin/start_netopeer2_server.sh -v3
+    sleep 2
 fi
+
 if [ "$1" = "gdb" ]; then
-    GDB="gdb --args"
+    INSTRUMENT="gdb --args"
     shift
 fi
 if [ "$1" = "valgrind" ]; then
-    GDB="valgrind"
+    INSTRUMENT="valgrind"
     shift
 fi
-$GDB ./bcmolt_netconf_server $*
+$INSTRUMENT ./bcmolt_netconf_server $*
+if ! $PS | grep bcmolt_netconf_server | grep -v grep > /dev/null; then
+    echo Killing netopeer2-server
+    killall netopeer2-server 2> /dev/null
+fi

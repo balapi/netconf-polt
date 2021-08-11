@@ -673,3 +673,32 @@ const struct lyd_node *nc_ly_get_sibling_or_parent_node(const struct lyd_node *n
 
     return n;
 }
+
+/*
+ * Save / restore transaction error
+ */
+void nc_sr_error_save(sr_session_ctx_t *srs, char **xpath, char **message)
+{
+    const sr_error_info_t *sr_err_info=NULL;
+
+    *xpath = NULL;
+    *message = NULL;
+    sr_get_error(srs, &sr_err_info);
+    if (sr_err_info != NULL && sr_err_info->err != NULL)
+    {
+        if (sr_err_info->err->xpath)
+            *xpath = bcmos_strdup(sr_err_info->err->xpath);
+        if (sr_err_info->err->message)
+            *message = bcmos_strdup(sr_err_info->err->message);
+    }
+}
+
+void nc_sr_error_restore(sr_session_ctx_t *srs, char *xpath, char *message)
+{
+    if (message != NULL)
+        sr_set_error(srs, xpath, message);
+    if (xpath != NULL)
+        bcmos_free(xpath);
+    if (message != NULL)
+        bcmos_free(message);
+}

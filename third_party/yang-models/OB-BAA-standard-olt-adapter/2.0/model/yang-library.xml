@@ -1,0 +1,1078 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rpc-reply xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" message-id="2">
+    <data>
+        <modules-state xmlns="urn:ietf:params:xml:ns:yang:ietf-yang-library">
+            <module-set-id>69</module-set-id>
+<module>
+   <name>ietf-netconf-monitoring</name>
+   <revision>2010-10-04</revision>
+   <namespace>urn:ietf:params:xml:ns:yang:ietf-netconf-monitoring</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>ietf-netconf-acm</name>
+   <revision>2018-02-14</revision>
+   <namespace>urn:ietf:params:xml:ns:yang:ietf-netconf-acm</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-qos-composite-filters</name>
+   <revision>2021-06-02</revision>
+   <namespace>urn:bbf:yang:bbf-qos-composite-filters</namespace>
+   <feature>match-on-specific-ipv4-header-fields</feature>
+   <feature>match-on-specific-ipv6-header-fields</feature>
+   <feature>match-on-common-ip-header-fields</feature>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-hardware-rpf-dpu-state</name>
+   <revision>2020-10-13</revision>
+   <namespace>urn:bbf:yang:bbf-hardware-rpf-dpu-state</namespace>
+   <feature>performance-24hr</feature>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>ietf-tcp-common</name>
+   <revision>2020-08-20</revision>
+   <namespace>urn:ietf:params:xml:ns:yang:ietf-tcp-common</namespace>
+   <feature>keepalives-supported</feature>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>ietf-netconf</name>
+   <revision>2011-06-01</revision>
+   <namespace>urn:ietf:params:xml:ns:netconf:base:1.0</namespace>
+   <feature>writable-running</feature>
+   <feature>candidate</feature>
+   <feature>confirmed-commit</feature>
+   <feature>rollback-on-error</feature>
+   <feature>validate</feature>
+   <feature>startup</feature>
+   <feature>url</feature>
+   <feature>xpath</feature>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>ieee802-dot1x</name>
+   <revision>2020-02-18</revision>
+   <namespace>urn:ieee:std:802.1X:yang:ieee802-dot1x</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-alarm-types</name>
+   <revision>2020-10-13</revision>
+   <namespace>urn:bbf:yang:bbf-alarm-types</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>ietf-truststore</name>
+   <revision>2020-08-20</revision>
+   <namespace>urn:ietf:params:xml:ns:yang:ietf-truststore</namespace>
+   <feature>truststore-supported</feature>
+   <feature>local-definitions-supported</feature>
+   <feature>certificates</feature>
+   <feature>public-keys</feature>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-xpon-power-management</name>
+   <revision>2020-10-13</revision>
+   <namespace>urn:bbf:yang:bbf-xpon-power-management</namespace>
+   <feature>xpon-power-management</feature>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-l2-forwarding-shared-fdb</name>
+   <revision>2020-10-13</revision>
+   <namespace>urn:bbf:yang:bbf-l2-forwarding-shared-fdb</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-qos-enhanced-scheduling-state</name>
+   <revision>2021-06-02</revision>
+   <namespace>urn:bbf:yang:bbf-qos-enhanced-scheduling-state</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-hardware-cpu</name>
+   <revision>2020-10-13</revision>
+   <namespace>urn:bbf:yang:bbf-hardware-cpu</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>iana-hardware</name>
+   <revision>2018-03-13</revision>
+   <namespace>urn:ietf:params:xml:ns:yang:iana-hardware</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>ietf-yang-types</name>
+   <revision>2013-07-15</revision>
+   <namespace>urn:ietf:params:xml:ns:yang:ietf-yang-types</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-frame-processing-profiles</name>
+   <revision>2021-06-02</revision>
+   <namespace>urn:bbf:yang:bbf-frame-processing-profiles</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-network-function-client</name>
+   <revision>2021-02-19</revision>
+   <namespace>urn:bbf:yang:bbf-network-function-client</namespace>
+   <feature>kafka-agent-supported</feature>
+   <feature>grpc-client-supported</feature>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>ietf-ethertypes</name>
+   <revision>2019-03-04</revision>
+   <namespace>urn:ietf:params:xml:ns:yang:ietf-ethertypes</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>ietf-tcp-client</name>
+   <revision>2020-08-20</revision>
+   <namespace>urn:ietf:params:xml:ns:yang:ietf-tcp-client</namespace>
+   <feature>local-binding-supported</feature>
+   <feature>tcp-client-keepalives</feature>
+   <feature>proxy-connect</feature>
+   <feature>socks5-gss-api</feature>
+   <feature>socks5-username-password</feature>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>ietf-packet-fields</name>
+   <revision>2019-03-04</revision>
+   <namespace>urn:ietf:params:xml:ns:yang:ietf-packet-fields</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-xponani-power-management</name>
+   <revision>2020-10-13</revision>
+   <namespace>urn:bbf:yang:bbf-xponani-power-management</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-qos-enhanced-scheduling</name>
+   <revision>2021-06-02</revision>
+   <namespace>urn:bbf:yang:bbf-qos-enhanced-scheduling</namespace>
+   <feature>child-traffic-type</feature>
+   <feature>child-scheduler-queue-references</feature>
+   <feature>dual-rate-scheduling-from-scheduler</feature>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-qos-types</name>
+   <revision>2021-06-02</revision>
+   <namespace>urn:bbf:yang:bbf-qos-types</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-ancp-interfaces</name>
+   <revision>2020-10-13</revision>
+   <namespace>urn:bbf:yang:bbf-ancp-interfaces</namespace>
+   <feature>access-aggregation-circuit-id</feature>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>ietf-netconf-notifications</name>
+   <revision>2012-02-06</revision>
+   <namespace>urn:ietf:params:xml:ns:yang:ietf-netconf-notifications</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-ptm</name>
+   <revision>2021-06-02</revision>
+   <namespace>urn:bbf:yang:bbf-ptm</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-pppoe-intermediate-agent</name>
+   <revision>2017-05-08</revision>
+   <namespace>urn:bbf:yang:bbf-pppoe-intermediate-agent</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-link-table</name>
+   <revision>2020-10-13</revision>
+   <namespace>urn:bbf:yang:bbf-link-table</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-qos-filters</name>
+   <revision>2021-06-02</revision>
+   <namespace>urn:bbf:yang:bbf-qos-filters</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-if-type</name>
+   <revision>2020-10-13</revision>
+   <namespace>urn:bbf:yang:bbf-if-type</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-hardware-types</name>
+   <revision>2020-10-13</revision>
+   <namespace>urn:bbf:yang:bbf-hardware-types</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-l2-terminations</name>
+   <revision>2020-10-13</revision>
+   <namespace>urn:bbf:yang:bbf-l2-terminations</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-availability</name>
+   <revision>2020-10-13</revision>
+   <namespace>urn:bbf:yang:bbf-availability</namespace>
+   <feature>availability</feature>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-inet-types</name>
+   <revision>2020-10-13</revision>
+   <namespace>urn:bbf:yang:bbf-inet-types</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-vomci-types</name>
+   <revision>2020-12-01</revision>
+   <namespace>urn:bbf:yang:bbf-vomci-types</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-xpon-if-type</name>
+   <revision>2020-10-13</revision>
+   <namespace>urn:bbf:yang:bbf-xpon-if-type</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-hardware-rpf-dpu</name>
+   <revision>2020-10-13</revision>
+   <namespace>urn:bbf:yang:bbf-hardware-rpf-dpu</namespace>
+   <feature>performance-24hr</feature>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>ietf-ipfix-psamp</name>
+   <revision>2012-09-05</revision>
+   <namespace>urn:ietf:params:xml:ns:yang:ietf-ipfix-psamp</namespace>
+   <feature>exporter</feature>
+   <feature>collector</feature>
+   <feature>meter</feature>
+   <feature>psampSampCountBased</feature>
+   <feature>psampSampTimeBased</feature>
+   <feature>psampSampRandOutOfN</feature>
+   <feature>psampSampUniProb</feature>
+   <feature>psampFilterMatch</feature>
+   <feature>psampFilterHash</feature>
+   <feature>immediateCache</feature>
+   <feature>timeoutCache</feature>
+   <feature>naturalCache</feature>
+   <feature>permanentCache</feature>
+   <feature>udpTransport</feature>
+   <feature>tcpTransport</feature>
+   <feature>fileReader</feature>
+   <feature>fileWriter</feature>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-mgmd</name>
+   <revision>2020-10-13</revision>
+   <namespace>urn:bbf:yang:bbf-mgmd</namespace>
+   <feature>mgmd-snoop-last-leave</feature>
+   <feature>mgmd-proxy</feature>
+   <feature>mgmd-snoop-transparent</feature>
+   <feature>mgmd-snoop-with-proxy-reporting</feature>
+   <feature>multicast-cac</feature>
+   <feature>multicast-package</feature>
+   <feature>multicast-preview</feature>
+   <feature>mgmd-group-ip-range</feature>
+   <feature>static-multicast-host-associations</feature>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-ethernet-performance-management</name>
+   <revision>2021-06-02</revision>
+   <namespace>urn:bbf:yang:bbf-ethernet-performance-management</namespace>
+   <feature>in-undersize-pkts</feature>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-ancp-fastdsl-access-extensions</name>
+   <revision>2020-10-13</revision>
+   <namespace>urn:bbf:yang:bbf-ancp-fastdsl-access-extensions</namespace>
+   <feature>port-down-line-attributes</feature>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>ietf-hardware</name>
+   <revision>2018-03-13</revision>
+   <namespace>urn:ietf:params:xml:ns:yang:ietf-hardware</namespace>
+   <feature>entity-mib</feature>
+   <feature>hardware-state</feature>
+   <feature>hardware-sensor</feature>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>ieee802-dot1x-types</name>
+   <revision>2020-02-18</revision>
+   <namespace>urn:ieee:std:802.1X:yang:ieee802-dot1x-types</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-gbond</name>
+   <revision>2020-10-13</revision>
+   <namespace>urn:bbf:yang:bbf-gbond</namespace>
+   <feature>bonding-primary-interface</feature>
+   <feature>bonding-group-statistics</feature>
+   <feature>bonding-group-performance</feature>
+   <feature>bonding-group-performance-15min</feature>
+   <feature>bonding-group-performance-24hr</feature>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-hardware</name>
+   <revision>2020-10-13</revision>
+   <namespace>urn:bbf:yang:bbf-hardware</namespace>
+   <feature>additional-hardware-configuration</feature>
+   <feature>model-name-configuration</feature>
+   <feature>hardware-component-reset</feature>
+   <feature>interface-hardware-management</feature>
+   <feature>interface-hardware-reference</feature>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-interface-usage</name>
+   <revision>2020-10-13</revision>
+   <namespace>urn:bbf:yang:bbf-interface-usage</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-qos-traffic-mngt</name>
+   <revision>2021-06-02</revision>
+   <namespace>urn:bbf:yang:bbf-qos-traffic-mngt</namespace>
+   <feature>pre-emption</feature>
+   <feature>tc-id-2-queue-id-mapping-config</feature>
+   <feature>extended-scheduling-weight</feature>
+   <feature>dual-rate-scheduling-from-queue</feature>
+   <feature>queue-statistics</feature>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-device-types</name>
+   <revision>2021-06-02</revision>
+   <namespace>urn:bbf:yang:bbf-device-types</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-l2-dhcpv4-relay</name>
+   <revision>2017-05-08</revision>
+   <namespace>urn:bbf:yang:bbf-l2-dhcpv4-relay</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-vdsl-alarm-types</name>
+   <revision>2020-10-13</revision>
+   <namespace>urn:bbf:yang:bbf-vdsl-alarm-types</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>ietf-keystore</name>
+   <revision>2020-08-20</revision>
+   <namespace>urn:ietf:params:xml:ns:yang:ietf-keystore</namespace>
+   <feature>keystore-supported</feature>
+   <feature>local-definitions-supported</feature>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-interfaces-performance-management</name>
+   <revision>2021-06-02</revision>
+   <namespace>urn:bbf:yang:bbf-interfaces-performance-management</namespace>
+   <feature>performance-24hr</feature>
+   <feature>total-pkts</feature>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-hardware-transceivers</name>
+   <revision>2021-06-02</revision>
+   <namespace>urn:bbf:yang:bbf-hardware-transceivers</namespace>
+   <feature>vendor-eeprom</feature>
+   <feature>vendor-eeprom-string</feature>
+   <feature>vendor-eeprom-binary</feature>
+   <feature>extended-information</feature>
+   <feature>user-eeprom</feature>
+   <feature>user-eeprom-string</feature>
+   <feature>user-eeprom-binary</feature>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-olt-vomci</name>
+   <revision>2021-02-07</revision>
+   <namespace>urn:bbf:yang:bbf-olt-vomci</namespace>
+   <feature>nf-client-supported</feature>
+   <feature>nf-server-supported</feature>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-ancp-fastdsl-threshold</name>
+   <revision>2020-10-13</revision>
+   <namespace>urn:bbf:yang:bbf-ancp-fastdsl-threshold</namespace>
+   <feature>delayed-port-up-reporting</feature>
+   <feature>delayed-data-rate-change-reporting</feature>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-hardware-transceiver-alarm-types</name>
+   <revision>2021-06-02</revision>
+   <namespace>urn:bbf:yang:bbf-hardware-transceiver-alarm-types</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-vdsl</name>
+   <revision>2020-10-13</revision>
+   <namespace>urn:bbf:yang:bbf-vdsl</namespace>
+   <feature>availability</feature>
+   <feature>virtual-noise</feature>
+   <feature>sos</feature>
+   <feature>impulse-noise-monitoring</feature>
+   <feature>re-initialization-policy</feature>
+   <feature>vectoring</feature>
+   <feature>data-gathering</feature>
+   <feature>data-rate-profile-leftr</feature>
+   <feature>maxeftr</feature>
+   <feature>successful-sra</feature>
+   <feature>vdsl2-lr</feature>
+   <feature>strongfext</feature>
+   <feature>performance-24hr</feature>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-xpon-types</name>
+   <revision>2020-10-13</revision>
+   <namespace>urn:bbf:yang:bbf-xpon-types</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-xpon-onu-types</name>
+   <revision>2020-10-13</revision>
+   <namespace>urn:bbf:yang:bbf-xpon-onu-types</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-subscriber-types</name>
+   <revision>2020-10-13</revision>
+   <namespace>urn:bbf:yang:bbf-subscriber-types</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>nc-notifications</name>
+   <revision>2008-07-14</revision>
+   <namespace>urn:ietf:params:xml:ns:netmod:notification</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-fast-alarm-types</name>
+   <revision>2020-10-13</revision>
+   <namespace>urn:bbf:yang:bbf-fast-alarm-types</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-sub-interface-tagging</name>
+   <revision>2021-06-02</revision>
+   <namespace>urn:bbf:yang:bbf-sub-interface-tagging</namespace>
+   <feature>copy-vlan-id-from-tag-index</feature>
+   <feature>write-pbit-value-in-vlan-tag</feature>
+   <feature>exclude-criteria</feature>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-qos-traffic-mngt-state</name>
+   <revision>2021-06-02</revision>
+   <namespace>urn:bbf:yang:bbf-qos-traffic-mngt-state</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>ietf-hardware-state</name>
+   <revision>2018-03-13</revision>
+   <namespace>urn:ietf:params:xml:ns:yang:ietf-hardware-state</namespace>
+   <feature>entity-mib</feature>
+   <feature>hardware-state</feature>
+   <feature>hardware-sensor</feature>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-xponani</name>
+   <revision>2020-10-13</revision>
+   <namespace>urn:bbf:yang:bbf-xponani</namespace>
+   <feature>configurable-ani-onu-id</feature>
+   <feature>configurable-ani-management-gem-port-id</feature>
+   <feature>ani-onu-serial-number-reporting</feature>
+   <feature>ani-defects</feature>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-network-function-types</name>
+   <revision>2021-03-01</revision>
+   <namespace>urn:bbf:yang:bbf-network-function-types</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>iana-crypt-hash</name>
+   <revision>2014-08-06</revision>
+   <namespace>urn:ietf:params:xml:ns:yang:iana-crypt-hash</namespace>
+   <feature>crypt-hash-md5</feature>
+   <feature>crypt-hash-sha-256</feature>
+   <feature>crypt-hash-sha-512</feature>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>ietf-pseudowires</name>
+   <revision>2018-10-22</revision>
+   <namespace>urn:ietf:params:xml:ns:yang:ietf-pseudowires</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-l2-dhcpv4-relay-forwarding</name>
+   <revision>2020-10-13</revision>
+   <namespace>urn:bbf:yang:bbf-l2-dhcpv4-relay-forwarding</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>ietf-tls-client</name>
+   <revision>2020-08-20</revision>
+   <namespace>urn:ietf:params:xml:ns:yang:ietf-tls-client</namespace>
+   <feature>tls-client-hello-params-config</feature>
+   <feature>tls-client-keepalives</feature>
+   <feature>x509-certificate-auth</feature>
+   <feature>raw-public-key-auth</feature>
+   <feature>psk-auth</feature>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-qos-classifiers</name>
+   <revision>2021-06-02</revision>
+   <namespace>urn:bbf:yang:bbf-qos-classifiers</namespace>
+   <feature>qos-action-permit</feature>
+   <feature>qos-configurable-defaults</feature>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>ietf-crypto-types</name>
+   <revision>2020-08-20</revision>
+   <namespace>urn:ietf:params:xml:ns:yang:ietf-crypto-types</namespace>
+   <feature>one-symmetric-key-format</feature>
+   <feature>one-asymmetric-key-format</feature>
+   <feature>encrypted-one-symmetric-key-format</feature>
+   <feature>encrypted-one-asymmetric-key-format</feature>
+   <feature>certificate-signing-request-generation</feature>
+   <feature>certificate-expiration-notification</feature>
+   <feature>password-encryption</feature>
+   <feature>symmetric-key-encryption</feature>
+   <feature>private-key-encryption</feature>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-ghs</name>
+   <revision>2020-10-13</revision>
+   <namespace>urn:bbf:yang:bbf-ghs</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-frame-classification</name>
+   <revision>2021-06-02</revision>
+   <namespace>urn:bbf:yang:bbf-frame-classification</namespace>
+   <feature>filter-on-ip-prefix</feature>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-interfaces-statistics-management</name>
+   <revision>2021-06-02</revision>
+   <namespace>urn:bbf:yang:bbf-interfaces-statistics-management</namespace>
+   <feature>total-pkts</feature>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>ietf-inet-types</name>
+   <revision>2013-07-15</revision>
+   <namespace>urn:ietf:params:xml:ns:yang:ietf-inet-types</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-hardware-rpf-dpu-alarm-types</name>
+   <revision>2020-10-13</revision>
+   <namespace>urn:bbf:yang:bbf-hardware-rpf-dpu-alarm-types</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-l2-forwarding</name>
+   <revision>2020-10-13</revision>
+   <namespace>urn:bbf:yang:bbf-l2-forwarding</namespace>
+   <feature>flooding-policies</feature>
+   <feature>flooding-policies-profiles</feature>
+   <feature>forwarder-port-groups</feature>
+   <feature>forwarding-databases</feature>
+   <feature>shared-forwarding-databases</feature>
+   <feature>mac-learning</feature>
+   <feature>read-system-fdb-capacity</feature>
+   <feature>mac-learning-control-profiles</feature>
+   <feature>split-horizon-profiles</feature>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>iana-if-type</name>
+   <revision>2017-03-30</revision>
+   <namespace>urn:ietf:params:xml:ns:yang:iana-if-type</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-xpongemtcont-qos</name>
+   <revision>2020-10-13</revision>
+   <namespace>urn:bbf:yang:bbf-xpongemtcont-qos</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-qos-rate-control</name>
+   <revision>2020-10-13</revision>
+   <namespace>urn:bbf:yang:bbf-qos-rate-control</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-sub-interfaces</name>
+   <revision>2021-06-02</revision>
+   <namespace>urn:bbf:yang:bbf-sub-interfaces</namespace>
+   <feature>tag-rewrites</feature>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-ghn</name>
+   <revision>2018-07-13</revision>
+   <namespace>urn:bbf:yang:bbf-ghn</namespace>
+   <feature>performance-24hr</feature>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-qos-policies-sub-interfaces</name>
+   <revision>2021-06-02</revision>
+   <namespace>urn:bbf:yang:bbf-qos-policies-sub-interfaces</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>ietf-interfaces</name>
+   <revision>2018-02-20</revision>
+   <namespace>urn:ietf:params:xml:ns:yang:ietf-interfaces</namespace>
+   <feature>arbitrary-names</feature>
+   <feature>pre-provisioning</feature>
+   <feature>if-mib</feature>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-obbaa-mfc-conf</name>
+   <revision>2021-06-02</revision>
+   <namespace>urn:bbf:yang:obbaa:mfc-conf</namespace>
+   <feature>control-relay</feature>
+   <feature>nf-client-supported</feature>
+   <feature>nf-server-supported</feature>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-qos-shaping</name>
+   <revision>2021-06-02</revision>
+   <namespace>urn:bbf:yang:bbf-qos-shaping</namespace>
+   <feature>two-token-bucket-shaper</feature>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>notifications</name>
+   <revision>2008-07-14</revision>
+   <namespace>urn:ietf:params:xml:ns:netconf:notification:1.0</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-qos-policing-state</name>
+   <revision>2021-06-02</revision>
+   <namespace>urn:bbf:yang:bbf-qos-policing-state</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-hardware-transceivers-xpon</name>
+   <revision>2020-10-13</revision>
+   <namespace>urn:bbf:yang:bbf-hardware-transceivers-xpon</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-xpon-defects</name>
+   <revision>2020-10-13</revision>
+   <namespace>urn:bbf:yang:bbf-xpon-defects</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>ietf-system</name>
+   <revision>2014-08-06</revision>
+   <namespace>urn:ietf:params:xml:ns:yang:ietf-system</namespace>
+   <feature>radius</feature>
+   <feature>authentication</feature>
+   <feature>local-users</feature>
+   <feature>radius-authentication</feature>
+   <feature>ntp</feature>
+   <feature>ntp-udp-port</feature>
+   <feature>timezone-name</feature>
+   <feature>dns-udp-tcp-port</feature>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-network-function-server</name>
+   <revision>2021-02-19</revision>
+   <namespace>urn:bbf:yang:bbf-network-function-server</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>ieee802-types</name>
+   <revision>2018-03-07</revision>
+   <namespace>urn:ieee:std:802.1Q:yang:ieee802-types</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-qos-policer-envelope-profiles</name>
+   <revision>2021-06-02</revision>
+   <namespace>urn:bbf:yang:bbf-qos-policer-envelope-profiles</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-qos-policies-sub-interface-rewrite</name>
+   <revision>2021-06-02</revision>
+   <namespace>urn:bbf:yang:bbf-qos-policies-sub-interface-rewrite</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-qos-policies-state</name>
+   <revision>2021-06-02</revision>
+   <namespace>urn:bbf:yang:bbf-qos-policies-state</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-network-function-endpoint-filter</name>
+   <revision>2021-03-04</revision>
+   <namespace>urn:bbf:yang:bbf-network-function-endpoint-filter</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-yang-types</name>
+   <revision>2021-06-02</revision>
+   <namespace>urn:bbf:yang:bbf-yang-types</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-xpon</name>
+   <revision>2020-10-13</revision>
+   <namespace>urn:bbf:yang:bbf-xpon</namespace>
+   <feature>ictp-support</feature>
+   <feature>configurable-ictp-proxy-tcp-port</feature>
+   <feature>pon-pools</feature>
+   <feature>onu-phase-drift-monitoring-control</feature>
+   <feature>channel-termination-defects</feature>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-qos-policies</name>
+   <revision>2021-06-02</revision>
+   <namespace>urn:bbf:yang:bbf-qos-policies</namespace>
+   <feature>interface-policy-management</feature>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-subscriber-profiles</name>
+   <revision>2020-10-13</revision>
+   <namespace>urn:bbf:yang:bbf-subscriber-profiles</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-melt</name>
+   <revision>2020-10-13</revision>
+   <namespace>urn:bbf:yang:bbf-melt</namespace>
+   <feature>melt-p</feature>
+   <feature>melt-pmd-reporting-parameter-reliability</feature>
+   <feature>melt-pmd-measurement-parameter-reliability</feature>
+   <feature>melt-processing-derived-parameter-reliability</feature>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-kafka-agent</name>
+   <revision>2021-02-19</revision>
+   <namespace>urn:bbf:yang:bbf-kafka-agent</namespace>
+   <feature>publication-supported</feature>
+   <feature>consumption-supported</feature>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-fastdsl</name>
+   <revision>2020-10-13</revision>
+   <namespace>urn:bbf:yang:bbf-fastdsl</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-hardware-storage-drives</name>
+   <revision>2020-10-13</revision>
+   <namespace>urn:bbf:yang:bbf-hardware-storage-drives</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>ietf-alarms-x733</name>
+   <revision>2019-09-11</revision>
+   <namespace>urn:ietf:params:xml:ns:yang:ietf-alarms-x733</namespace>
+   <feature>configure-x733-mapping</feature>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-grpc-client</name>
+   <revision>2021-02-19</revision>
+   <namespace>urn:bbf:yang:bbf-grpc-client</namespace>
+   <feature>connection-backoff-supported</feature>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>ietf-tcp-server</name>
+   <revision>2020-08-20</revision>
+   <namespace>urn:ietf:params:xml:ns:yang:ietf-tcp-server</namespace>
+   <feature>tcp-server-keepalives</feature>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>ietf-tls-server</name>
+   <revision>2020-08-20</revision>
+   <namespace>urn:ietf:params:xml:ns:yang:ietf-tls-server</namespace>
+   <feature>tls-server-hello-params-config</feature>
+   <feature>tls-server-keepalives</feature>
+   <feature>client-auth-config-supported</feature>
+   <feature>x509-certificate-auth</feature>
+   <feature>raw-public-key-auth</feature>
+   <feature>psk-auth</feature>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-gbond-state</name>
+   <revision>2020-10-13</revision>
+   <namespace>urn:bbf:yang:bbf-gbond-state</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>ietf-http-server</name>
+   <revision>2020-08-20</revision>
+   <namespace>urn:ietf:params:xml:ns:yang:ietf-http-server</namespace>
+   <feature>client-auth-config-supported</feature>
+   <feature>basic-auth</feature>
+   <feature>tcp-supported</feature>
+   <feature>tls-supported</feature>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-dot1q-types</name>
+   <revision>2021-06-02</revision>
+   <namespace>urn:bbf:yang:bbf-dot1q-types</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>ietf-tls-common</name>
+   <revision>2020-08-20</revision>
+   <namespace>urn:ietf:params:xml:ns:yang:ietf-tls-common</namespace>
+   <feature>tls-1_0</feature>
+   <feature>tls-1_1</feature>
+   <feature>tls-1_2</feature>
+   <feature>tls-1_3</feature>
+   <feature>tls-ecc</feature>
+   <feature>tls-dhe</feature>
+   <feature>tls-3des</feature>
+   <feature>tls-gcm</feature>
+   <feature>tls-sha2</feature>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>ietf-yang-library</name>
+   <revision>2019-01-04</revision>
+   <namespace>urn:ietf:params:xml:ns:yang:ietf-yang-library</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-xpon-onu-state</name>
+   <revision>2020-10-13</revision>
+   <namespace>urn:bbf:yang:bbf-xpon-onu-state</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-mgmd-mrd</name>
+   <revision>2020-10-13</revision>
+   <namespace>urn:bbf:yang:bbf-mgmd-mrd</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-xponvani-power-management</name>
+   <revision>2020-10-13</revision>
+   <namespace>urn:bbf:yang:bbf-xponvani-power-management</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-ldra</name>
+   <revision>2020-10-13</revision>
+   <namespace>urn:bbf:yang:bbf-ldra</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-xpongemtcont-gemport-performance-management</name>
+   <revision>2020-10-13</revision>
+   <namespace>urn:bbf:yang:</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-xpongemtcont</name>
+   <revision>2020-10-13</revision>
+   <namespace>urn:bbf:yang:bbf-xpongemtcont</namespace>
+   <feature>configurable-gemport-id</feature>
+   <feature>configurable-alloc-id</feature>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-ancp</name>
+   <revision>2020-10-13</revision>
+   <namespace>urn:bbf:yang:bbf-ancp</namespace>
+   <feature>protocol-version</feature>
+   <feature>partition-id-negotiation</feature>
+   <feature>session-statistics</feature>
+   <feature>tcp-port</feature>
+   <feature>port-message-dampening</feature>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-qos-policing</name>
+   <revision>2021-06-02</revision>
+   <namespace>urn:bbf:yang:bbf-qos-policing</namespace>
+   <feature>single-rate-two-color-marker</feature>
+   <feature>single-rate-three-color-marker</feature>
+   <feature>two-rate-three-color-marker</feature>
+   <feature>two-rate-three-color-marker-mef</feature>
+   <feature>two-rate-three-color-marker-color-promotion</feature>
+   <feature>policing-profile-ref</feature>
+   <feature>interface-policing-management</feature>
+   <feature>policing-statistics</feature>
+   <feature>counts-per-ingress-and-egress-color</feature>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-vomci-entity</name>
+   <revision>2021-02-07</revision>
+   <namespace>urn:bbf:yang:bbf-vomci-entity</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-mgmd-types</name>
+   <revision>2020-10-13</revision>
+   <namespace>urn:bbf:yang:bbf-mgmd-types</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>ietf-routing-types</name>
+   <revision>2017-12-04</revision>
+   <namespace>urn:ietf:params:xml:ns:yang:ietf-routing-types</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-xpon-performance-management</name>
+   <revision>2020-10-13</revision>
+   <namespace>urn:bbf:yang:bbf-xpon-performance-management</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>ietf-http-client</name>
+   <revision>2020-08-20</revision>
+   <namespace>urn:ietf:params:xml:ns:yang:ietf-http-client</namespace>
+   <feature>proxy-connect</feature>
+   <feature>basic-auth</feature>
+   <feature>tcp-supported</feature>
+   <feature>tls-supported</feature>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>ietf-datastores</name>
+   <revision>2018-02-14</revision>
+   <namespace>urn:ietf:params:xml:ns:yang:ietf-datastores</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-xponvani</name>
+   <revision>2020-10-13</revision>
+   <namespace>urn:bbf:yang:bbf-xponvani</namespace>
+   <feature>configurable-v-ani-onu-id</feature>
+   <feature>configurable-v-ani-management-gem-port-id</feature>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-fast</name>
+   <revision>2020-10-13</revision>
+   <namespace>urn:bbf:yang:bbf-fast</namespace>
+   <feature>availability</feature>
+   <feature>annex-x</feature>
+   <feature>annex-d</feature>
+   <feature>srec</feature>
+   <feature>dta</feature>
+   <feature>andeftr</feature>
+   <feature>rmcr</feature>
+   <feature>classmask</feature>
+   <feature>impulse-noise-monitoring</feature>
+   <feature>preferred-ndr</feature>
+   <feature>rmccarmask</feature>
+   <feature>tgvn</feature>
+   <feature>performance-24hr</feature>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-selt</name>
+   <revision>2020-10-13</revision>
+   <namespace>urn:bbf:yang:bbf-selt</namespace>
+   <feature>selt-p</feature>
+   <feature>extended-bandwidth-selt-uer</feature>
+   <feature>extended-bandwidth-selt-qln</feature>
+   <feature>extended-bandwidth-selt-tflog</feature>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>ietf-alarms</name>
+   <revision>2019-09-11</revision>
+   <namespace>urn:ietf:params:xml:ns:yang:ietf-alarms</namespace>
+   <feature>operator-actions</feature>
+   <feature>alarm-shelving</feature>
+   <feature>alarm-history</feature>
+   <feature>alarm-summary</feature>
+   <feature>alarm-profile</feature>
+   <feature>severity-assignment</feature>
+   <feature>root-cause-analysis</feature>
+   <feature>service-impact-analysis</feature>
+   <feature>alarm-correlation</feature>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-omci-message-retransmission</name>
+   <revision>2021-02-07</revision>
+   <namespace>urn:bbf:yang:bbf-omci-message-retransmission</namespace>
+   <feature>omci-msg-retrans-supported</feature>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>bbf-qos-policing-types</name>
+   <revision>2021-06-02</revision>
+   <namespace>urn:bbf:yang:bbf-qos-policing-types</namespace>
+   <conformance-type>implement</conformance-type>
+</module>
+<module>
+   <name>ieee802-ethernet-interface</name>
+   <revision>2019-06-21</revision>
+   <namespace>urn:ieee:std:802.3:yang:ieee802-ethernet-interface</namespace>
+   <feature>ethernet-pfc</feature>
+   <feature>ethernet-pause</feature>
+   <conformance-type>implement</conformance-type>
+</module>
+
+        </modules-state>
+    </data>
+</rpc-reply>

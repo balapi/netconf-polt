@@ -237,8 +237,7 @@ void bcm_tr451_polt_cli_init(void)
             BCMCLI_MAKE_PARM("vendor_specific", "Vendor specific id", BCMCLI_PARM_HEX, BCMCLI_PARM_FLAG_OPTIONAL),
             { 0 }
         };
-        cmd_parms[0].enum_table = client_server_enum_table;
-        cmd_parms[4].enum_table = filter_enum_table;
+        cmd_parms[3].enum_table = filter_enum_table;
         bcmcli_cmd_add(dir, "filter", polt_cli_create_filter, "Create a client/server filter",
             BCMCLI_ACCESS_ADMIN, NULL, cmd_parms);
     }

@@ -114,7 +114,6 @@ module bbf-vomci-proxy {
         description
           "The unique name of the ONU.";
       }
-      uses bbf-vomci-ent:vomci-onu-header;
     }
   }
 
@@ -160,6 +159,7 @@ module bbf-vomci-proxy {
               "The remote endpoint name to use for transmitting
                vOMCI messages toward the vOMCI function.";
           }
+          uses bbf-vomci-ent:vomci-onu-header;
         }
       }
   

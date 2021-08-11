@@ -43,7 +43,7 @@ BCMOLT_TYPE2STR(omci_svc_ext_vlan_tag_oper_cfg_data_filter, extern);
 /** @brief omci svc layer structure used by adapter layers */
 typedef bcm_omci_ext_vlan_tag_oper_config_data_rx_frame_vlan_tag_oper_table omci_svc_ext_vlan_tag_oper_config_data_rx_frame_vlan_tag_oper_table;
 
-bcmos_errno omci_svc_uni_get(omci_svc_onu *onu_context, bcmonu_mgmt_flow_cfg *flow, omci_svc_uni **uni);
+omci_svc_uni *omci_svc_uni_get(omci_svc_onu *onu_context, bcmonu_mgmt_flow_cfg *flow);
 bcmos_bool omci_svc_is_flow_double_tagged(bcmonu_mgmt_flow_cfg *flow);
 unsigned long omci_svc_filter_mask_get(bcmonu_mgmt_flow_cfg *flow);
 

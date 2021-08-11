@@ -1,7 +1,7 @@
 #!/bin/bash
 # Parameters:
 # - tool parameters
-# set -x
+#set -x
 
 fs_bin_dir=`dirname $0`
 tool_name=$fs_bin_dir/netopeer2-server
@@ -38,7 +38,7 @@ fi
 if test ! -d /dev/shm; then
     mkdir /dev/shm
 fi
-if ! $PS | grep netconf_server | grep -v grep > /dev/null; then
+if ! $PS | grep bcmolt_netconf_server | grep -v grep > /dev/null; then
     echo Cleaning up stale state
     unset SHM_PREFIX
     if [ "$SYSREPO_SHM_PREFIX" != "" ]; then

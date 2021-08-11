@@ -137,7 +137,8 @@ void nc_error_reply(sr_session_ctx_t *srs, const char *xpath, const char *format
 
 #define NC_ERROR_REPLY(_srs, _xpath, _format, _args...) \
     do { \
-        nc_error_reply(_srs, _xpath, _format, ##_args); \
+        if (_srs != NULL) \
+            nc_error_reply(_srs, _xpath, _format, ##_args); \
         NC_LOG_ERR(_format "\n", ##_args); \
     } while (0)
 
@@ -206,5 +207,11 @@ const struct lyd_node *nc_ly_get_sibling_node(const struct lyd_node *node, const
 
 /* find a sibling or a parent+siblings node by name */
 const struct lyd_node *nc_ly_get_sibling_or_parent_node(const struct lyd_node *node, const char *name);
+
+/*
+ * Save / restore transaction error
+ */
+void nc_sr_error_save(sr_session_ctx_t *srs, char **xpath, char **message);
+void nc_sr_error_restore(sr_session_ctx_t *srs, char *xpath, char *message);
 
 #endif /* _NETCONF2_MODULE_UTILS_H_ */

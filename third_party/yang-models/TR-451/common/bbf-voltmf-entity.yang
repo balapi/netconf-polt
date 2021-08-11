@@ -93,7 +93,7 @@ module bbf-voltmf-entity {
   // vOMCI ONU Management information
   grouping vomci-onu-config {
     description
-      "The configuration data needed to manage ONU's via vOMCI.";
+      "The configuration data needed to manage ONUs via vOMCI.";
 
     leaf use-vomci-management {
       type boolean;
@@ -117,7 +117,7 @@ module bbf-voltmf-entity {
   
   grouping vomci-onu-state {
     description
-      "State data needed to manage ONU's via vOMCI.";
+      "State data needed to manage ONUs via vOMCI.";
 
     container voltmf-msg-data {
       description

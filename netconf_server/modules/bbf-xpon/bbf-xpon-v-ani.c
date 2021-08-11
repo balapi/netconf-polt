@@ -39,6 +39,8 @@
 #include <bcmolt_netconf_module_utils.h>
 #include <bcmolt_netconf_notifications.h>
 
+#define ONU_STATE_CHANGE_REQUEST_DELAY_US    (500*1000)
+
 /* sysrepo session */
 static sr_session_ctx_t *sr_session;
 
@@ -260,16 +262,17 @@ static void _olt_onu_indication_cb(bcmolt_oltid olt, bcmolt_msg *msg)
             xpon_v_ani *onu_info;
 
             bcmos_mutex_lock(&onu_config_lock);
+
+            /* Remove discovered ONU record if any */
+            _xpon_discovered_onu_delete(ac->key.pon_ni, &onu_info_tmp.serial_number);
+
             onu_info = xpon_v_ani_get_by_id(ac->key.pon_ni, ac->key.onu_id);
             if (onu_info == NULL)
             {
                 bcmos_mutex_unlock(&onu_config_lock);
-                NC_LOG_ERR("ONU %u.%u: can't find in the data base\n", ac->key.pon_ni, ac->key.onu_id);
+                NC_LOG_INFO("ONU %u.%u: can't find in the data base. Ignored..\n", ac->key.pon_ni, ac->key.onu_id);
                 break;
             }
-
-            /* Remove discovered ONU record if any */
-            _xpon_discovered_onu_delete(ac->key.pon_ni, &onu_info_tmp.serial_number);
 
             onu_info->registered = (ac->data.status == BCMOLT_RESULT_SUCCESS);
             onu_info_tmp = *onu_info;
@@ -491,7 +494,8 @@ static void _onu_deactivate(bcmolt_interface pon_ni, bcmolt_onu_id onu_id)
 
     BCMOLT_OPER_INIT(&set_state, onu, set_onu_state, key);
     BCMOLT_MSG_FIELD_SET(&set_state, onu_state, BCMOLT_ONU_OPERATION_INACTIVE);
-    err = bcmolt_oper_submit(netconf_agent_olt_id(), &set_state.hdr);
+    err = xpon_oper_submit_and_schedule_if_failed(NULL, &set_state.hdr, ONU_STATE_CHANGE_REQUEST_DELAY_US,
+        BCM_ERR_STATE, "processing");
     if (err != BCM_ERR_OK)
     {
         NC_LOG_ERR("ONU deactivation failed for %u.%u. Error %s-%s\n",
@@ -548,7 +552,7 @@ void bbf_xpon_onu_discovered(bcmolt_oltid olt, bcmolt_msg *msg)
             {
                 auto_activated = BCMOS_TRUE;
             }
-            else
+            else if (!(err == BCM_ERR_STATE && strstr(set_state.hdr.hdr.err_text, "processing") != NULL))
             {
                 NC_LOG_ERR("ONU activation failed for %s. Error %s-%s\n",
                     onu_info->hdr.name, bcmos_strerror(err), set_state.hdr.hdr.err_text);
@@ -626,10 +630,11 @@ static bcmos_errno xpon_v_ani_apply(sr_session_ctx_t *srs, xpon_v_ani *onu_info,
             bcmolt_onu_set_onu_state set_state;
             BCMOLT_OPER_INIT(&set_state, onu, set_onu_state, key);
             BCMOLT_MSG_FIELD_SET(&set_state, onu_state, BCMOLT_ONU_OPERATION_INACTIVE);
-            err = bcmolt_oper_submit(netconf_agent_olt_id(), &set_state.hdr);
+            err = xpon_oper_submit_and_schedule_if_failed(srs, &set_state.hdr, ONU_STATE_CHANGE_REQUEST_DELAY_US,
+                BCM_ERR_STATE, "processing");
             if (err != BCM_ERR_OK)
             {
-                NC_ERROR_REPLY(srs, NULL, "ONU.set_onu_state(DISABLED) failed for %s. Error %s-%s\n",
+                NC_ERROR_REPLY(srs, NULL, "ONU.set_onu_state(INACTIVE) failed for %s. Error %s-%s\n",
                     onu_info->hdr.name, bcmos_strerror(err), set_state.hdr.hdr.err_text);
                 break;
             }
@@ -660,7 +665,8 @@ static bcmos_errno xpon_v_ani_apply(sr_session_ctx_t *srs, xpon_v_ani *onu_info,
 
             BCMOLT_OPER_INIT(&set_state, onu, set_onu_state, key);
             BCMOLT_MSG_FIELD_SET(&set_state, onu_state, BCMOLT_ONU_OPERATION_ACTIVE);
-            err = bcmolt_oper_submit(netconf_agent_olt_id(), &set_state.hdr);
+            err = xpon_oper_submit_and_schedule_if_failed(srs, &set_state.hdr, ONU_STATE_CHANGE_REQUEST_DELAY_US,
+                BCM_ERR_STATE, "processing");
             if (err != BCM_ERR_OK)
             {
                 NC_ERROR_REPLY(srs, NULL, "ONU.set_onu_state(ENABLED) failed for %s. Error %s-%s\n",
@@ -979,7 +985,7 @@ static int xpon_v_ani_state_populate1(sr_session_ctx_t *session, const char *xpa
             snprintf(id, sizeof(id), "%u", v_ani->onu_id);
             *parent = nc_ly_sub_value_add(ctx, *parent, v_ani_xpath, "onu-id", id);
 #ifdef TR451_VOMCI
-            if (v_ani->cterm != NULL)
+            if (v_ani->cterm != NULL && bcm_tr451_onu_management_is_enabled())
             {
                 xpon_v_ani_vomci_state_populate1(session, v_ani_xpath, parent, v_ani);
             }

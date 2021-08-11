@@ -21,7 +21,7 @@ ifneq (,$(wildcard ./netconf_server))
     NETCONF_SERVER  ?= y
     NETCONF_SERVER_OPT     := -DNETCONF_SERVER:BOOL=$(NETCONF_SERVER)
 endif
-ifneq (,$(wildcard ./onu_mgmt/tr451_vomci_polt)$(wildcard ./tr451_vomci_polt))
+ifneq (,$(wildcard ./onu_mgmt/tr451_vomci_polt))
     TR451_VOMCI_POLT ?= y
     TR451_VOMCI_POLT_OPT   := -DTR451_VOMCI_POLT:BOOL=$(TR451_VOMCI_POLT)
 endif

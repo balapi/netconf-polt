@@ -41,6 +41,35 @@ static bcmos_errno polt_cli_inject_omci_rx(bcmcli_session *session, const bcmcli
     return BCM_ERR_OK;
 }
 
+/*Inject OMCI_TX packet to ONU*/
+static bcmos_errno polt_cli_inject_omci_tx(bcmcli_session *session, const bcmcli_cmd_parm parm[], uint16_t nparms)
+{
+    bcmos_errno err;
+
+    OnuHeader *header = new OnuHeader();
+    header->set_chnl_term_name(parm[0].value.string);
+    header->set_onu_id(parm[1].value.unumber);
+    OmciPacket *grpc_omci_packet = new OmciPacket();
+    grpc_omci_packet->set_allocated_header(header);
+    grpc_omci_packet->set_payload(inject_buffer, sizeof(inject_buffer));
+
+    err = tr451_vendor_omci_send_to_onu(*grpc_omci_packet);
+    if (err != BCM_ERR_OK)
+    {
+        grpc::Status status = tr451_bcm_errno_grpc_status(err,
+            "Failed to send OMCI message to ONU %s:%u. Error '%s'",
+            grpc_omci_packet->header().chnl_term_name().c_str(), grpc_omci_packet->header().onu_id(),
+            bcmos_strerror(err));
+        BCM_POLT_LOG(ERROR, "%s:\n", status.error_message().c_str());
+        return BCM_ERR_IO;
+    }
+    BCM_POLT_LOG(DEBUG, "Sent OMCI message to ONU %s:%u. %lu bytes\n",
+        grpc_omci_packet->header().chnl_term_name().c_str(), grpc_omci_packet->header().onu_id(),
+        grpc_omci_packet->payload().length());
+
+    return BCM_ERR_OK;
+}
+
 /* Add ONU */
 static bcmos_errno polt_cli_onu_add(bcmcli_session *session, const bcmcli_cmd_parm parm[], uint16_t nparms)
 {
@@ -139,6 +168,20 @@ bcmos_errno tr451_vendor_cli_init(bcmcli_entry *dir)
         bcmcli_cmd_add(dir, "inject", polt_cli_inject_omci_rx,
             "Inject OMCI packet received from ONU", BCMCLI_ACCESS_ADMIN, NULL, inject_parms);
     }
+    
+    /* Inject proxy_tx */
+    {
+        static bcmcli_cmd_parm inject_parms[] = {
+            BCMCLI_MAKE_PARM("channel_term", "Channel termination name", BCMCLI_PARM_STRING, 0),
+            BCMCLI_MAKE_PARM("onu", "ONU", BCMCLI_PARM_NUMBER, 0),
+            BCMCLI_MAKE_PARM("data", "OMCI packet without MIC", BCMCLI_PARM_BUFFER, 0),
+            { 0 } } ;
+        inject_parms[2].value.buffer.len = sizeof(inject_buffer);
+        inject_parms[2].value.buffer.start = inject_parms[2].value.buffer.curr = inject_buffer;
+        bcmcli_cmd_add(dir, "inject_onu", polt_cli_inject_omci_tx,
+            "Inject OMCI packet received from vOMCI", BCMCLI_ACCESS_ADMIN, NULL, inject_parms);
+    }
+
 
     /* Set Rx handling mode */
     {

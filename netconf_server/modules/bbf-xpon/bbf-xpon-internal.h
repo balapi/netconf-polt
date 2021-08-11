@@ -1178,4 +1178,16 @@ bcmos_errno xpon_apply_flow_create(sr_session_ctx_t *srs, xpon_forwarder *fwd);
 bcmos_errno xpon_create_onu_flows_on_subif(sr_session_ctx_t *srs, xpon_obj_hdr *uni, xpon_vlan_subif *subif);
 bcmos_errno xpon_create_onu_flows_on_uni(sr_session_ctx_t *srs, xpon_obj_hdr *uni);
 
+/*
+ * Scheduled requests
+ */
+typedef enum
+{
+    BBF_XPON_REQUEST_TYPE_CFG,
+    BBF_XPON_REQUEST_TYPE_OPER
+} bbf_xpon_request_type;
+
+bcmos_errno xpon_cfg_set_and_schedule_if_failed(sr_session_ctx_t *srs, bcmolt_cfg *cfg, uint32_t delay, bcmos_errno test_err, const char *test_text);
+bcmos_errno xpon_oper_submit_and_schedule_if_failed(sr_session_ctx_t *srs, bcmolt_oper *oper, uint32_t delay, bcmos_errno test_err, const char *test_text);
+
 #endif /* _BBF_XPON_INTERNAL_H_ */

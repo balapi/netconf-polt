@@ -7,6 +7,7 @@
 fs_bin_dir=`dirname $0`
 tool_name=$1
 tool_dir=`dirname $1`
+mkdir -p $fs_bin_dir/../sysrepo
 pushd $fs_bin_dir/../sysrepo
 sysrepo_dir=`pwd`
 popd

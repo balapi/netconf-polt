@@ -3,10 +3,14 @@
 include(third_party)
 
 bcm_make_debug_option(NETCONF_TOOLS_FROM_DEVEL BOOL "Take netopeer2, sysrepo, libyang and libnetconf2 from devel" n)
+bcm_make_normal_option(NETOPEER2_VERSION_2X BOOL "Use libyang,sysrepo,libnetconf2,netopeer2 v2.x packages" n)
+
 if(NETCONF_TOOLS_FROM_DEVEL)
     set(_VERSION "devel")
+elseif(NETOPEER2_VERSION_2X)
+    set(_VERSION "2.0.1")
 else()
-    set(_VERSION "1.1.36")
+    set(_VERSION "1.1.46")
 endif()
 bcm_3rdparty_module_name(libnetconf2 ${_VERSION})
 

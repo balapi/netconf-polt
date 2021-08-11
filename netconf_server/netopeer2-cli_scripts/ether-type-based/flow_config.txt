@@ -1,0 +1,20 @@
+
+ONU is identified by SVID in the DS
+
+1) IPv4:
+OLT NNI: (101)
+OLT PON: (101, pbit=4), GEM port=1024, ALLOC_ID=1024
+ONU PON: (101, pbit=4), GEM port=1024, ALLOC_ID=1024
+ONU UNI: untagged, ether_type=0x800, 806 (IP, ARP)
+
+2) PPPOE:
+OLT NNI: (201)
+OLT PON: (201, pbit=0), GEM port=1025, ALLOC_ID=1025
+ONU PON: (201, pbit=0), GEM port=1025, ALLOC_ID=1025
+ONU UNI: untagged, ether_type=0x8863, 8864 (PPPoE)
+
+3) IPv6
+OLT NNI: (301)
+OLT PON: (301, pbit=4), GEM port=1026, ALLOC_ID=1026
+ONU PON: (301, pbit=4), GEM port=1026, ALLOC_ID=1026
+ONU UNI: untagged, ether_type 86dd
