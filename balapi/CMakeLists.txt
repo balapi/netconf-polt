@@ -19,6 +19,7 @@ if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${_SUBDIR_LIST})
     execute_process(
         COMMAND sh -c "rm -fr ${_UNPACKED_DIR_NAME} &&
             tar -xzf ${_BAL_API_ARCHIVE} &&
+	    test ! -d ${_UNPACKED_DIR_NAME} && mv bal-sdk-${BAL_API_VERSION} ${_UNPACKED_DIR_NAME} |
             grep bcm_add_subdirectory ${_UNPACKED_DIR_NAME}/CMakeLists.txt |
             sed -e 's@bcm_add_subdirectory(@bcm_add_subdirectory(${_UNPACKED_DIR_NAME}/@' > ${_SUBDIR_LIST}"
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
