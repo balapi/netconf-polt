@@ -66,7 +66,8 @@ static bcmos_errno tr451_prepare_onu_info(const char *cterm_name, uint16_t onu_i
 }
 
 /* Report ONU discovered */
-bcmos_errno sim_tr451_vendor_onu_added(const char *cterm_name, uint16_t onu_id, const tr451_polt_onu_serial_number *serial)
+bcmos_errno sim_tr451_vendor_onu_added(const char *cterm_name, uint16_t onu_id,
+   const tr451_polt_onu_serial_number *serial, xpon_onu_presence_flags flags)
 {
     tr451_polt_onu_info onu_info;
     bcmos_errno err;
@@ -74,7 +75,7 @@ bcmos_errno sim_tr451_vendor_onu_added(const char *cterm_name, uint16_t onu_id, 
     err = tr451_prepare_onu_info(cterm_name, onu_id, serial, &onu_info);
     if (err != BCM_ERR_OK)
         return err;
-    onu_info.presence_flags = XPON_ONU_PRESENCE_FLAG_ONU;
+    onu_info.presence_flags = flags ? flags : XPON_ONU_PRESENCE_FLAG_ONU;
     vendor_event_cfg.tr451_onu_state_change_cb(vendor_event_cfg.user_handle, &onu_info);
     if (vendor_event_cfg.tr451_onu_state_change_notify_cb != nullptr)
     {
@@ -85,7 +86,8 @@ bcmos_errno sim_tr451_vendor_onu_added(const char *cterm_name, uint16_t onu_id, 
 }
 
 /* Report ONU removed */
-bcmos_errno sim_tr451_vendor_onu_removed(const char *cterm_name, uint16_t onu_id, const tr451_polt_onu_serial_number *serial)
+bcmos_errno sim_tr451_vendor_onu_removed(const char *cterm_name, uint16_t onu_id,
+   const tr451_polt_onu_serial_number *serial, xpon_onu_presence_flags flags)
 {
     tr451_polt_onu_info onu_info;
     bcmos_errno err;
@@ -93,7 +95,7 @@ bcmos_errno sim_tr451_vendor_onu_removed(const char *cterm_name, uint16_t onu_id
     err = tr451_prepare_onu_info(cterm_name, onu_id, serial, &onu_info);
     if (err != BCM_ERR_OK)
         return err;
-    onu_info.presence_flags = XPON_ONU_PRESENCE_FLAG_V_ANI;
+    onu_info.presence_flags = flags ? flags : XPON_ONU_PRESENCE_FLAG_V_ANI;
     vendor_event_cfg.tr451_onu_state_change_cb(vendor_event_cfg.user_handle, &onu_info);
 
     if (vendor_event_cfg.tr451_onu_state_change_notify_cb != nullptr)

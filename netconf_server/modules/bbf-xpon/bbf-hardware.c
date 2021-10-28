@@ -142,8 +142,11 @@ static bcmos_errno xpon_hardware_attribute_populate(sr_session_ctx_t *srs, xpon_
 }
 
 /* Handle gem change events */
-static int _hardware_change_cb(sr_session_ctx_t *srs, const char *module_name,
-    const char *xpath, sr_event_t event, uint32_t request_id, void *private_ctx)
+static int _hardware_change_cb(sr_session_ctx_t *srs,
+#ifdef SYSREPO_LIBYANG_V2
+    uint32_t sub_id,
+#endif
+    const char *module_name, const char *xpath, sr_event_t event, uint32_t request_id, void *private_ctx)
 {
     sr_change_iter_t *sr_iter = NULL;
     sr_change_oper_t sr_oper;
@@ -240,8 +243,11 @@ static int _hardware_change_cb(sr_session_ctx_t *srs, const char *module_name,
 }
 
 /* Get operational status callback */
-static int _hardware_state_get_cb(sr_session_ctx_t *session, const char *module_name,
-    const char *xpath, const char *request_path, uint32_t request_id,
+static int _hardware_state_get_cb(sr_session_ctx_t *session,
+#ifdef SYSREPO_LIBYANG_V2
+    uint32_t sub_id,
+#endif
+    const char *module_name, const char *xpath, const char *request_path, uint32_t request_id,
     struct lyd_node **parent, void *private_data)
 {
     NC_LOG_INFO("module=%s xpath=%s request=%s\n", module_name, xpath, request_path);

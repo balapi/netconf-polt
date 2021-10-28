@@ -171,8 +171,11 @@ static bcmos_errno _td_prof_attribute_populate(sr_session_ctx_t *srs, xpon_td_pr
     return err;
 }
 
-static int _td_prof_change_cb(sr_session_ctx_t *srs, const char *module_name,
-    const char *xpath, sr_event_t event, uint32_t request_id, void *private_ctx)
+static int _td_prof_change_cb(sr_session_ctx_t *srs,
+#ifdef SYSREPO_LIBYANG_V2
+    uint32_t sub_id,
+#endif
+    const char *module_name, const char *xpath, sr_event_t event, uint32_t request_id, void *private_ctx)
 {
     sr_change_iter_t *sr_iter = NULL;
     sr_change_oper_t sr_oper;
@@ -510,8 +513,11 @@ static bcmos_errno _tcont_attribute_populate(sr_session_ctx_t *srs, xpon_tcont *
 }
 
 /* Handle tcont change events */
-static int _tcont_change_cb(sr_session_ctx_t *srs, const char *module_name,
-    const char *xpath, sr_event_t event, uint32_t request_id, void *private_ctx)
+static int _tcont_change_cb(sr_session_ctx_t *srs,
+#ifdef SYSREPO_LIBYANG_V2
+    uint32_t sub_id,
+#endif
+    const char *module_name, const char *xpath, sr_event_t event, uint32_t request_id, void *private_ctx)
 {
     sr_change_iter_t *sr_iter = NULL;
     sr_change_oper_t sr_oper;
@@ -644,8 +650,11 @@ static int xpon_tcont_state_populate1(sr_session_ctx_t *session, const char *xpa
 }
 
 /* Get operational status callback */
-static int _tcont_state_get_cb(sr_session_ctx_t *session, const char *module_name,
-    const char *xpath, const char *request_path, uint32_t request_id,
+static int _tcont_state_get_cb(sr_session_ctx_t *session,
+#ifdef SYSREPO_LIBYANG_V2
+    uint32_t sub_id,
+#endif
+    const char *module_name, const char *xpath, const char *request_path, uint32_t request_id,
     struct lyd_node **parent, void *private_data)
 {
     xpon_obj_hdr *hdr, *hdr_tmp;

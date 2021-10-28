@@ -11,16 +11,16 @@
 <if:interfaces xmlns:if="urn:ietf:params:xml:ns:yang:ietf-interfaces">
    <if:interface>
          <if:name>channeltermination.1</if:name>
-         <if:type xmlns:bbf-xponift="urn:bbf:yang:bbf-xpon-if-type">bbf-xponift:channel-termination</type>
-         <if:enabled>true</enabled>
+         <if:type xmlns:bbf-xponift="urn:bbf:yang:bbf-xpon-if-type">bbf-xponift:channel-termination</if:type>
+         <if:enabled>true</if:enabled>
          <channel-termination xmlns="urn:bbf:yang:bbf-xpon" xmlns:bbf-xpon-onu-s="urn:bbf:yang:bbf-xpon-onu-state" xmlns:bbf-xpon-onu-types="urn:bbf:yang:bbf-xpon-onu-types">
             <channel-pair-ref>channelpair.1</channel-pair-ref>
             <channel-termination-type xmlns:bbf-xpon-types="urn:bbf:yang:bbf-xpon-types">bbf-xpon-types:xgs</channel-termination-type>
             <xgs-pon-id>0</xgs-pon-id>
             <location xmlns:bbf-xpon-types="urn:bbf:yang:bbf-xpon-types">bbf-xpon-types:inside-olt</location>
-            <bbf-xpon-onu-s:notifiable-onu-presence-states>bbf-xpon-onu-types:onu-present-and-on-intended-channel-termination</notifiable-onu-presence-states>
+            <!--<bbf-xpon-onu-s:notifiable-onu-presence-states>bbf-xpon-onu-types:onu-present-and-on-intended-channel-termination</notifiable-onu-presence-states>
             <bbf-xpon-onu-s:notifiable-onu-presence-states>bbf-xpon-onu-types:onu-present-and-v-ani-known-and-o5-failed</notifiable-onu-presence-states>
-            <bbf-xpon-onu-s:notifiable-onu-presence-states>bbf-xpon-onu-types:onu-present-and-no-v-ani-known-and-o5-failed-no-onu-id</notifiable-onu-presence-states>
+            <bbf-xpon-onu-s:notifiable-onu-presence-states>bbf-xpon-onu-types:onu-present-and-no-v-ani-known-and-o5-failed-no-onu-id</notifiable-onu-presence-states>-->
          </channel-termination>
          <port-layer-if xmlns="urn:bbf:yang:bbf-interface-port-reference">PORT2</port-layer-if>
    </if:interface>
@@ -30,8 +30,8 @@
    </if:interface>
    <if:interface>
       <if:name>channelpair.1</if:name>
-      <if:type xmlns:bbf-xponift="urn:bbf:yang:bbf-xpon-if-type">bbf-xponift:channel-pair</type>
-      <if:enabled>true</enabled>
+      <if:type xmlns:bbf-xponift="urn:bbf:yang:bbf-xpon-if-type">bbf-xponift:channel-pair</if:type>
+      <if:enabled>true</if:enabled>
       <channel-pair xmlns="urn:bbf:yang:bbf-xpon">
          <channel-partition-ref>channelpartition.1</channel-partition-ref>
          <channel-group-ref>channelgroup.1</channel-group-ref>
@@ -41,8 +41,8 @@
    </if:interface>
    <if:interface>
       <if:name>channelpartition.1</if:name>
-      <if:type xmlns:bbf-xponift="urn:bbf:yang:bbf-xpon-if-type">bbf-xponift:channel-partition</type>
-      <if:enabled>true</enabled>
+      <if:type xmlns:bbf-xponift="urn:bbf:yang:bbf-xpon-if-type">bbf-xponift:channel-partition</if:type>
+      <if:enabled>true</if:enabled>
       <channel-partition xmlns="urn:bbf:yang:bbf-xpon">
          <channel-group-ref>channelgroup.1</channel-group-ref>
          <channel-partition-index>0</channel-partition-index>
@@ -53,8 +53,8 @@
    </if:interface>
    <if:interface>
       <if:name>channelgroup.1</if:name>
-      <if:type xmlns:bbf-xponift="urn:bbf:yang:bbf-xpon-if-type">bbf-xponift:channel-group</type>
-      <if:enabled>true</enabled>
+      <if:type xmlns:bbf-xponift="urn:bbf:yang:bbf-xpon-if-type">bbf-xponift:channel-group</if:type>
+      <if:enabled>true</if:enabled>
       <channel-group xmlns="urn:bbf:yang:bbf-xpon">
          <polling-period>100</polling-period>
          <raman-mitigation>raman-none</raman-mitigation>

@@ -43,6 +43,10 @@
 extern dev_log_id log_id_netconf;
 #endif
 
+#if defined(SYSREPO_LIBYANG_V2) && !defined(SR_ERR_NOMEM)
+#define SR_ERR_NOMEM SR_ERR_NO_MEMORY
+#endif
+
 #define NC_LOG_ERR(fmt, args...)   BCM_LOG(ERROR, log_id_netconf, fmt, ##args);
 #define NC_LOG_INFO(fmt, args...)  BCM_LOG(INFO, log_id_netconf, fmt, ##args);
 #define NC_LOG_WARN(fmt, args...)  BCM_LOG(WARNING, log_id_netconf, fmt, ##args);
@@ -164,6 +168,20 @@ int nc_sr_sub_value_add(
     sr_val_t **values,
     size_t *values_cnt);
 
+/* Type for libyang value containing data (as opposed to other nodes) */
+#ifndef SYSREPO_LIBYANG_V2
+#define NC_SR_GET_CHANGE_TREE_NEXT_PREF_DFLT_TYPE   bool
+#define NC_LYD_DATA_NODE struct lyd_node_leaf_list
+#define NC_LYD_DATA_NODE_STRING_VAL(node)  ((const NC_LYD_DATA_NODE *)(node))->value_str
+#define NC_LYD_DATA_NODE_BOOL_VAL(node)    ((const NC_LYD_DATA_NODE *)(node))->value.bln
+#else
+#define NC_SR_GET_CHANGE_TREE_NEXT_PREF_DFLT_TYPE   int
+#define NC_LYD_DATA_NODE struct lyd_node_term
+#define NC_LYD_DATA_NODE_STRING_VAL(node)  lyd_get_value(node)
+#define NC_LYD_DATA_NODE_BOOL_VAL(node)    ((const NC_LYD_DATA_NODE *)(node))->value.boolean
+#endif
+#define NC_LYD_DATA_NODE_VAL(node)         (&(((const NC_LYD_DATA_NODE *)(node))->value))
+
 /* Add sub-value to the libyang context.
  * The difference from nc_sr_value_add is that xpath is built internally
  * from 2 components: xpath_base and value_name
@@ -213,5 +231,26 @@ const struct lyd_node *nc_ly_get_sibling_or_parent_node(const struct lyd_node *n
  */
 void nc_sr_error_save(sr_session_ctx_t *srs, char **xpath, char **message);
 void nc_sr_error_restore(sr_session_ctx_t *srs, char *xpath, char *message);
+
+/*
+ * Modules
+ */
+const struct lys_module *nc_ly_ctx_load_module(struct ly_ctx *ly_ctx, const char *module_name,
+    const char *version, const char **features, bcmos_bool log_error);
+
+/*
+ * Notification
+ */
+bcmos_errno nc_sr_event_notif_send(sr_session_ctx_t *srs, struct lyd_node *notif, const char *notif_xpath);
+
+static inline void nc_sr_event_notif_free(struct lyd_node *notif)
+{
+    if (notif != NULL)
+#ifdef SYSREPO_LIBYANG_V2
+        lyd_free_all(notif);
+#else
+        lyd_free_withsiblings(notif);
+#endif
+}
 
 #endif /* _NETCONF2_MODULE_UTILS_H_ */

@@ -77,6 +77,7 @@ static bcmos_errno polt_cli_onu_add(bcmcli_session *session, const bcmcli_cmd_pa
     uint16_t onu_id = (uint16_t)parm[1].value.unumber;
     const char *vendor_id = (const char *)parm[2].value.string;
     uint32_t vendor_specific = (uint32_t)parm[3].value.unumber;
+    xpon_onu_presence_flags flags = (xpon_onu_presence_flags)parm[4].value.unumber;
 
     tr451_polt_onu_serial_number serial_number = {};
     strncpy((char *)&serial_number.data[0], vendor_id, sizeof(serial_number));
@@ -85,7 +86,7 @@ static bcmos_errno polt_cli_onu_add(bcmcli_session *session, const bcmcli_cmd_pa
     serial_number.data[6] = (vendor_specific >> 8) & 0xff;
     serial_number.data[7] = vendor_specific & 0xff;
 
-    return sim_tr451_vendor_onu_added(cterm_name, onu_id, &serial_number);
+    return sim_tr451_vendor_onu_added(cterm_name, onu_id, &serial_number, flags);
 }
 
 /* Delete ONU */
@@ -95,6 +96,7 @@ static bcmos_errno polt_cli_onu_delete(bcmcli_session *session, const bcmcli_cmd
     uint16_t onu_id = (uint16_t)parm[1].value.unumber;
     const char *vendor_id = (const char *)parm[2].value.string;
     uint32_t vendor_specific = (uint32_t)parm[3].value.unumber;
+    xpon_onu_presence_flags flags = (xpon_onu_presence_flags)parm[4].value.unumber;
 
     tr451_polt_onu_serial_number serial_number = {};
     strncpy((char *)&serial_number.data[0], vendor_id, sizeof(serial_number));
@@ -103,7 +105,7 @@ static bcmos_errno polt_cli_onu_delete(bcmcli_session *session, const bcmcli_cmd
     serial_number.data[6] = (vendor_specific >> 8) & 0xff;
     serial_number.data[7] = vendor_specific & 0xff;
 
-    return sim_tr451_vendor_onu_removed(cterm_name, onu_id, &serial_number);
+    return sim_tr451_vendor_onu_removed(cterm_name, onu_id, &serial_number, flags);
 }
 
 /* Set Rx handling mode */
@@ -129,6 +131,13 @@ static bcmos_errno polt_cli_set_rx_mode(bcmcli_session *session, const bcmcli_cm
 
 bcmos_errno tr451_vendor_cli_init(bcmcli_entry *dir)
 {
+    static bcmcli_enum_val onu_flags_table[] = {
+        { .name = "expected",           .val=XPON_ONU_PRESENCE_FLAG_V_ANI },
+        { .name = "present",            .val=XPON_ONU_PRESENCE_FLAG_ONU },
+        { .name = "in_o5",              .val=XPON_ONU_PRESENCE_FLAG_ONU_IN_O5 },
+        { .name = "activation_failed",  .val=XPON_ONU_PRESENCE_FLAG_ONU_ACTIVATION_FAILED },
+        BCMCLI_ENUM_LAST
+    };
 
     /* Add ONU */
     {
@@ -137,6 +146,7 @@ bcmos_errno tr451_vendor_cli_init(bcmcli_entry *dir)
             BCMCLI_MAKE_PARM("onu_id", "onu_id", BCMCLI_PARM_NUMBER, 0),
             BCMCLI_MAKE_PARM("serial_vendor_id", "serial_number: 4 bytes ASCII vendor id", BCMCLI_PARM_STRING, 0),
             BCMCLI_MAKE_PARM("serial_vendor_specific", "serial_number: vendor-specific id", BCMCLI_PARM_HEX, 0),
+            BCMCLI_MAKE_PARM_ENUM_MASK_DEFVAL("flags", "notification flags", onu_flags_table, 0, "expected+present+in_o5"),
             { 0 }
         } ;
         bcmcli_cmd_add(dir, "onu_add", polt_cli_onu_add, "Add ONU",
@@ -150,6 +160,7 @@ bcmos_errno tr451_vendor_cli_init(bcmcli_entry *dir)
             BCMCLI_MAKE_PARM("onu_id", "onu_id", BCMCLI_PARM_NUMBER, 0),
             BCMCLI_MAKE_PARM("serial_vendor_id", "serial_number: 4 bytes ASCII vendor id", BCMCLI_PARM_STRING, 0),
             BCMCLI_MAKE_PARM("serial_vendor_specific", "serial_number: vendor-specific id", BCMCLI_PARM_HEX, 0),
+            BCMCLI_MAKE_PARM_ENUM_MASK_DEFVAL("flags", "notification flags", onu_flags_table, 0, "expected"),
             { 0 }
         } ;
         bcmcli_cmd_add(dir, "onu_delete", polt_cli_onu_delete, "Delete ONU",
@@ -168,7 +179,7 @@ bcmos_errno tr451_vendor_cli_init(bcmcli_entry *dir)
         bcmcli_cmd_add(dir, "inject", polt_cli_inject_omci_rx,
             "Inject OMCI packet received from ONU", BCMCLI_ACCESS_ADMIN, NULL, inject_parms);
     }
-    
+
     /* Inject proxy_tx */
     {
         static bcmcli_cmd_parm inject_parms[] = {

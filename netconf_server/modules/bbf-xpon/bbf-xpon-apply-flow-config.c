@@ -872,7 +872,14 @@ bcmos_errno xpon_create_onu_flows_on_subif(sr_session_ctx_t *srs, xpon_obj_hdr *
     }
     v_ani = (ani == NULL) ? NULL : ani->linked_v_ani;
     if (v_ani_v_enet == NULL || v_ani == NULL || ani->hdr.obj_type != XPON_OBJ_TYPE_ANI)
+    {
+        NC_LOG_ERR("Couldn't create ONU flows: v_ani_v_enet:%s v_ani:%s ani:%s ani_obj_type:%d\n",
+            v_ani_v_enet ? v_ani_v_enet->hdr.name : "none",
+            v_ani ? v_ani->hdr.name : "none",
+            ani ? ani->hdr.name : "none",
+            ani ? ani->hdr.obj_type : -1);
         return BCM_ERR_PARM;
+    }
 
     STAILQ_FOREACH_SAFE(rule, &subif->ingress, next, rule_tmp)
     {

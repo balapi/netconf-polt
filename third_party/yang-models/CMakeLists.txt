@@ -344,17 +344,26 @@ list(APPEND _IMPORT_MODELS
     ${_IETF_IANA_DIR}/ietf-netconf-nmda.yang
     ${_IETF_IANA_DIR}/ietf-netconf-acm.yang
     ${_IETF_IANA_DIR}/ietf-netconf-monitoring.yang
+    ${_IETF_IANA_DIR}/ietf-ip.yang
+    ${_IETF_IANA_DIR}/ietf-subscribed-notifications.yang
+    ${_IETF_IANA_DIR}/ietf-yang-push.yang
+    ${_IETF_IANA_DIR}/ietf-network-instance.yang
+    ${_IETF_IANA_DIR}/ietf-restconf.yang
+    ${_IETF_IANA_DIR}/ietf-yang-patch.yang
+    ${_IETF_IANA_DIR}/ietf-yang-schema-mount.yang
     ${_IETF_IANA_DIR}/notifications.yang
     ${_IETF_IANA_DIR}/nc-notifications.yang)
 set(ietf-tcp-client-features local-binding-supported)
 set(ietf-netconf-nmda-features origin with-defaults)
 set(ietf-netconf-features candidate writable-running rollback-on-error validate startup url xpath)
 set(ietf-keystore-features keystore-supported)
-set(ietf-truststore-features truststore-supported)
+set(ietf-truststore-features truststore-supported public-keys certificates)
 set(ietf-tcp-common-features keepalives-supported)
 set(ietf-ssh-server-features ssh-server-transport-params-config client-auth-config-supported client-auth-publickey client-auth-password)
 set(ietf-tls-server-features client-auth-config-supported psk-auth)
 set(ietf-netconf-server-features ssh-listen tls-listen ssh-call-home tls-call-home)
+set(ietf-subscribed-notifications-features encode-xml replay subtree xpath)
+set(ietf-yang-push-features on-change)
 
 # Import WT-451 models
 if (NOT USE_OBBAA_YANG_MODELS)
@@ -402,11 +411,11 @@ foreach(_IMPORT ${_IMPORT_MODELS})
     endif()
     if(_FEATURES_OPT)
         set(_FEATURES_OPT_CMD COMMAND ${_SYSREPOTOOL_WRAPPER} ${_SYSREPOCTL} --change ${_IMPORT_NAME_UNVERSIONED} -a ${_FEATURES_OPT})
-        set(_FEATURES_OPT_CMD_ECHO COMMAND echo ${_SYSREPOTOOL_WRAPPER} ${_SYSREPOCTL} --change ${_IMPORT_NAME_UNVERSIONED} ${_FEATURES_OPT})
+        set(_FEATURES_OPT_CMD_ECHO COMMAND echo ${_SYSREPOTOOL_WRAPPER} ${_SYSREPOCTL} --change ${_IMPORT_NAME_UNVERSIONED} -a ${_FEATURES_OPT})
     endif()
     add_custom_command(OUTPUT ${_IMPORT_INSTALLED}
         COMMAND mkdir -p ${CMAKE_CURRENT_BINARY_DIR}
-        COMMAND echo ${_SYSREPOTOOL_WRAPPER} ${_SYSREPOCTL} --install ${_IMPORT} ${_SEARCH_DIRS}
+        COMMAND echo ${_SYSREPOTOOL_WRAPPER} ${_SYSREPOCTL} --install ${_IMPORT} -a ${_SEARCH_DIRS}
         COMMAND ${_SYSREPOTOOL_WRAPPER} ${_SYSREPOCTL} --install ${_IMPORT} -a ${_SEARCH_DIRS}
         ${_FEATURES_OPT_CMD_ECHO}
         ${_FEATURES_OPT_CMD}

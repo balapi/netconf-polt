@@ -245,7 +245,7 @@ static bcmos_errno xpon_vlan_subif_apply(sr_session_ctx_t *srs, xpon_vlan_subif 
     changes->dhcpr.profile = NULL;
 
     /* Try to create ONU flows */
-    if (!info->is_olt_subif && info->subif_lower_layer != NULL)
+    if (!info->is_olt_subif && info->subif_lower_layer != NULL && !bcm_tr451_onu_management_is_enabled())
     {
         /* Create ONU flows. Ignore BCM_ERR_STATE. It just means that part of the provisioning isn't ready */
         xpon_obj_hdr *uni = info->subif_lower_layer;
