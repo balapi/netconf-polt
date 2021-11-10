@@ -59,7 +59,7 @@ static STAILQ_HEAD(, xpon_discovered_onu) discovered_onu_list[BCM_MAX_PONS_PER_O
 static bcmos_mutex onu_config_lock;
 
 static void _onu_send_state_change_event(bcmolt_interface pon_ni, bcmolt_onu_id onu_id, bcmolt_serial_number *serial,
-    xpon_onu_presence_flags presence_flags);
+    uint8_t *registration_id, xpon_onu_presence_flags presence_flags);
 
 static bcmos_errno _xpon_discovered_onu_add(bcmolt_pon_ni pon_ni, bcmolt_serial_number *serial)
 {
@@ -245,6 +245,7 @@ static void _onu_populate_from_omci(const bcmonu_mgmt_onu_cfg *onu)
 static void _olt_onu_indication_cb(bcmolt_oltid olt, bcmolt_msg *msg)
 {
     xpon_v_ani onu_info_tmp;
+    uint8_t *registration_id = NULL;
     bcmos_errno err;
 
     /* It is safe to cast to any ONU indication because key is the same for all */
@@ -275,8 +276,13 @@ static void _olt_onu_indication_cb(bcmolt_oltid olt, bcmolt_msg *msg)
             }
 
             onu_info->registered = (ac->data.status == BCMOLT_RESULT_SUCCESS);
+            if (onu_info->registered)
+                XPON_PROP_SET(onu_info, v_ani, registration_id, ac->data.registration_id);
             onu_info_tmp = *onu_info;
             bcmos_mutex_unlock(&onu_config_lock);
+
+            registration_id = XPON_PROP_IS_SET(&onu_info_tmp, v_ani, registration_id) ?
+                onu_info_tmp.registration_id.arr : NULL;
 
             /* Ignore ACTIVATION_FAILED */
             if (ac->data.status != BCMOLT_RESULT_SUCCESS)
@@ -285,6 +291,7 @@ static void _olt_onu_indication_cb(bcmolt_oltid olt, bcmolt_msg *msg)
                     ac->key.pon_ni, ac->key.onu_id,
                     BCMOLT_ENUM_STRING_VAL(bcmolt_onu_onu_activation_completed_data_id, ac->data.fail_reason));
                 _onu_send_state_change_event(ac->key.pon_ni, ac->key.onu_id, &onu_info_tmp.serial_number,
+                    registration_id,
                     XPON_ONU_PRESENCE_FLAG_ONU | XPON_ONU_PRESENCE_FLAG_ONU_ACTIVATION_FAILED);
                 break;
             }
@@ -305,12 +312,14 @@ static void _olt_onu_indication_cb(bcmolt_oltid olt, bcmolt_msg *msg)
                 if (err != BCM_ERR_OK)
                 {
                     _onu_send_state_change_event(ac->key.pon_ni, ac->key.onu_id, &onu_info_tmp.serial_number,
+                        registration_id,
                         XPON_ONU_PRESENCE_FLAG_ONU | XPON_ONU_PRESENCE_FLAG_ONU_ACTIVATION_FAILED);
                 }
             }
             else
             {
                 _onu_send_state_change_event(ac->key.pon_ni, ac->key.onu_id, &onu_info_tmp.serial_number,
+                    registration_id,
                     XPON_ONU_PRESENCE_FLAG_ONU | XPON_ONU_PRESENCE_FLAG_ONU_IN_O5);
             }
         }
@@ -348,7 +357,7 @@ static void _olt_onu_indication_cb(bcmolt_oltid olt, bcmolt_msg *msg)
 
             bcmos_mutex_unlock(&onu_config_lock);
             _onu_send_state_change_event(sufi->key.pon_ni, sufi->key.onu_id, &onu_info_tmp.serial_number,
-                XPON_ONU_PRESENCE_FLAG_NONE);
+                NULL, XPON_ONU_PRESENCE_FLAG_NONE);
         }
         break;
 
@@ -362,14 +371,17 @@ static void _olt_onu_indication_cb(bcmolt_oltid olt, bcmolt_msg *msg)
 static void _omci_onu_indication_cb(bcmonu_mgmt_cfg *omci_obj)
 {
     bcmonu_mgmt_onu_cfg *onu = (bcmonu_mgmt_onu_cfg *)omci_obj;
+    xpon_v_ani *onu_info = xpon_v_ani_get_by_id(onu->key.pon_ni, onu->key.onu_id);
+    uint8_t *registration_id = (onu_info && XPON_PROP_IS_SET(onu_info, v_ani, registration_id)) ?
+        onu_info->registration_id.arr : NULL;
 
     if (onu->hdr.hdr.err == BCM_ERR_OK)
     {
-        xpon_v_ani *onu_info = xpon_v_ani_get_by_id(onu->key.pon_ni, onu->key.onu_id);
         if (onu_info != NULL)
         {
             onu_info->omci_ready = (onu->data.oper_status == BCMONU_MGMT_STATUS_UP);
             _onu_send_state_change_event(onu->key.pon_ni, onu->key.onu_id, &onu_info->serial_number,
+                registration_id,
                 XPON_ONU_PRESENCE_FLAG_ONU |
                     (onu_info->omci_ready ?
                         XPON_ONU_PRESENCE_FLAG_ONU_IN_O5 : XPON_ONU_PRESENCE_FLAG_ONU_ACTIVATION_FAILED));
@@ -383,13 +395,12 @@ static void _omci_onu_indication_cb(bcmonu_mgmt_cfg *omci_obj)
     }
     else
     {
-        xpon_v_ani *onu_info = xpon_v_ani_get_by_id(onu->key.pon_ni, onu->key.onu_id);
         NC_LOG_INFO("onu %u.%u: OMCI transaction failed (%s).\n",
             onu->key.pon_ni, onu->key.onu_id, bcmos_strerror(onu->hdr.hdr.err));
         if (onu_info != NULL)
         {
             _onu_send_state_change_event(onu->key.pon_ni, onu->key.onu_id, &onu_info->serial_number,
-                XPON_ONU_PRESENCE_FLAG_ONU | XPON_ONU_PRESENCE_FLAG_ONU_ACTIVATION_FAILED);
+                registration_id, XPON_ONU_PRESENCE_FLAG_ONU | XPON_ONU_PRESENCE_FLAG_ONU_ACTIVATION_FAILED);
         }
     }
 }
@@ -449,8 +460,8 @@ static bcmos_errno _omci_onu_ind_register_unregister(bcmos_bool is_register)
 }
 
 /* change onu state change event */
-static void _onu_send_state_change_event(bcmolt_interface pon_ni, bcmolt_onu_id onu_id, bcmolt_serial_number *serial,
-    xpon_onu_presence_flags presence_flags)
+static void _onu_send_state_change_event(bcmolt_interface pon_ni, bcmolt_onu_id onu_id,
+    bcmolt_serial_number *serial, uint8_t *registration_id, xpon_onu_presence_flags presence_flags)
 {
     xpon_channel_termination *cterm = xpon_cterm_get_by_id(
         netconf_agent_olt_id(), pon_ni);
@@ -470,7 +481,7 @@ static void _onu_send_state_change_event(bcmolt_interface pon_ni, bcmolt_onu_id 
     if (v_ani != NULL)
         presence_flags |= XPON_ONU_PRESENCE_FLAG_V_ANI;
 
-    bcmolt_xpon_v_ani_state_change(cterm->hdr.name, onu_id, serial_number, presence_flags);
+    bcmolt_xpon_v_ani_state_change(cterm->hdr.name, onu_id, serial_number, registration_id, presence_flags);
 }
 
 
@@ -482,7 +493,7 @@ static void _onu_send_onu_discovered(bcmolt_pon_interface_onu_discovered *od)
     if (onu != NULL)
         return;
     _xpon_discovered_onu_add(od->key.pon_ni, &od->data.serial_number);
-    _onu_send_state_change_event(od->key.pon_ni, od->data.onu_id, &od->data.serial_number,
+    _onu_send_state_change_event(od->key.pon_ni, od->data.onu_id, &od->data.serial_number, NULL,
         XPON_ONU_PRESENCE_FLAG_ONU);
 }
 
@@ -950,6 +961,7 @@ static int xpon_v_ani_state_populate1(sr_session_ctx_t *session, const char *xpa
     const struct ly_ctx *ctx = sr_get_context(sr_session_get_connection(session));
     char v_ani_xpath[BCM_MAX_XPATH_LENGTH] = {};
     bcmos_bool entire_v_ani = (*xpath && xpath[strlen(xpath) - 1] == ']');
+    bcmos_bool is_state = strstr(xpath, "interfaces-state") != NULL;
 
     if (entire_v_ani || strstr(xpath, "-status"))
     {
@@ -967,7 +979,7 @@ static int xpon_v_ani_state_populate1(sr_session_ctx_t *session, const char *xpa
     else
         strncpy(v_ani_xpath, xpath, sizeof(v_ani_xpath) - 1);
 
-    if (entire_v_ani || strstr(xpath, "v-ani"))
+    if (is_state && (entire_v_ani || strstr(xpath, "v-ani")))
     {
         if (v_ani->cpair)
         {
@@ -990,6 +1002,24 @@ static int xpon_v_ani_state_populate1(sr_session_ctx_t *session, const char *xpa
                 xpon_v_ani_vomci_state_populate1(session, v_ani_xpath, parent, v_ani);
             }
 #endif
+        }
+
+        char serial_number_string[13];
+        snprintf(serial_number_string, sizeof(serial_number_string),
+            "%c%c%c%c%02X%02X%02X%02X",
+            v_ani->serial_number.vendor_id.arr[0], v_ani->serial_number.vendor_id.arr[1],
+            v_ani->serial_number.vendor_id.arr[3], v_ani->serial_number.vendor_id.arr[3],
+            v_ani->serial_number.vendor_specific.arr[0], v_ani->serial_number.vendor_specific.arr[1],
+            v_ani->serial_number.vendor_specific.arr[2], v_ani->serial_number.vendor_specific.arr[3]);
+        *parent = nc_ly_sub_value_add(ctx, *parent, v_ani_xpath,
+            "onu-present-on-this-olt/detected-serial-number", serial_number_string);
+
+        if (XPON_PROP_IS_SET(v_ani, v_ani, registration_id))
+        {
+            char registration_id_string[sizeof(v_ani->registration_id.arr)*2 + 1];
+            nc_bin_to_hex(v_ani->registration_id.arr, sizeof(v_ani->registration_id.arr), registration_id_string);
+            *parent = nc_ly_sub_value_add(ctx, *parent, v_ani_xpath,
+                "onu-present-on-this-olt/detected-registration-id", registration_id_string);
         }
     }
 
@@ -1068,7 +1098,7 @@ bcmos_errno xpon_v_ani_init(sr_session_ctx_t *srs)
     err = err ? err : bcmos_mutex_create(&onu_config_lock, 0, "nc_onu_lock");
     if (!bcm_tr451_onu_management_is_enabled())
     {
-        err = err ? err : bcmonu_mgmt_init(BCMOS_MODULE_ID_NETCONF_SERVER);
+        err = err ? err : bcmonu_mgmt_init(BCMOS_MODULE_ID_NETCONF_SERVER, 0);
         err = err ? err : bcmonu_mgmt_olt_init(netconf_agent_olt_id());
         err = err ? err : _omci_onu_ind_register_unregister(BCMOS_TRUE);
     }

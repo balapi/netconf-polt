@@ -35,6 +35,9 @@
 #define OMCI_SVC_EXT_VLAN_TAG_OPER_CFG_DATA_INPUT_TPID 0x8100
 #define OMCI_SVC_EXT_VLAN_TAG_OPER_CFG_DATA_OUTPUT_TPID 0x8100
 
+/** @brief flag to indicate if it is warm restart for onu mgmt. Just used as a stub for now */
+int omci_svc_is_issu = 0;
+
 static bcmos_errno omci_svc_flow_op_queue_create(bcmolt_oltid olt_id, bcmolt_pon_ni pon_id, bcmolt_pon_onu_id onu_id)
 {
     omci_svc_onu *onu_context = OMCI_SVC_ONU_TOPO_CONTEXT(olt_id, pon_id, onu_id);
@@ -57,7 +60,7 @@ static void omci_svc_onu_mib_init(omci_svc_onu *onu_context)
     TAILQ_INIT(&onu_context->mib.ds_priority_queues);
 }
 
-bcmos_errno omci_svc_init(onu_state_changed_cb onu_cb)
+bcmos_errno omci_svc_init(onu_state_changed_cb onu_cb, int is_issu)
 {
     bcmos_errno rc;
 #ifdef ENABLE_LOG
@@ -72,6 +75,7 @@ bcmos_errno omci_svc_init(onu_state_changed_cb onu_cb)
 #endif
 
     omci_onu_state_changed = onu_cb;
+    omci_svc_is_issu = is_issu;
 
     /* initialize a couple of global lists */
     /** @note each of the lists store for all olts */
@@ -140,20 +144,25 @@ bcmos_errno omci_svc_olt_init(bcmolt_oltid olt_id)
 
     /** query topology for OLT */
     rc = omci_svc_query_pon_topology(olt_id, &max_pon_for_olt);
-        if (BCM_ERR_OK != rc)
-        {
+    if (BCM_ERR_OK != rc)
+    {
         BCM_LOG(ERROR, omci_svc_log_id, "Failed to query Topology for OLT id=%u, error:%s\n",
                 olt_id, bcmos_strerror(rc));
-            return rc;
-        }
+        return rc;
+    }
+    else
+    {
+        BCM_LOG(INFO, omci_svc_log_id, "query Topology for OLT id=%u, max_pon_for_olt=%d\n", 
+                olt_id, max_pon_for_olt);
+    }
 
     rc = omci_svc_topo_init_context(olt_id, max_pon_for_olt);
-        if (BCM_ERR_OK != rc)
-        {
+    if (BCM_ERR_OK != rc)
+    {
         BCM_LOG(ERROR, omci_svc_log_id, "Failed to initialize omci svc topo context for OLT id=%u, error:%s\n",
                 olt_id, bcmos_strerror(rc));
-            return rc;
-        }
+        return rc;
+    }
 
         /** initialize DB for each logical pon present in Topology */
         for (logical_pon_id=0; logical_pon_id < max_pon_for_olt; logical_pon_id++)
@@ -170,7 +179,7 @@ bcmos_errno omci_svc_olt_init(bcmolt_oltid olt_id)
 
             for (onu_id=0; onu_id < OMCI_SVC_PON_TOPO_MAX_ONUS_PER_PON; onu_id++)
             {
-            omci_svc_onu *onu_context = OMCI_SVC_ONU_TOPO_CONTEXT(olt_id, logical_pon_id, onu_id);
+                omci_svc_onu *onu_context = OMCI_SVC_ONU_TOPO_CONTEXT(olt_id, logical_pon_id, onu_id);
 
                 onu_context->state = OMCI_SVC_ONU_STATE_ID_INACTIVE;
                 onu_context->admin_state = BCMONU_MGMT_ADMIN_STATE_DOWN;

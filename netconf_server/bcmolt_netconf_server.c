@@ -677,7 +677,11 @@ int main(int argc, char *argv[])
     }
 
     /* build libyang context */
+#ifdef SYSREPO_LIBYANG_V2
+    ly_ctx_new(SR_MODELS_SEARCH_DIR, LY_CTX_ALL_IMPLEMENTED, &ly_ctx);
+#else
     ly_ctx = ly_ctx_new(SR_MODELS_SEARCH_DIR, LY_CTX_ALLIMPLEMENTED);
+#endif
     if (!ly_ctx)
     {
         bcmos_printf("Unable to create libyang context.");

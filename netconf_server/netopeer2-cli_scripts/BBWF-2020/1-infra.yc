@@ -483,7 +483,7 @@
     </interface>
 
     <!-- 4. Configure Channel Termination Interface : CT_1 -->
-    <interface>
+    <interface xmlns:bbfhw="urn:bbf:yang:bbf-hardware">
         <name>CT_1</name>
         <type xmlns:bbf-xponift="urn:bbf:yang:bbf-xpon-if-type">bbf-xponift:channel-termination</type>
         <enabled>true</enabled>
@@ -493,105 +493,13 @@
             <gpon-pon-id>00000000000000</gpon-pon-id>
             <ber-calc-period>10</ber-calc-period>
             <location xmlns:bbf-xpon-types="urn:bbf:yang:bbf-xpon-types">bbf-xpon-types:inside-olt</location>
-            <bbf-xpon-onu-s:notifiable-onu-presence-states>bbf-xpon-onu-types:onu-present-and-on-intended-channel-termination</notifiable-onu-presence-states>
-            <bbf-xpon-onu-s:notifiable-onu-presence-states>bbf-xpon-onu-types:onu-present-and-v-ani-known-and-o5-failed</notifiable-onu-presence-states>
-            <bbf-xpon-onu-s:notifiable-onu-presence-states>bbf-xpon-onu-types:onu-present-and-no-v-ani-known-and-o5-failed-no-onu-id</notifiable-onu-presence-states>
+            <bbf-xpon-onu-s:notifiable-onu-presence-states>bbf-xpon-onu-types:onu-present-and-on-intended-channel-termination</bbf-xpon-onu-s:notifiable-onu-presence-states>
+            <bbf-xpon-onu-s:notifiable-onu-presence-states>bbf-xpon-onu-types:onu-present-and-v-ani-known-and-o5-failed</bbf-xpon-onu-s:notifiable-onu-presence-states>
+            <bbf-xpon-onu-s:notifiable-onu-presence-states>bbf-xpon-onu-types:onu-present-and-no-v-ani-known-and-o5-failed-no-onu-id</bbf-xpon-onu-s:notifiable-onu-presence-states>
         </channel-termination>
-        <port-layer-if xmlns="urn:bbf:yang:bbf-interface-port-reference">PORT1</port-layer-if>
-    </interface>
-    <!-- 1. Configure Channel Group Interface : CG_2 -->
-    <interface>
-        <name>CG_2</name>
-        <type xmlns:bbf-xponift="urn:bbf:yang:bbf-xpon-if-type">bbf-xponift:channel-group</type>
-        <enabled>true</enabled>
-        <channel-group xmlns="urn:bbf:yang:bbf-xpon">
-            <polling-period>100</polling-period>
-            <raman-mitigation>raman-none</raman-mitigation>
-            <system-id>00000</system-id>
-            <pon-pools>
-                <pon-pool>
-                    <name>pool1</name>
-                    <channel-termination-ref>CT_2</channel-termination-ref>
-                </pon-pool>
-            </pon-pools>
-        </channel-group>
-    </interface>
-
-    <!-- 2. Configure Channel Partition Interface : CG_2.CPart_1 -->
-    <interface>
-        <name>CG_2.CPart_1</name>
-        <type xmlns:bbf-xponift="urn:bbf:yang:bbf-xpon-if-type">bbf-xponift:channel-partition</type>
-        <enabled>true</enabled>
-        <channel-partition xmlns="urn:bbf:yang:bbf-xpon">
-            <channel-group-ref>CG_2</channel-group-ref>
-            <channel-partition-index>1</channel-partition-index>
-            <downstream-fec>true</downstream-fec>
-            <multicast-aes-indicator>false</multicast-aes-indicator>
-            <authentication-method>serial-number</authentication-method>
-            <closest-onu-distance>0</closest-onu-distance>
-            <maximum-differential-xpon-distance>20</maximum-differential-xpon-distance>
-        </channel-partition>
-        <tm-root xmlns="urn:bbf:yang:bbf-qos-traffic-mngt">
-            <scheduler-node xmlns="urn:bbf:yang:bbf-qos-enhanced-scheduling">
-                <name>NODE_DEF</name>
-                <scheduling-level>1</scheduling-level>
-                <queue>
-                    <local-queue-id>0</local-queue-id>
-                </queue>
-                <queue>
-                    <local-queue-id>1</local-queue-id>
-                </queue>
-                <queue>
-                    <local-queue-id>2</local-queue-id>
-                </queue>
-                <queue>
-                    <local-queue-id>3</local-queue-id>
-                </queue>
-                <queue>
-                    <local-queue-id>4</local-queue-id>
-                </queue>
-                <queue>
-                    <local-queue-id>5</local-queue-id>
-                </queue>
-                <queue>
-                    <local-queue-id>6</local-queue-id>
-                </queue>
-                <queue>
-                    <local-queue-id>7</local-queue-id>
-                </queue>
-            </scheduler-node>
-            <child-scheduler-nodes xmlns="urn:bbf:yang:bbf-qos-enhanced-scheduling">
-                <name>NODE_DEF</name>
-            </child-scheduler-nodes>
-        </tm-root>
-    </interface>
-
-    <!-- 3. Configure Channel Pair Interface : CG_2.CPart_1.CPair_gpon -->
-    <interface>
-        <name>CG_2.CPart_1.CPair_gpon</name>
-        <type xmlns:bbf-xponift="urn:bbf:yang:bbf-xpon-if-type">bbf-xponift:channel-pair</type>
-        <enabled>true</enabled>
-        <channel-pair xmlns="urn:bbf:yang:bbf-xpon">
-            <channel-group-ref>CG_2</channel-group-ref>
-            <channel-partition-ref>CG_2.CPart_1</channel-partition-ref>
-            <channel-pair-type xmlns:bbf-xpon-types="urn:bbf:yang:bbf-xpon-types">bbf-xpon-types:gpon</channel-pair-type>
-            <gpon-pon-id-interval>0</gpon-pon-id-interval>
-        </channel-pair>
-    </interface>
-
-    <!-- 4. Configure Channel Termination Interface : CT_2 -->
-    <interface>
-        <name>CT_2</name>
-        <type xmlns:bbf-xponift="urn:bbf:yang:bbf-xpon-if-type">bbf-xponift:channel-termination</type>
-        <enabled>true</enabled>
-        <channel-termination xmlns="urn:bbf:yang:bbf-xpon">
-            <channel-pair-ref>CG_2.CPart_1.CPair_gpon</channel-pair-ref>
-            <channel-termination-type xmlns:bbf-xpon-types="urn:bbf:yang:bbf-xpon-types">bbf-xpon-types:gpon</channel-termination-type>
-            <gpon-pon-id>00000000000000</gpon-pon-id>
-            <ber-calc-period>10</ber-calc-period>
-            <location xmlns:bbf-xpon-types="urn:bbf:yang:bbf-xpon-types">bbf-xpon-types:inside-olt</location>
-        </channel-termination>
-        <port-layer-if xmlns="urn:bbf:yang:bbf-interface-port-reference">PORT2</port-layer-if>
+        <bbfhw:hardware-component >
+          <bbfhw:port-layer-if>PORT1</bbfhw:port-layer-if>
+        </bbfhw:hardware-component>
     </interface>
 
     <!-- olt-side  uplink interface -->
@@ -599,57 +507,6 @@
         <name>uplink_port_intf</name>
         <enabled>true</enabled>
         <type xmlns:ianaift="urn:ietf:params:xml:ns:yang:iana-if-type">ianaift:ethernetCsmacd</type>
-        <port-layer-if xmlns="urn:bbf:yang:bbf-interface-port-reference">uplink_port</port-layer-if>
+        <!--port-layer-if xmlns:bbfhw="urn:bbf:yang:bbf-hardware">uplink_port</port-layer-if-->
     </interface>
 </interfaces>
-
-<!-- Configure OLT for gRPC connection -->
-<bbf-polt-vomci:remote-nf-settings xmlns:bbf-polt-vomci="urn:bbf:yang:bbf-polt-vomci">
-  <bbf-polt-vomci:nf-client>
-    <bbf-polt-vomci:enabled>true</bbf-polt-vomci:enabled>
-    <bbf-polt-vomci:client-parameters>
-      <bbf-polt-vomci:nf-initiate>
-        <bbf-polt-vomci:remote-endpoints>
-          <bbf-polt-vomci:name>vOMCIProxy</bbf-polt-vomci:name>
-          <bbf-polt-vomci:type>vOMCI-nf</bbf-polt-vomci:type>
-          <bbf-polt-vomci:remote-endpoint>
-            <bbf-polt-vomci:access-points>
-              <bbf-polt-vomci:name>vOMCIProxy</bbf-polt-vomci:name>
-              <bbf-polt-vomci:grpc>
-                <bbf-polt-vomci:grpc-client-parameters>
-                  <bbf-polt-vomci:remote-address>127.0.0.1</bbf-polt-vomci:remote-address>
-                  <bbf-polt-vomci:remote-port>8433</bbf-polt-vomci:remote-port>
-                </bbf-polt-vomci:grpc-client-parameters>
-              </bbf-polt-vomci:grpc>
-            </bbf-polt-vomci:access-points>
-          </bbf-polt-vomci:remote-endpoint>
-        </bbf-polt-vomci:remote-endpoints>
-      </bbf-polt-vomci:nf-initiate>
-    </bbf-polt-vomci:client-parameters>
-    <bbf-polt-vomci:nf-endpoint-filter>
-      <bbf-polt-vomci:rule>
-        <bbf-polt-vomci:name>client_rule1</bbf-polt-vomci:name>
-        <bbf-polt-vomci:priority>1</bbf-polt-vomci:priority>
-        <bbf-polt-vomci:flexible-match>
-          <!--bbf-polt-vomci:any-onu></bbf-polt-vomci:any-onu-->
-          <bbf-polt-vomci:onu-vendor>BRCM</bbf-polt-vomci:onu-vendor>
-        </bbf-polt-vomci:flexible-match>
-        <bbf-polt-vomci:resulting-endpoint>vOMCIProxy</bbf-polt-vomci:resulting-endpoint>
-      </bbf-polt-vomci:rule>
-    </bbf-polt-vomci:nf-endpoint-filter>
-  </bbf-polt-vomci:nf-client>
-  <bbf-polt-vomci:nf-server>
-    <bbf-polt-vomci:enabled>true</bbf-polt-vomci:enabled>
-    <bbf-polt-vomci:nf-endpoint-filter>
-      <bbf-polt-vomci:rule>
-        <bbf-polt-vomci:name>server_rule1</bbf-polt-vomci:name>
-        <bbf-polt-vomci:priority>1</bbf-polt-vomci:priority>
-        <bbf-polt-vomci:flexible-match>
-          <bbf-polt-vomci:onu-vendor>none</bbf-polt-vomci:onu-vendor>
-        </bbf-polt-vomci:flexible-match>
-        <bbf-polt-vomci:resulting-endpoint>vOMCIProxy</bbf-polt-vomci:resulting-endpoint>
-      </bbf-polt-vomci:rule>
-    </bbf-polt-vomci:nf-endpoint-filter>
-    <bbf-polt-vomci:server-parameters/>
-  </bbf-polt-vomci:nf-server>
-</bbf-polt-vomci:remote-nf-settings>

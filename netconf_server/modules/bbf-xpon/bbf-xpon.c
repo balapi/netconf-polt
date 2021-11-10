@@ -83,8 +83,11 @@ static int num_connected_devices(void)
     return num_connected;
 }
 
-static int xpon_interface_state_get_cb(sr_session_ctx_t *session, const char *module_name,
-    const char *xpath, const char *request_path, uint32_t request_id,
+static int xpon_interface_state_get_cb(sr_session_ctx_t *session,
+#ifdef SYSREPO_LIBYANG_V2
+    uint32_t sub_id,
+#endif
+    const char *module_name, const char *xpath, const char *request_path, uint32_t request_id,
     struct lyd_node **parent, void *private_data)
 {
     NC_LOG_INFO("module=%s xpath=%s request=%s\n", module_name, xpath, request_path);
@@ -276,7 +279,7 @@ static int bbf_xpon_interface_change_or_rollback(sr_session_ctx_t *srs, const ch
     nc_sr_free_value_pair(&sr_old_val, &sr_new_val);
     sr_free_change_iter(sr_iter);
 
-    if (err != BCM_ERR_OK && event != SR_EV_ABORT)
+    if (err != BCM_ERR_OK && event != SR_EV_ABORT && !is_rollback)
     {
         /* Rollback if error */
         char *err_xpath, *err_message;
@@ -293,8 +296,11 @@ static int bbf_xpon_interface_change_or_rollback(sr_session_ctx_t *srs, const ch
 }
 
 /* Data store change indication callback */
-static int bbf_xpon_interface_change_cb(sr_session_ctx_t *srs, const char *module_name,
-    const char *xpath, sr_event_t event, uint32_t request_id, void *private_ctx)
+static int bbf_xpon_interface_change_cb(sr_session_ctx_t *srs,
+#ifdef SYSREPO_LIBYANG_V2
+    uint32_t sub_id,
+#endif
+    const char *module_name, const char *xpath, sr_event_t event, uint32_t request_id, void *private_ctx)
 {
     return bbf_xpon_interface_change_or_rollback(srs, module_name, xpath, event, request_id, private_ctx, NULL);
 }
@@ -633,94 +639,43 @@ bcmos_errno bbf_xpon_module_init(sr_session_ctx_t *srs, struct ly_ctx *ly_ctx)
     const struct lys_module *onu_states_mod;
     const struct lys_module *dhcpr_mod;
     const struct lys_module *bbf_interface_pon_ref_mod;
-    int i;
 
     do  {
-        /* make sure that ietf-interfaces module is loaded */
-        ietf_intf_mod = ly_ctx_get_module(ly_ctx, IETF_INTERFACES_MODULE_NAME, NULL, 1);
+        ietf_intf_mod = nc_ly_ctx_load_module(ly_ctx, IETF_INTERFACES_MODULE_NAME,
+            NULL, ietf_interfaces_features, BCMOS_TRUE);
         if (ietf_intf_mod == NULL)
-        {
-            ietf_intf_mod = ly_ctx_load_module(ly_ctx, IETF_INTERFACES_MODULE_NAME, NULL);
-            if (ietf_intf_mod == NULL)
-            {
-                NC_LOG_ERR(IETF_INTERFACES_MODULE_NAME ": can't find the schema in sysrepo\n");
-                break;
-            }
-        }
+            break;
 
-        /* make sure that bbf-xponvani module is loaded */
-        xponvani_mod = ly_ctx_get_module(ly_ctx, BBF_XPONVANI_MODULE_NAME, NULL, 1);
+        xponvani_mod = nc_ly_ctx_load_module(ly_ctx, BBF_XPONVANI_MODULE_NAME,
+            NULL, xponvani_features, BCMOS_TRUE);
         if (xponvani_mod == NULL)
-        {
-            xponvani_mod = ly_ctx_load_module(ly_ctx, BBF_XPONVANI_MODULE_NAME, NULL);
-            if (xponvani_mod == NULL)
-            {
-                NC_LOG_ERR(BBF_XPONVANI_MODULE_NAME ": can't find the schema in sysrepo\n");
-                break;
-            }
-        }
+            break;
 
-        /* make sure that bbf-xpongemtcont module is loaded */
-        xpongemtcont_mod = ly_ctx_get_module(ly_ctx, BBF_XPONGEMTCONT_MODULE_NAME, NULL, 1);
+        xpongemtcont_mod = nc_ly_ctx_load_module(ly_ctx, BBF_XPONGEMTCONT_MODULE_NAME,
+            NULL, xpongemtcont_features, BCMOS_TRUE);
         if (xpongemtcont_mod == NULL)
-        {
-            xpongemtcont_mod = ly_ctx_load_module(ly_ctx, BBF_XPONGEMTCONT_MODULE_NAME, NULL);
-            if (xpongemtcont_mod == NULL)
-            {
-                NC_LOG_ERR(BBF_XPONGEMTCONT_MODULE_NAME ": can't find the schema in sysrepo\n");
-                break;
-            }
-        }
+            break;
 
-        /* make sure that bbf-xpongemtcont module is loaded */
-        l2_forwarding_mod = ly_ctx_get_module(ly_ctx, BBF_L2_FORWARDING_MODULE_NAME, NULL, 1);
+        l2_forwarding_mod = nc_ly_ctx_load_module(ly_ctx, BBF_L2_FORWARDING_MODULE_NAME,
+            NULL, l2_forwarding_features, BCMOS_TRUE);
         if (l2_forwarding_mod == NULL)
-        {
-            l2_forwarding_mod = ly_ctx_load_module(ly_ctx, BBF_L2_FORWARDING_MODULE_NAME, NULL);
-            if (l2_forwarding_mod == NULL)
-            {
-                NC_LOG_ERR(BBF_L2_FORWARDING_MODULE_NAME ": can't find the schema in sysrepo\n");
-                break;
-            }
-        }
+            break;
 
-        /* make sure that ietf-hardware module is loaded */
-        ietf_hardware_mod = ly_ctx_get_module(ly_ctx, IETF_HARDWARE_MODULE_NAME, NULL, 1);
+        ietf_hardware_mod = nc_ly_ctx_load_module(ly_ctx, IETF_HARDWARE_MODULE_NAME,
+            NULL, ietf_hardware_features, BCMOS_TRUE);
         if (ietf_hardware_mod == NULL)
-        {
-            ietf_hardware_mod = ly_ctx_load_module(ly_ctx, IETF_HARDWARE_MODULE_NAME, NULL);
-            if (ietf_hardware_mod == NULL)
-            {
-                NC_LOG_ERR(IETF_HARDWARE_MODULE_NAME ": can't find the schema in sysrepo\n");
-                break;
-            }
-        }
+            break;
 
-        /* make sure that bbf-hardware-types module is loaded */
-        bbf_hardware_types_mod = ly_ctx_get_module(ly_ctx, BBF_HARDWARE_TYPES_MODULE_NAME, NULL, 1);
+        bbf_hardware_types_mod = nc_ly_ctx_load_module(ly_ctx, BBF_HARDWARE_TYPES_MODULE_NAME,
+            NULL, NULL, BCMOS_TRUE);
         if (bbf_hardware_types_mod == NULL)
-        {
-            bbf_hardware_types_mod = ly_ctx_load_module(ly_ctx, BBF_HARDWARE_TYPES_MODULE_NAME, NULL);
-            if (bbf_hardware_types_mod == NULL)
-            {
-                NC_LOG_ERR(BBF_HARDWARE_TYPES_MODULE_NAME ": can't find the schema in sysrepo\n");
-                break;
-            }
-        }
+            break;
 
-        /* make sure that bbf-hardware module is loaded */
-        bbf_hardware_mod = ly_ctx_get_module(ly_ctx, BBF_HARDWARE_MODULE_NAME, NULL, 1);
-        if (bbf_hardware_mod == NULL)
-        {
-            bbf_hardware_mod = ly_ctx_load_module(ly_ctx, BBF_HARDWARE_MODULE_NAME, NULL);
-        }
+        bbf_hardware_mod = nc_ly_ctx_load_module(ly_ctx, BBF_HARDWARE_MODULE_NAME,
+            NULL, bbf_hardware_features, BCMOS_FALSE);
 
-        /* make sure that bbf-interface-pon-reference module is loaded */
-        bbf_interface_pon_ref_mod = ly_ctx_get_module(ly_ctx, BBF_INTERFACE_PON_REFERENCE, NULL, 1);
-        if (bbf_interface_pon_ref_mod == NULL)
-        {
-            bbf_interface_pon_ref_mod = ly_ctx_load_module(ly_ctx, BBF_INTERFACE_PON_REFERENCE, NULL);
-        }
+        bbf_interface_pon_ref_mod = nc_ly_ctx_load_module(ly_ctx, BBF_INTERFACE_PON_REFERENCE,
+            NULL, NULL, BCMOS_FALSE);
 
         /* AT least one of bbf-hardware.yang or bbf-interface-pon-refference.yang must be loaded */
         if (bbf_hardware_mod == NULL && bbf_interface_pon_ref_mod == NULL)
@@ -730,99 +685,15 @@ bcmos_errno bbf_xpon_module_init(sr_session_ctx_t *srs, struct ly_ctx *ly_ctx)
             break;
         }
 
-        /* make sure that bbf-xpon-onu-states module is loaded */
-        onu_states_mod = ly_ctx_get_module(ly_ctx, BBF_XPON_ONU_STATES_MODULE_NAME, NULL, 1);
+        onu_states_mod = nc_ly_ctx_load_module(ly_ctx, BBF_XPON_ONU_STATES_MODULE_NAME,
+            NULL, NULL, BCMOS_TRUE);
         if (onu_states_mod == NULL)
-        {
-            onu_states_mod = ly_ctx_load_module(ly_ctx, BBF_XPON_ONU_STATES_MODULE_NAME, NULL);
-            if (onu_states_mod == NULL)
-            {
-                NC_LOG_ERR(BBF_XPON_ONU_STATES_MODULE_NAME ": can't find the schema in sysrepo\n");
-                break;
-            }
-        }
+            break;
 
-        /* make sure that bbf-l2-dhcpv4-relay module is loaded */
-        dhcpr_mod = ly_ctx_get_module(ly_ctx, BBF_L2_DHCPV4_RELAY_MODULE_NAME, NULL, 1);
+        dhcpr_mod = nc_ly_ctx_load_module(ly_ctx, BBF_L2_DHCPV4_RELAY_MODULE_NAME,
+            NULL, NULL, BCMOS_TRUE);
         if (dhcpr_mod == NULL)
-        {
-            dhcpr_mod = ly_ctx_load_module(ly_ctx, BBF_L2_DHCPV4_RELAY_MODULE_NAME, NULL);
-            if (dhcpr_mod == NULL)
-            {
-                NC_LOG_ERR(BBF_L2_DHCPV4_RELAY_MODULE_NAME ": can't find the schema in sysrepo\n");
-                break;
-            }
-        }
-
-        /* Enable all relevant features are enabled in sysrepo */
-        for (i = 0; ietf_interfaces_features[i]; i++)
-        {
-            if (lys_features_enable(ietf_intf_mod, ietf_interfaces_features[i]))
-            {
-                NC_LOG_ERR("%s: can't enable feature %s\n", IETF_INTERFACES_MODULE_NAME, ietf_interfaces_features[i]);
-                break;
-            }
-        }
-        if (ietf_interfaces_features[i])
             break;
-
-        for (i = 0; xponvani_features[i]; i++)
-        {
-            if (lys_features_enable(xponvani_mod, xponvani_features[i]))
-            {
-                NC_LOG_ERR("%s: can't enable feature %s\n", BBF_XPONVANI_MODULE_NAME, xponvani_features[i]);
-                break;
-            }
-        }
-        if (xponvani_features[i])
-            break;
-
-        for (i = 0; xpongemtcont_features[i]; i++)
-        {
-            if (lys_features_enable(xpongemtcont_mod, xpongemtcont_features[i]))
-            {
-                NC_LOG_ERR("%s: can't enable feature %s\n", BBF_XPONGEMTCONT_MODULE_NAME, xpongemtcont_features[i]);
-                break;
-            }
-        }
-        if (xpongemtcont_features[i])
-            break;
-
-        for (i = 0; l2_forwarding_features[i]; i++)
-        {
-            if (lys_features_enable(l2_forwarding_mod, l2_forwarding_features[i]))
-            {
-                NC_LOG_ERR("%s: can't enable feature %s\n", BBF_L2_FORWARDING_MODULE_NAME, l2_forwarding_features[i]);
-                break;
-            }
-        }
-        if (l2_forwarding_features[i])
-            break;
-
-        for (i = 0; ietf_hardware_features[i]; i++)
-        {
-            if (lys_features_enable(ietf_hardware_mod, ietf_hardware_features[i]))
-            {
-                NC_LOG_ERR("%s: can't enable feature %s\n", IETF_HARDWARE_MODULE_NAME, ietf_hardware_features[i]);
-                break;
-            }
-        }
-        if (ietf_hardware_features[i])
-            break;
-
-        if (bbf_hardware_mod != NULL)
-        {
-            for (i = 0; bbf_hardware_features[i]; i++)
-            {
-                if (lys_features_enable(bbf_hardware_mod, bbf_hardware_features[i]))
-                {
-                    NC_LOG_ERR("%s: can't enable feature %s\n", BBF_HARDWARE_MODULE_NAME, bbf_hardware_features[i]);
-                    break;
-                }
-            }
-            if (bbf_hardware_features[i])
-                break;
-        }
 
 #if 0
         /* Reset stored configuration if requested */

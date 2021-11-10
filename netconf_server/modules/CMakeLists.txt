@@ -14,6 +14,9 @@ if(NETCONF_SERVER)
     if(USE_OBBAA_YANG_MODELS)
         bcm_module_definitions(PUBLIC -DOB_BAA)
     endif()
+    if(NETOPEER2_VERSION_2X)
+        bcm_module_definitions(PUBLIC -DSYSREPO_LIBYANG_V2)
+    endif()
     bcm_module_header_paths(PUBLIC .)
     bcm_module_srcs(
         b64.c

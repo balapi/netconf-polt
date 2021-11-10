@@ -181,8 +181,11 @@ static bcmos_errno xpon_qos_classifier_attribute_populate(sr_session_ctx_t *srs,
 }
 
 /* Data store change indication callback */
-static int xpon_qos_classifier_change_cb(sr_session_ctx_t *srs, const char *module_name,
-    const char *xpath, sr_event_t event, uint32_t request_id, void *private_ctx)
+static int xpon_qos_classifier_change_cb(sr_session_ctx_t *srs,
+#ifdef SYSREPO_LIBYANG_V2
+    uint32_t sub_id,
+#endif
+    const char *module_name, const char *xpath, sr_event_t event, uint32_t request_id, void *private_ctx)
 {
     sr_change_iter_t *sr_iter = NULL;
     sr_change_oper_t sr_oper;
@@ -498,8 +501,11 @@ static bcmos_errno xpon_qos_policy_attribute_populate(sr_session_ctx_t *srs,
 }
 
 /* Data store change indication callback */
-static int bbf_xpon_qos_policy_change_cb(sr_session_ctx_t *srs, const char *module_name,
-    const char *xpath, sr_event_t event, uint32_t request_id, void *private_ctx)
+static int bbf_xpon_qos_policy_change_cb(sr_session_ctx_t *srs,
+#ifdef SYSREPO_LIBYANG_V2
+    uint32_t sub_id,
+#endif
+    const char *module_name, const char *xpath, sr_event_t event, uint32_t request_id, void *private_ctx)
 {
     sr_change_iter_t *sr_iter = NULL;
     sr_change_oper_t sr_oper;
@@ -812,8 +818,11 @@ static bcmos_errno xpon_qos_policy_profile_attribute_populate(sr_session_ctx_t *
 }
 
 /* Data store change indication callback */
-static int bbf_xpon_qos_policy_profile_change_cb(sr_session_ctx_t *srs, const char *module_name,
-    const char *xpath, sr_event_t event, uint32_t request_id, void *private_ctx)
+static int bbf_xpon_qos_policy_profile_change_cb(sr_session_ctx_t *srs,
+#ifdef SYSREPO_LIBYANG_V2
+    uint32_t sub_id,
+#endif
+    const char *module_name, const char *xpath, sr_event_t event, uint32_t request_id, void *private_ctx)
 {
     sr_change_iter_t *sr_iter = NULL;
     sr_change_oper_t sr_oper;

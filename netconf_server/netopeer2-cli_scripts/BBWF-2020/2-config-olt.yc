@@ -3,7 +3,7 @@
     <component xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0">
         <name>ont1</name>
         <class xmlns:ianahw="urn:ietf:params:xml:ns:yang:iana-hardware">ianahw:chassis</class>
-        <admin-state>unlocked</admin-state>
+        <!--admin-state>unlocked</admin-state-->
         <parent-rel-pos>1</parent-rel-pos>
     </component>
 
@@ -11,7 +11,7 @@
     <component xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0">
         <name>ontCard_ont1_1</name>
         <class xmlns:bbf-hwt="urn:bbf:yang:bbf-hardware-types">bbf-hwt:board</class>
-        <admin-state>unlocked</admin-state>
+        <!--admin-state>unlocked</admin-state-->
         <parent>ont1</parent>
         <parent-rel-pos>1</parent-rel-pos>
     </component>
@@ -71,40 +71,16 @@
                             <tag>
                                 <index>0</index>
                                 <dot1q-tag>
-                                    <tag-type xmlns:bbf-dot1qt="urn:bbf:yang:bbf-dot1q-types">bbf-dot1qt:s-vlan</tag-type>
-                                    <vlan-id>600</vlan-id>
-                                    <pbit>any</pbit>
-                                    <dei>any</dei>
-                                </dot1q-tag>
-                            </tag>
-                            <tag>
-                                <index>1</index>
-                                <dot1q-tag>
                                     <tag-type xmlns:bbf-dot1qt="urn:bbf:yang:bbf-dot1q-types">bbf-dot1qt:c-vlan</tag-type>
-                                    <vlan-id>10</vlan-id>
+                                    <vlan-id>1000</vlan-id>
                                     <pbit>any</pbit>
                                     <dei>any</dei>
                                 </dot1q-tag>
                             </tag>
                         </match-criteria>
                     </flexible-match>
-                    <ingress-rewrite>
-                        <pop-tags xmlns="urn:bbf:yang:bbf-sub-interface-tagging">1</pop-tags>
-                    </ingress-rewrite>
                 </rule>
             </ingress-rule>
-            <egress-rewrite>
-                <pop-tags xmlns="urn:bbf:yang:bbf-sub-interface-tagging">0</pop-tags>
-                <push-tag xmlns="urn:bbf:yang:bbf-sub-interface-tagging">
-                    <index>0</index>
-                    <dot1q-tag>
-                        <tag-type xmlns:bbf-dot1qt="urn:bbf:yang:bbf-dot1q-types">bbf-dot1qt:s-vlan</tag-type>
-                        <vlan-id>600</vlan-id>
-                        <pbit-from-tag-index>0</pbit-from-tag-index>
-                        <dei-from-tag-index>0</dei-from-tag-index>
-                    </dot1q-tag>
-                </push-tag>
-            </egress-rewrite>
         </inline-frame-processing>
     </interface>
 
@@ -153,7 +129,7 @@
                                 <index>0</index>
                                 <dot1q-tag>
                                     <tag-type xmlns:bbf-dot1qt="urn:bbf:yang:bbf-dot1q-types">bbf-dot1qt:c-vlan</tag-type>
-                                    <vlan-id>10</vlan-id>
+                                    <vlan-id>1000</vlan-id>
                                     <pbit>any</pbit>
                                     <dei>any</dei>
                                 </dot1q-tag>
@@ -164,12 +140,13 @@
             </ingress-rule>
         </inline-frame-processing>
 
-        <!-- olt-side vlan sub-interface dhcp relay profile association -->
+        <!-- olt-side vlan sub-interface dhcp relay profile association
         <l2-dhcpv4-relay xmlns="urn:bbf:yang:bbf-l2-dhcpv4-relay">
             <enable>true</enable>
             <trusted-port>false</trusted-port>
             <profile-ref>DHCP_Default</profile-ref>
         </l2-dhcpv4-relay>
+        -->
 
         <!-- olt-side vlan sub-interface  qos -->
         <ingress-qos-policy-profile xmlns="urn:bbf:yang:bbf-qos-policies">IPP0</ingress-qos-policy-profile>
@@ -185,7 +162,7 @@
         <name>ontAni_ont1</name>
             <type xmlns:bbf-xponift="urn:bbf:yang:bbf-xpon-if-type">bbf-xponift:ani</type>
             <enabled>true</enabled>
-            <port-layer-if xmlns="urn:bbf:yang:bbf-interface-port-reference">ontAniPort_ont1</port-layer-if>
+            <!--port-layer-if xmlns="urn:bbf:yang:bbf-interface-port-reference">ontAniPort_ont1</port-layer-if-->
             <ani xmlns="urn:bbf:yang:bbf-xponani">
                 <management-gemport-aes-indicator>false</management-gemport-aes-indicator>
                 <upstream-fec>true</upstream-fec>
@@ -198,7 +175,7 @@
         <name>enet_uni_ont1_1_1</name>
         <type xmlns:ianaift="urn:ietf:params:xml:ns:yang:iana-if-type">ianaift:ethernetCsmacd</type>
         <enabled>true</enabled>
-        <port-layer-if xmlns="urn:bbf:yang:bbf-interface-port-reference">ontUni_ont1_1_1</port-layer-if>
+        <!--port-layer-if xmlns="urn:bbf:yang:bbf-interface-port-reference">ontUni_ont1_1_1</port-layer-if-->
     </interface>
 
     <!-- onu-side sub-interface  -->
@@ -225,7 +202,7 @@
                             <index>0</index>
                             <dot1q-tag>
                                 <tag-type xmlns:bbf-dot1qt="urn:bbf:yang:bbf-dot1q-types">bbf-dot1qt:c-vlan</tag-type>
-                                <vlan-id>10</vlan-id>
+                                <vlan-id>1000</vlan-id>
                                 <pbit-from-tag-index>0</pbit-from-tag-index>
                                 <dei-from-tag-index>0</dei-from-tag-index>
                             </dot1q-tag>
@@ -259,13 +236,6 @@
             <tcont-ref>tcont_ont1</tcont-ref>
             <traffic-class>0</traffic-class>
             <gemport-id>1024</gemport-id>
-        </gemport>
-        <gemport xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0">
-            <name>gem_ont1_2</name>
-            <interface>venet_uni_ont1_1_1</interface>
-            <tcont-ref>tcont_ont1</tcont-ref>
-            <traffic-class>2</traffic-class>
-            <gemport-id>1026</gemport-id>
         </gemport>
     </gemports>
 </xpongemtcont>

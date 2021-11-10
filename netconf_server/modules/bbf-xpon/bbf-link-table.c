@@ -160,8 +160,12 @@ static bcmos_errno _link_apply(sr_session_ctx_t *srs, const char *xpath,
 }
 
 /* Handle gem change events */
-static int _link_change_cb(sr_session_ctx_t *srs, const char *module_name,
-    const char *xpath, sr_event_t event, uint32_t request_id, void *private_ctx)
+static int _link_change_cb(sr_session_ctx_t *srs,
+#ifdef SYSREPO_LIBYANG_V2
+    uint32_t sub_id,
+#endif
+    const char *module_name, const char *xpath, sr_event_t event,
+    uint32_t request_id, void *private_ctx)
 {
     sr_change_iter_t *sr_iter = NULL;
     sr_change_oper_t sr_oper;

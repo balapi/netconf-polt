@@ -173,7 +173,7 @@ static void onu_mgmt_parse_config(void)
     fclose(fp);
 }
 
-bcmos_errno bcmonu_mgmt_init(bcmos_module_id module_id)
+bcmos_errno bcmonu_mgmt_init(bcmos_module_id module_id, int is_issu)
 {
     bcmos_errno rc;
     uint16_t o;
@@ -198,6 +198,12 @@ bcmos_errno bcmonu_mgmt_init(bcmos_module_id module_id)
         return BCM_ERR_PARM;
     }
 
+    if (is_issu)
+    {
+        BCM_LOG(INFO, onu_mgmt_log_id, "ONU Mgmt: issu=%d\n", is_issu);
+        BCM_LOG(INFO, onu_mgmt_log_id, "ONU Mgmt: Note issu is just a stub mode of warm restart of ONU mgmt module\n");
+    }
+
     onu_mgmt_context.module_id = module_id;
     SLIST_INIT(&onu_mgmt_context.onu_notify_entities);
     SLIST_INIT(&onu_mgmt_context.flow_notify_entities);
@@ -209,7 +215,7 @@ bcmos_errno bcmonu_mgmt_init(bcmos_module_id module_id)
     switch (onu_mgmt_context.onu_mgmt_svc)
     {
     case BCM_ONU_MGMT_SVC_OMCI:
-        rc = omci_svc_init(onu_mgmt_onu_state_changed_notify);
+        rc = omci_svc_init(onu_mgmt_onu_state_changed_notify, is_issu);
         BCMOS_RETURN_IF_ERROR(rc);
         break;
 #ifdef ONU_MGMT_DPOE_SVC

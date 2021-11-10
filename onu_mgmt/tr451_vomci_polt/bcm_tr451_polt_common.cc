@@ -963,7 +963,8 @@ static void tr451_polt_omci_rx_cb(void *user_handle, OmciPacketEntry *packet)
     {
         BCM_POLT_LOG(ERROR, "Can't forward OMCI packet from ONU %s:%u to vOMCI. No connection\n",
             packet->header().chnl_term_name().c_str(), packet->header().onu_id());
-        ++onu->message_errors;
+        if (onu != nullptr)
+            ++onu->message_errors;
         delete packet;
         return;
     }
@@ -1021,7 +1022,8 @@ static bcmos_errno tr451_polt_onu_state_change_notify_cb(void *user_handle, cons
     bcmos_errno err;
     err = tr451_onu_status_change_cb(
         onu_info->cterm_name, onu_info->onu_id,
-        onu_info->serial_number.data, onu_info->presence_flags);
+        onu_info->serial_number.data, onu_info->registration_id,
+        onu_info->presence_flags);
     return err;
 }
 

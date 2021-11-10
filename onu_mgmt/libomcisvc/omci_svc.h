@@ -43,7 +43,7 @@ bcmos_errno bcmomci_svc_cfg_set(bcmonu_mgmt_cfg *cfg);
 bcmos_errno bcmomci_svc_cfg_get(bcmonu_mgmt_cfg *cfg);
 bcmos_errno bcmomci_svc_cfg_clear(bcmonu_mgmt_cfg *cfg);
 
-bcmos_errno omci_svc_init(onu_state_changed_cb onu_cb);
+bcmos_errno omci_svc_init(onu_state_changed_cb onu_cb, int is_issu);
 bcmos_errno omci_svc_deinit(void);
 bcmos_errno omci_svc_olt_init(bcmolt_oltid olt_id);
 

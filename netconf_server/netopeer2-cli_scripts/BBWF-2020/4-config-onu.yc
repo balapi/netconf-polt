@@ -358,7 +358,7 @@
     <component xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0" xc:operation="merge">
         <name>ont1</name>
         <class xmlns:ianahw="urn:ietf:params:xml:ns:yang:iana-hardware">ianahw:chassis</class>
-        <admin-state>unlocked</admin-state>
+        <!--admin-state>unlocked</admin-state-->
         <parent-rel-pos>1</parent-rel-pos>
     </component>
 
@@ -366,7 +366,7 @@
     <component xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0" xc:operation="merge">
         <name>ontCard_ont1_1</name>
         <class xmlns:bbf-hwt="urn:bbf:yang:bbf-hardware-types">bbf-hwt:board</class>
-        <admin-state>unlocked</admin-state>
+        <!--admin-state>unlocked</admin-state-->
         <parent>ont1</parent>
         <parent-rel-pos>1</parent-rel-pos>
     </component>
@@ -410,7 +410,7 @@
         <name>ontAni_ont1</name>
             <type xmlns:bbf-xponift="urn:bbf:yang:bbf-xpon-if-type">bbf-xponift:ani</type>
             <enabled>true</enabled>
-            <port-layer-if xmlns="urn:bbf:yang:bbf-interface-port-reference">ontAniPort_ont1</port-layer-if>
+            <!--port-layer-if xmlns="urn:bbf:yang:bbf-interface-port-reference">ontAniPort_ont1</port-layer-if-->
             <ani xmlns="urn:bbf:yang:bbf-xponani">
                 <management-gemport-aes-indicator>false</management-gemport-aes-indicator>
                 <upstream-fec>true</upstream-fec>
@@ -423,7 +423,7 @@
         <name>enet_uni_ont1_1_1</name>
         <type xmlns:ianaift="urn:ietf:params:xml:ns:yang:iana-if-type">ianaift:ethernetCsmacd</type>
         <enabled>true</enabled>
-        <port-layer-if xmlns="urn:bbf:yang:bbf-interface-port-reference">ontUni_ont1_1_1</port-layer-if>
+        <!--port-layer-if xmlns="urn:bbf:yang:bbf-interface-port-reference">ontUni_ont1_1_1</port-layer-if-->
     </interface>
 
     <!-- onu-side sub-interface  -->
@@ -450,7 +450,7 @@
                             <index>0</index>
                             <dot1q-tag>
                                 <tag-type xmlns:bbf-dot1qt="urn:bbf:yang:bbf-dot1q-types">bbf-dot1qt:c-vlan</tag-type>
-                                <vlan-id>10</vlan-id>
+                                <vlan-id>1000</vlan-id>
                                 <pbit-from-tag-index>0</pbit-from-tag-index>
                                 <dei-from-tag-index>0</dei-from-tag-index>
                             </dot1q-tag>
@@ -467,7 +467,7 @@
     </interface>
 </interfaces>
 
-<!-- ont-side tcont and gemport-->
+<!-- ont-side tcont and gemport
 <xpongemtcont xmlns="urn:bbf:yang:bbf-xpongemtcont">
     <tconts>
         <tcont xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0" xc:operation="merge">
@@ -487,3 +487,4 @@
         </gemport>
     </gemports>
 </xpongemtcont>
+-->
