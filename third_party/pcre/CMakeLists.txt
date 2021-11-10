@@ -4,7 +4,7 @@ include(third_party)
 
 bcm_3rdparty_module_name(pcre "8.45")
 
-bcm_3rdparty_download_wget("https://sourceforge.net/projects/pcre/files/pcre" "pcre-${PCRE_VERSION}.tar.gz")
+bcm_3rdparty_download_wget("https://sourceforge.net/projects/pcre/files/pcre/${PCRE_VERSION}" "pcre-${PCRE_VERSION}.tar.gz")
 
 bcm_3rdparty_add_dependencies(zlib)
 
