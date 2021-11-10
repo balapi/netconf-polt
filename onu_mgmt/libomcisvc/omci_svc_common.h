@@ -1,22 +1,22 @@
 /*
  *  <:copyright-BRCM:2016-2020:Apache:standard
- *  
+ *
  *   Copyright (c) 2016-2020 Broadcom. All Rights Reserved
- *  
+ *
  *   The term “Broadcom” refers to Broadcom Inc. and/or its subsidiaries
- *  
+ *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
  *   You may obtain a copy of the License at
- *  
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *   Unless required by applicable law or agreed to in writing, software
  *   distributed under the License is distributed on an "AS IS" BASIS,
  *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
- *  
+ *
  *  :>
  *
  *****************************************************************************/
@@ -34,12 +34,10 @@
 #include "omci_svc_adapter_common.h"
 #include "omci_svc_adapt_old_code.h"
 
+extern int omci_svc_is_issu;
+
 /** @todo currently setting max ONUs per pon to 256. Later BAL topology query should return this */
-/** @todo also to prevent out-of-memory condition, reducing number of ONUs per PON to an arbitrary lower limit.
-    The ideal max number of ONUs per PON should be as below:
-    #define OMCI_SVC_PON_TOPO_MAX_ONUS_PER_PON      (MAX(GPON_NUM_OF_ONUS, XGPON_NUM_OF_ONUS))
-    */
-#define OMCI_SVC_PON_TOPO_MAX_ONUS_PER_PON     128
+#define OMCI_SVC_PON_TOPO_MAX_ONUS_PER_PON     (MAX(GPON_NUM_OF_ONUS, XGPON_NUM_OF_ONUS))
 
 #define OMCI_SVC_PON_TOPO_CONTEXT(olt_id, pon_id) ((omci_svc_pon_context_t *)omci_svc_topo_pon_get_context(olt_id, pon_id))
 #define OMCI_SVC_ONU_TOPO_CONTEXT(olt_id, pon_id, onu_id) (&(OMCI_SVC_PON_TOPO_CONTEXT(olt_id, pon_id)->onus[onu_id]))
@@ -49,8 +47,6 @@
 bcmos_errno omci_svc_topo_init_context(bcmolt_oltid olt_id, uint8_t max_pon_for_olt);
 bcmos_errno omci_svc_topo_pon_set_context(bcmolt_oltid olt_id, uint32_t logical_pon_id, uint32_t max_num_of_onus, void *context);
 void *omci_svc_topo_pon_get_context(bcmolt_oltid olt_id, uint32_t logical_pon_id);
-/** @todo aspen not needed for broadcom omci stack */
-//bcmbal_pon_sub_family omci_svc_topo_pon_get_sub_family(bcmolt_oltid olt_id, uint32_t logical_pon_id);
 bcmos_bool omci_svc_topo_pon_is_valid(bcmolt_oltid olt_id, uint32_t logical_pon_id);
 bcmos_bool omci_svc_topo_pon_is_onu_id_valid(bcmolt_oltid olt_id, uint32_t logical_pon_id, bcmolt_pon_onu_id onu_id);
 
@@ -83,15 +79,27 @@ bcmos_bool omci_svc_topo_pon_is_onu_id_valid(bcmolt_oltid olt_id, uint32_t logic
 /* We assume that for the same ONU there cannot be more than 16 concurrent flow add/delete operations. */
 #define OMCI_SVC_FLOW_OP_QUEUE_SIZE 16
 
-#define OMCI_SVC_ETH_UNI_PORT_ID_MASK 0x00FF
+#define OMCI_SVC_ETH_UNI_PORT_ID_MASK 0x0FFF
 
-#define OMCI_SVC_O_VID_IS_MULTICAST_BROADCAST_MASK 0x8000
-#define OMCI_SVC_O_VID_IS_MULTICAST_BROADCAST_SHIFT 15
-/** Untagged flow would be designated as having vid of 4096 with a 1 in bit place 14 (starting from 0). 
-  This is needed to just assign an entity Id for a ME for untagged flow, 
+/** This defines the bit positions & values to make a ME instance entity Id based on following:
+  - VID (0-12th bits including 4096 used for any vid)
+  - uni port included in entity Id (13th bit)
+  - untagged flow (14th bit)
+  - mcast/broadcast flow (15th bit)
+  */
+#define OMCI_SVC_O_VID_IS_MULTICAST_BROADCAST_MASK      0x8000
+#define OMCI_SVC_O_VID_IS_MULTICAST_BROADCAST_SHIFT     15
+/** Untagged flow would be designated as having vid of 4096 with a 1 in bit place 14 (starting from 0).
+  This is needed to just assign an entity Id for a ME for untagged flow,
   and avoid conflicting with an ME associated actually with unicast or multicast VID value of 4096 (internal value to designate "Any VID") */
-#define OMCI_SVC_O_VID_UNTAGGED_END_TO_END_FLOW_SHIFT 14
-#define OMCI_SVC_O_VID_VALUE_MASK 0x1FFF
+#define OMCI_SVC_O_VID_UNTAGGED_END_TO_END_FLOW_SHIFT   14
+/** if VID+uni_port makes entity Id; 
+  this is used for Flows classifying same VID on different UNI ports (e.g. Broadcast flow) */
+#define OMCI_SVC_O_VID_PLUS_UNI_FLOW_SHIFT              13
+
+#define OMCI_SVC_O_VID_VALUE_MASK                       0x1FFF
+
+#define OMCI_SVC_O_VID_ENTITY_ID_HAS_UNI_PORT(o_vid_entity_id)  ((o_vid_entity_id) & (1 << OMCI_SVC_O_VID_PLUS_UNI_FLOW_SHIFT))
 
 typedef enum
 {
@@ -210,6 +218,7 @@ typedef enum
     OMCI_SVC_FLOW_STATE_ID__NUM_OF,
 } omci_svc_flow_state_id;
 
+
 typedef struct
 {
     bcmonu_mgmt_flow_cfg flow;
@@ -291,13 +300,25 @@ typedef struct
     uint8_t mapper_tp_type;
 } omci_svc_ieee_8021_p_mapper_svc_prof;
 
+
 typedef struct omci_svc_o_vid
 {
     DLIST_ENTRY(omci_svc_o_vid) next;
-    uint16_t entity_id; /* Has 2 fields, VID value and whether it's a multicast flow, that are accesses by OMCI_SVC_O_VID_VALUE_MASK and OMCI_SVC_O_VID_IS_MULTICAST_MASK respectively. */
+    uint16_t entity_id; /* Has VID value and control bits to indicate mcast etc */
     uint16_t ref_count;
     omci_svc_ieee_8021_p_mapper_svc_prof ieee_8021p_mapper_service_profile_me; /* Not relevant in case of multicast. */
 } omci_svc_o_vid;
+
+typedef struct omci_svc_o_vid_uni
+{
+    DLIST_ENTRY(omci_svc_o_vid_uni) next;
+    uint16_t ctrl_bits;          /* mcast/bast, untagged, uniport (bits 15, 14, 13) */
+    uint16_t o_vid;
+    uint16_t uni_entity_id;     /* uni entity id as reported by ONU MIB */
+    uint16_t entity_id; /* entity id which maps from o_vid & uni port (used for broadcast flow) */
+    uint16_t ref_count;
+    omci_svc_ieee_8021_p_mapper_svc_prof ieee_8021p_mapper_service_profile_me; /* Not relevant for mcast or broadcast. */
+} omci_svc_o_vid_uni;
 
 typedef struct omci_svc_gem_port
 {
@@ -331,6 +352,7 @@ typedef struct omci_svc_onu_mib
 
     /* ME that will probably be provisioned to the ONU by the OLT. */
     DLIST_HEAD(, omci_svc_o_vid) o_vids;
+    DLIST_HEAD(, omci_svc_o_vid_uni) o_vid_unis;
     DLIST_HEAD(, omci_svc_gem_port) gem_ports;
     TAILQ_HEAD(, omci_svc_mac_bridge_port) free_mac_bridge_ports;
     TAILQ_HEAD(, omci_svc_mac_bridge_port) used_mac_bridge_ports;
@@ -343,7 +365,7 @@ typedef struct omci_svc_onu
     omci_svc_onu_state_id state;
     bcmonu_mgmt_admin_state admin_state;
     bcmonu_mgmt_status oper_status;
-    bcmonu_mgmt_onu_cfg onu_cfg;
+    bcmonu_mgmt_onu_cfg *onu_cfg;
 
     /* Next available operation reference */
     uint16_t op_ref;
@@ -363,6 +385,12 @@ typedef struct omci_svc_onu
     omci_svc_onu_mib mib;
 
     void *iter; /* Generic iterator */
+
+    /** 8 bit of Id generator for o_vid+uni based entity Id;
+        @note the actual Id is set with control bits for broadcast, uni port inclusion etc,
+                and stored in o_vid_unis entries.
+     */
+    uint8_t o_vid_uni_entity_id_gen;    /* 8 bit of Id generator for o_vid+uni based entity Id */
 } omci_svc_onu;
 
 /* Per PON context */

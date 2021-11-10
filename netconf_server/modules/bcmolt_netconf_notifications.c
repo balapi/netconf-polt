@@ -40,7 +40,8 @@ extern bcmos_bool xpon_cterm_is_onu_state_notifiable(const char *cterm_name, con
    representing 4-byte vendor-specific id
 */
 bcmos_errno bcmolt_xpon_v_ani_state_change(const char *cterm_name, uint16_t onu_id,
-    const uint8_t *serial_number, xpon_onu_presence_flags presence_flags)
+    const uint8_t *serial_number, uint8_t *registration_id,
+    xpon_onu_presence_flags presence_flags)
 {
     sr_session_ctx_t *session = bcm_netconf_session_get();
     const struct ly_ctx *ctx = sr_get_context(sr_session_get_connection(session));
@@ -51,7 +52,7 @@ bcmos_errno bcmolt_xpon_v_ani_state_change(const char *cterm_name, uint16_t onu_
     char serial_number_string[13];
     const char *presence_state;
     char notif_xpath[200];
-    int sr_rc = SR_ERR_INVAL_ARG;
+    bcmos_errno err = BCM_ERR_INTERNAL;
 
     /* Don't send notification if ONU was discovered, but not yet activated and v-ani is present.
        In this case NETCONF server will attempt to activate the ONU, so this discovery state is transitional.
@@ -139,6 +140,16 @@ bcmos_errno bcmolt_xpon_v_ani_state_change(const char *cterm_name, uint16_t onu_
             }
         }
 
+        if (registration_id != NULL)
+        {
+            char registration_id_string[73];
+            nc_bin_to_hex(registration_id, 36, registration_id_string);
+            if (nc_ly_sub_value_add(NULL, notif, notif_xpath, "detected-registration-id", registration_id_string) == NULL)
+            {
+                break;
+            }
+        }
+
 #else /* #ifdef TR385_ISSUE2 */
     /* TR-385 issue 1 */
 #define BBF_XPON_ONU_STATES_MODULE_NAME             "bbf-xpon-onu-states"
@@ -191,6 +202,16 @@ bcmos_errno bcmolt_xpon_v_ani_state_change(const char *cterm_name, uint16_t onu_
             }
         }
 
+        if (registration_id != NULL)
+        {
+            char registration_id_string[73];
+            nc_bin_to_hex(registration_id, 36, registration_id_string);
+            if (nc_ly_sub_value_add(NULL, notif, notif_xpath, "detected-registration-id", registration_id_string) == NULL)
+            {
+                break;
+            }
+        }
+
         if (cterm_name != NULL)
         {
             if (nc_ly_sub_value_add(NULL, notif, notif_xpath, "channel-termination-ref", (void *)(long)cterm_name) == NULL)
@@ -205,10 +226,11 @@ bcmos_errno bcmolt_xpon_v_ani_state_change(const char *cterm_name, uint16_t onu_
             break;
 
         NC_LOG_INFO("Sent '%s' notification for ONU %s on %s\n", presence_state, serial_number_string, cterm_name);
+        err = BCM_ERR_OK;
 
     } while (0);
 
     nc_sr_event_notif_free(notif);
 
-    return (sr_rc == SR_ERR_OK) ? BCM_ERR_OK : BCM_ERR_INTERNAL;
+    return err;
 }

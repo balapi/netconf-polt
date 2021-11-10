@@ -20,10 +20,85 @@
 :>
  */
 #include <bcmolt_daemon.h>
+#if defined(CONFIG_LINENOISE) && !defined(LINENOISE_DISABLE_TERMIOS)
+#include <linenoise.h>
+#include <termios.h>
+static struct termios termios_org;
+#endif
 
 static FILE *daemon_in_fifo;
 static FILE *daemon_out_fifo;
 static bcmos_bool terminated;
+static bcmos_bool no_lineedit;
+
+#if defined(CONFIG_LINENOISE)
+static bcmos_bool raw_mode;
+#endif
+
+static void raw_terminal_mode_disable(void)
+{
+    /* Don't even check the return value as it's too late. */
+#if defined(CONFIG_LINENOISE) && !defined(LINENOISE_DISABLE_TERMIOS)
+    if (raw_mode)
+    {
+        tcsetattr(STDIN_FILENO, TCSAFLUSH, &termios_org);
+        raw_mode = BCMOS_FALSE;
+    }
+#endif
+}
+
+#if defined(CONFIG_LINENOISE)
+/* Raw mode */
+static bcmos_bool raw_terminal_mode_enable(void)
+{
+#if !defined(LINENOISE_DISABLE_TERMIOS)
+    int rc = -1;
+    struct termios raw;
+
+    if (raw_mode)
+        return BCMOS_TRUE;
+
+    if (tcgetattr(STDIN_FILENO, &termios_org) == -1)
+    {
+        return BCMOS_FALSE;
+    }
+    raw = termios_org;  /* modify the original mode */
+    /* input modes: no break, no CR to NL, no parity check, no strip char,
+     * no start/stop output control. */
+    raw.c_iflag &= ~(BRKINT | IGNBRK | ICRNL | INPCK | ISTRIP | IXON | IXOFF);
+
+    /* output modes - disable post processing */
+    /* raw.c_oflag &= ~(OPOST); */
+
+    /* control modes - set 8 bit chars */
+    raw.c_cflag |= (CS8 /* | ISIG */);
+
+    /* local modes - echoing off, canonical off, no extended functions,
+     * no signal chars (^Z,^C) */
+    raw.c_lflag &= ~(ECHO | ICANON | IEXTEN);
+    /* control chars - set return condition: min number of bytes and timer.
+     * We want read to return every single byte, without timeout. */
+    raw.c_cc[VMIN] = 1; raw.c_cc[VTIME] = 0; /* 1 byte, no timer */
+
+    /* put terminal in raw mode after flushing */
+    rc = tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
+
+    raw_mode = (rc != -1) ? BCMOS_TRUE : BCMOS_FALSE;
+#endif
+    return raw_mode;
+}
+#endif
+
+/* Check termios support */
+static bcmos_bool raw_terminal_mode_check(void)
+{
+    int rc = -1;
+#if defined(CONFIG_LINENOISE) && !defined(LINENOISE_DISABLE_TERMIOS)
+    struct termios raw;
+    rc = tcgetattr(STDIN_FILENO, &raw);
+#endif
+    return (rc != -1);
+}
 
 static int _fifo_read_handler(long arg)
 {
@@ -42,11 +117,27 @@ static int _fifo_read_handler(long arg)
     /* coverity[tainted_data] - we want to mirror the input directly, even if it's "tainted" */
     while ((c = fgetc(daemon_out_fifo)) >= 0)
     {
-        putchar(c);
-        fflush(stdout);
+        /* Special handling of EnableRaw / DisableRaw special characters */
+#if defined(CONFIG_LINENOISE)
+        if (c == REMOTE_SET_RAW_ON_CHAR)
+        {
+            raw_terminal_mode_enable();
+        }
+        else if (c == REMOTE_SET_RAW_OFF_CHAR)
+        {
+            raw_terminal_mode_disable();
+        }
+        else
+#endif
+        {
+            putchar(c);
+            fflush(stdout);
+        }
     }
     printf("daemon_attach: Error or EOF when reading from CLI FIFO (%s). Terminated\n", strerror(errno));
     terminated = BCMOS_TRUE;
+    if (!no_lineedit)
+        raw_terminal_mode_disable();
     fclose(daemon_out_fifo);
 
     return 0;
@@ -55,10 +146,31 @@ static int _fifo_read_handler(long arg)
 static int print_help(char *cmd)
 {
     fprintf(stderr, "Usage:\n"
-        "%s [-global] [-path path] name\n", cmd);
+        "%s [-global] [-no-lineedit] [-path path] name\n", cmd);
     fprintf(stderr, "\t-global\t\tOnly one daemon instance per host. The default is instance per user\n");
+    fprintf(stderr, "\t-no-lineedit\t\tDisable enhanced line editing\n");
     fprintf(stderr, "\t-path path\t\tDaemon control files location. The default is /tmp\n");
     return -1;
+}
+
+static void daemon_attach_signal_handler(int signal_number)
+{
+    switch (signal_number)
+    {
+    case SIGINT:
+    case SIGTERM:
+    case SIGKILL:
+        printf("daemon_attach: Caught SIGINT/SIGTERM/SIGKILL signal. Terminating..\n");
+        if (!no_lineedit)
+            raw_terminal_mode_disable();
+        terminated = BCMOS_TRUE;
+        close(STDIN_FILENO);
+        break;
+
+    default:
+        printf("daemon_attach: Caught unexpected signal %d. Signal ignored\n", signal_number);
+        break;
+    }
 }
 
 int main(int argc, char *argv[])
@@ -75,6 +187,7 @@ int main(int argc, char *argv[])
     int i;
     int c;
     char str[256];
+    struct sigaction act;
     bcmos_errno rc;
 
     /* Process command line parameters */
@@ -84,12 +197,20 @@ int main(int argc, char *argv[])
         {
             daemon_parms.is_global = BCMOS_TRUE;
         }
+        else if (!strcmp(argv[i], "-no-lineedit"))
+        {
+            no_lineedit = BCMOS_TRUE;
+        }
         else if (!strcmp(argv[i], "-path"))
         {
             ++i;
             if (i >= argc)
                 return print_help(argv[0]);
             daemon_parms.path = argv[i];
+        }
+        else if (argv[i][0] == '-')
+        {
+            return print_help(argv[0]);
         }
         else
         {
@@ -114,7 +235,22 @@ int main(int argc, char *argv[])
     rc = bcmos_task_create(&fifo_rd_task, &rd_task_parms);
     BUG_ON(rc != BCM_ERR_OK);
 
+    memset (&act, 0, sizeof (act));
+    act.sa_handler = (__sighandler_t)daemon_attach_signal_handler;
+    sigaction(SIGINT, &act, NULL);
+    sigaction(SIGTERM, &act, NULL);
+
     bcmos_printf("Attached to %s Daemon. Enter CLI command\n", daemon_parms.name);
+    /* Try to switch the terminal into the raw mode and force linenoise to accept
+       the terminal as "smart" if successful. Otherwise, linenoise will refuse to do
+       line editing on a pipe file
+    */
+    if (!no_lineedit && raw_terminal_mode_check())
+    {
+        bcmos_printf("Enhanced line editing is enabled\n");
+        fputs("/~ enable=yes multiline=yes force=yes\n", daemon_in_fifo);
+        fflush(daemon_in_fifo);
+    }
 
     /* Read from stdin and write to the FIFO */
     while (!terminated && (c = getchar()) >= 0)
@@ -129,6 +265,8 @@ int main(int argc, char *argv[])
 
     fclose(daemon_in_fifo);
     bcmos_task_destroy(&fifo_rd_task);
+    if (!no_lineedit)
+        raw_terminal_mode_disable();
 
     return 0;
 }

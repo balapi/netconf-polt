@@ -40,7 +40,7 @@ bcmos_errno bcmonu_mgmt_cfg_clear(bcmonu_mgmt_cfg *cfg)
     return BCM_ERR_OK;
 }
 
-bcmos_errno bcmonu_mgmt_init(bcmos_module_id module_id)
+bcmos_errno bcmonu_mgmt_init(bcmos_module_id module_id, int is_issu )
 {
     return BCM_ERR_OK;
 }

@@ -1,10 +1,11 @@
 # pcre - Perl Regular Expression parser
+# version 2.x
 #
 include(third_party)
 
-bcm_3rdparty_module_name(pcre "8.45")
+bcm_3rdparty_module_name(pcre2 "10.39")
 
-bcm_3rdparty_download_wget("https://sourceforge.net/projects/pcre/files/pcre/${PCRE_VERSION}" "pcre-${PCRE_VERSION}.tar.gz")
+bcm_3rdparty_download_wget("https://github.com/PhilipHazel/pcre2/releases/download/pcre2-${PCRE2_VERSION}" "pcre2-${PCRE2_VERSION}.tar.gz")
 
 bcm_3rdparty_add_dependencies(zlib)
 

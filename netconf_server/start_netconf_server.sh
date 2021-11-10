@@ -15,6 +15,14 @@ else
 fi
 
 NETCONF_PARMS=""
+
+# trap ctrl-c and call ctrl_c()
+trap ctrl_c INT
+
+function ctrl_c() {
+    echo "** Trapped CTRL-C"
+}
+
 # Kill the old netopeer2-server instance unless it is running in the foreground (ie, was started separately)
 if $PS | grep netopeer2\-server | grep -v grep | grep '\-d' > /dev/null; then
     echo "netopeer2-server is running in the foreground. Keeping the running instance"
@@ -34,8 +42,12 @@ if [ "$1" = "valgrind" ]; then
     INSTRUMENT="valgrind"
     shift
 fi
+
 $INSTRUMENT ./bcmolt_netconf_server $*
+
 if ! $PS | grep bcmolt_netconf_server | grep -v grep > /dev/null; then
     echo Killing netopeer2-server
     killall netopeer2-server 2> /dev/null
 fi
+# Restore terminal mode
+tset -c

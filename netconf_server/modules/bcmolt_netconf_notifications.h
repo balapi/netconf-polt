@@ -48,6 +48,7 @@ typedef enum
    serial_number is in 8 byte binary format.
 */
 bcmos_errno bcmolt_xpon_v_ani_state_change(const char *cterm_name, uint16_t onu_id,
-    const uint8_t *serial_number, xpon_onu_presence_flags presence_flags);
+    const uint8_t *serial_number, uint8_t *registration_id,
+    xpon_onu_presence_flags presence_flags);
 
 #endif

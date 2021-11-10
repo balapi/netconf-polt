@@ -698,6 +698,7 @@ struct xpon_enet
     /* Config info */
     bbf_interface_usage usage;
     xpon_obj_hdr *lower_layer;
+    xpon_hardware *port_layer_if;
     bcmolt_interface intf_id;
 
     xpon_subif_list subifs;
@@ -709,6 +710,7 @@ typedef enum
 {
     xpon_enet_prop_id_usage,
     xpon_enet_prop_id_lower_layer,
+    xpon_enet_prop_id_port_layer_if,
 } xpon_enet_prop_id;
 
 

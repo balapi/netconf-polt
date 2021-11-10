@@ -243,7 +243,7 @@ bcmos_errno omci_svc_omci_mib_upload_req (bcmolt_oltid olt_id, uint32_t pon_ni, 
  */
 void omci_svc_omci_mib_upload_analyze (bcmonu_mgmt_onu_key *key, omci_svc_onu *onu_context, void *context)
 {
-    bcmolt_oltid olt_id = onu_context->onu_cfg.hdr.hdr.olt_id;
+    bcmolt_oltid olt_id = onu_context->onu_cfg->hdr.hdr.olt_id;
     bcm_omci_me_hdr *me = context;
 
     OMCI_SVC_LOG(DEBUG, olt_id, key, NULL, "MIB upload next (class_id=%s(0x%X), entity_id=%u)\n",
@@ -487,8 +487,7 @@ static bcmos_errno omci_svc_omci_ext_vlan_tag_oper_config_data_set_entry_in_tabl
  */
 bcmos_errno omci_svc_omci_ext_vlan_tag_oper_config_data_me_add_entry (bcmonu_mgmt_onu_key *onu_key, omci_svc_onu *onu_context , bcmonu_mgmt_flow_cfg *flow, unsigned long filter_mask)
 {
-    omci_svc_uni *uni = omci_svc_uni_get(onu_context, flow);
-    bcmolt_oltid olt_id = onu_context->onu_cfg.hdr.hdr.olt_id;
+    bcmolt_oltid olt_id = onu_context->onu_cfg->hdr.hdr.olt_id;
 #ifdef ENABLE_LOG
     unsigned long full_filter_mask = omci_svc_filter_mask_get(flow);
 #endif
@@ -496,8 +495,17 @@ bcmos_errno omci_svc_omci_ext_vlan_tag_oper_config_data_me_add_entry (bcmonu_mgm
     bcmos_errno rc = BCM_ERR_OK;
     bcm_omci_ext_vlan_tag_oper_config_data_rx_frame_vlan_tag_oper_table entry = {};
     bcmos_bool is_add_entry = BCMOS_TRUE;
+    omci_svc_uni *uni = NULL;
 
     BCM_LOG(DEBUG, omci_svc_log_id, "%s: ext_vlan_tag_oper_config_data Entry 0x%lx/0x%lx\n", __FUNCTION__, filter_mask, full_filter_mask);
+
+    rc = omci_svc_uni_get(onu_context, flow, &uni);
+    if (rc != BCM_ERR_OK)
+    {
+        OMCI_SVC_LOG(ERROR, olt_id, onu_key, NULL, "%s: failed, me_id={class_id=%s}, result=%s\n",
+            __FUNCTION__, BCM_OMCI_ME_CLASS_VAL_STR(BCM_OMCI_ME_CLASS_VAL_EXT_VLAN_TAG_OPER_CONFIG_DATA), bcmos_strerror(rc));
+        return rc;
+    }
 
     if (omci_svc_is_flow_double_tagged(flow))
     {
@@ -529,8 +537,7 @@ bcmos_errno omci_svc_omci_ext_vlan_tag_oper_config_data_me_add_entry (bcmonu_mgm
  */
 bcmos_errno omci_svc_omci_ext_vlan_tag_oper_config_data_me_remove_entry (bcmonu_mgmt_onu_key *onu_key, omci_svc_onu *onu_context, bcmonu_mgmt_flow_cfg *flow, unsigned long filter_mask)
 {
-    omci_svc_uni *uni = omci_svc_uni_get(onu_context, flow);
-    bcmolt_oltid olt_id = onu_context->onu_cfg.hdr.hdr.olt_id;
+    bcmolt_oltid olt_id = onu_context->onu_cfg->hdr.hdr.olt_id;
 #ifdef ENABLE_LOG
     unsigned long full_filter_mask = omci_svc_filter_mask_get(flow);
 #endif
@@ -538,8 +545,17 @@ bcmos_errno omci_svc_omci_ext_vlan_tag_oper_config_data_me_remove_entry (bcmonu_
     bcmos_errno rc = BCM_ERR_OK;
     bcm_omci_ext_vlan_tag_oper_config_data_rx_frame_vlan_tag_oper_table entry = {};
     bcmos_bool is_add_entry = BCMOS_FALSE;
+    omci_svc_uni *uni = NULL;
 
     BCM_LOG(DEBUG, omci_svc_log_id, "%s: ext_vlan_tag_oper_config_data Entry 0x%lx/0x%lx\n", __FUNCTION__, filter_mask, full_filter_mask);
+
+    rc = omci_svc_uni_get(onu_context, flow, &uni);
+    if (rc != BCM_ERR_OK)
+    {
+        OMCI_SVC_LOG(ERROR, olt_id, onu_key, NULL, "%s: failed, me_id={class_id=%s}, result=%s\n",
+            __FUNCTION__, BCM_OMCI_ME_CLASS_VAL_STR(BCM_OMCI_ME_CLASS_VAL_EXT_VLAN_TAG_OPER_CONFIG_DATA), bcmos_strerror(rc));
+        return rc;
+    }
 
     if (omci_svc_is_flow_double_tagged(flow))
     {
@@ -949,9 +965,17 @@ bcmos_errno omci_svc_omci_mcast_operations_profile_me_delete(bcmolt_oltid olt_id
 bcmos_errno omci_svc_omci_mcast_operations_profile_me_add_entry_dynamic_acl(bcmonu_mgmt_onu_key *onu_key,  omci_svc_onu *onu_context, bcmonu_mgmt_flow_cfg *flow, bcmonu_mgmt_svc_port_id gem_port_id)
 {
     bcmos_errno rc = BCM_ERR_OK;
-    omci_svc_uni *uni = omci_svc_uni_get(onu_context, flow);
+    omci_svc_uni *uni = NULL;
     bcmos_bool is_add_entry = BCMOS_TRUE;
-    bcmolt_oltid olt_id = onu_context->onu_cfg.hdr.hdr.olt_id;
+    bcmolt_oltid olt_id = onu_context->onu_cfg->hdr.hdr.olt_id;
+
+    rc = omci_svc_uni_get(onu_context, flow, &uni);
+    if (rc != BCM_ERR_OK)
+    {
+        OMCI_SVC_LOG(ERROR, olt_id, onu_key, NULL, "%s: failed, me_id={class_id=%s}, result=%s\n",
+            __FUNCTION__, BCM_OMCI_ME_CLASS_VAL_STR(BCM_OMCI_ME_CLASS_VAL_MCAST_OPERATIONS_PROFILE), bcmos_strerror(rc));
+        return rc;
+    }
 
     bcm_omci_mcast_operations_profile_dynamic_access_control_list_table entry = {};
 
@@ -974,10 +998,18 @@ bcmos_errno omci_svc_omci_mcast_operations_profile_me_add_entry_dynamic_acl(bcmo
  */
 bcmos_errno omci_svc_omci_mcast_operations_profile_me_remove_entry_dynamic_acl(bcmonu_mgmt_onu_key *onu_key, omci_svc_onu *onu_context, bcmonu_mgmt_flow_cfg *flow)
 {
-    bcmos_errno rc = BCM_ERR_OK;
-    omci_svc_uni *uni = omci_svc_uni_get(onu_context, flow);
     bcmos_bool is_add_entry = BCMOS_FALSE;
-    bcmolt_oltid olt_id = onu_context->onu_cfg.hdr.hdr.olt_id;
+    bcmolt_oltid olt_id = onu_context->onu_cfg->hdr.hdr.olt_id;
+    bcmos_errno rc = BCM_ERR_OK;
+    omci_svc_uni *uni = NULL;
+
+    rc = omci_svc_uni_get(onu_context, flow, &uni);
+    if (rc != BCM_ERR_OK)
+    {
+        OMCI_SVC_LOG(ERROR, olt_id, onu_key, NULL, "%s: failed, me_id={class_id=%s}, result=%s\n",
+            __FUNCTION__, BCM_OMCI_ME_CLASS_VAL_STR(BCM_OMCI_ME_CLASS_VAL_MCAST_OPERATIONS_PROFILE), bcmos_strerror(rc));
+        return rc;
+    }
 
     bcm_omci_mcast_operations_profile_dynamic_access_control_list_table entry = {};
 
