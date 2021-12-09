@@ -1098,7 +1098,7 @@ bcmos_errno xpon_v_ani_init(sr_session_ctx_t *srs)
     err = err ? err : bcmos_mutex_create(&onu_config_lock, 0, "nc_onu_lock");
     if (!bcm_tr451_onu_management_is_enabled())
     {
-        err = err ? err : bcmonu_mgmt_init(BCMOS_MODULE_ID_NETCONF_SERVER, 0);
+        err = err ? err : bcmonu_mgmt_init(BCMOS_MODULE_ID_NETCONF_SERVER);
         err = err ? err : bcmonu_mgmt_olt_init(netconf_agent_olt_id());
         err = err ? err : _omci_onu_ind_register_unregister(BCMOS_TRUE);
     }
