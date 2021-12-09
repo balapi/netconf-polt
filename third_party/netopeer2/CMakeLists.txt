@@ -8,7 +8,7 @@ bcm_make_normal_option(NETOPEER_SSH_PORT STRING "Default SSH port netopeer liste
 if(NETCONF_TOOLS_FROM_DEVEL)
     set(_VERSION "devel")
 elseif(NETOPEER2_VERSION_2X)
-    set(_VERSION "2.0.0")
+    set(_VERSION "2.0.35")
 else()
     set(_VERSION "1.1.76")
 endif()

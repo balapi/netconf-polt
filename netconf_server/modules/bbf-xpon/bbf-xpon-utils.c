@@ -31,9 +31,27 @@
 
 static bcmos_mutex xpon_lock;
 static hash_table *object_hash;
+static hash_table *vlan_hash;
 
 #define MAX_INTERFACE_NAME_LENGTH   32
 #define XPON_OBJ_HASH_KEY_LENGTH    MAX_INTERFACE_NAME_LENGTH
+
+typedef struct xpon_vlan_key
+{
+    bcmolt_interface pon_ni;
+    uint16_t vlan;
+} xpon_vlan_key;
+
+typedef struct xpon_vlan_entry
+{
+    bcmolt_flow_id flow_id;
+} xpon_vlan_entry;
+
+/* TODO: ideally would be to expose BAL's max_num_of_flows and a few other limits through
+   OLT object. Using a constant for now.
+*/
+#define XPON_MAX_FLOWS              4096
+
 
 static uint16_t number_of_pons;
 static bcmolt_topology_map olt_topology_maps[BCM_MAX_PONS_PER_OLT];
@@ -794,6 +812,7 @@ bcmos_errno xpon_get_olt_topology(bcmolt_topology *topo)
     for (i = 0; i < olt_cfg.data.topology.topology_maps.len; i++)
         olt_topology_maps[i] = olt_cfg.data.topology.topology_maps.arr[i];
 
+    topo->num_switch_ports = olt_cfg.data.topology.num_switch_ports;
     topo->topology_maps.arr = olt_topology_maps;
     topo->topology_maps.len = olt_cfg.data.topology.topology_maps.len;
     return BCM_ERR_OK;
@@ -850,12 +869,34 @@ bcmos_errno xpon_tm_sched_create(bcmolt_interface_type type, bcmolt_interface ni
         return err;
     }
 
+    /* Create a default qmp for NNI interface */
+    if (type == BCMOLT_INTERFACE_TYPE_NNI)
+    {
+        bcmolt_tm_qmp_key key = {
+            .id = ni
+        };
+        bcmolt_tm_qmp_cfg qmp_cfg;
+        bcmolt_arr_u8_8 pbits_to_tmq = {};
+        for (tc = 0; tc < 8; tc++)
+            pbits_to_tmq.arr[tc] = tc;
+
+        BCMOLT_CFG_INIT(&qmp_cfg, tm_qmp, key);
+        BCMOLT_MSG_FIELD_SET(&qmp_cfg, pbits_to_tmq_id, pbits_to_tmq);
+        err = bcmolt_cfg_set(netconf_agent_olt_id(), &qmp_cfg.hdr);
+        if (err != BCM_ERR_OK)
+        {
+            NC_LOG_ERR("Failed to create tm_qmp %u. Error %s (%s)\n",
+                ni, bcmos_strerror(err), qmp_cfg.hdr.hdr.err_text);
+            return err;
+        }
+    }
+
     for (tc = 0; tc < 8; tc++)
     {
         bcmolt_tm_queue_key tm_queue_key = {
             .sched_id = tm_sched_key.id,
             .id = tc,
-            .tm_q_set_id = 32768
+            .tm_q_set_id = (type == BCMOLT_INTERFACE_TYPE_NNI) ? 0 : 32768
         };
         bcmolt_tm_queue_cfg tm_queue_cfg;
 
@@ -1045,6 +1086,53 @@ bcmos_errno xpon_oper_submit_and_schedule_if_failed(sr_session_ctx_t *srs, bcmol
     return err;
 }
 
+bcmos_errno xpon_vlan_add(bcmolt_interface pon_ni, uint16_t vlan, bcmolt_flow_id flow_id)
+{
+    xpon_vlan_key key_str = {
+        .pon_ni = pon_ni,
+        .vlan = vlan
+    };
+    xpon_vlan_entry entry = {
+        .flow_id = flow_id
+    };
+    uint8_t *key = (uint8_t *)&key_str;
+    bcmos_errno err;
+
+    bbf_xpon_lock();
+    if (hash_table_get(vlan_hash, key) != NULL)
+    {
+        err = BCM_ERR_ALREADY;
+    }
+    else
+    {
+        if (hash_table_put(vlan_hash, key, &entry) != NULL)
+            err = BCM_ERR_OK;
+        else
+            err = BCM_ERR_NOMEM;
+    }
+    bbf_xpon_unlock();
+    NC_LOG_DBG("Added vlan [%u:%u]=%u. Result '%s'\n", pon_ni, vlan, flow_id, bcmos_strerror(err));
+    return err;
+
+}
+
+bcmos_errno xpon_vlan_delete(bcmolt_interface pon_ni, uint16_t vlan)
+{
+    xpon_vlan_key key_str = {
+        .pon_ni = pon_ni,
+        .vlan = vlan
+    };
+    uint8_t *key = (uint8_t *)&key_str;
+    bcmos_bool removed;
+
+    bbf_xpon_lock();
+    removed = hash_table_remove(vlan_hash, key);
+    bbf_xpon_unlock();
+    NC_LOG_DBG("Deleted vlan %u:%u. found=%d\n", pon_ni, vlan, removed);
+
+    return removed ? BCM_ERR_OK : BCM_ERR_NOENT;
+}
+
 bcmos_errno bcmolt_xpon_utils_init(void)
 {
     bcmos_errno err;
@@ -1061,6 +1149,14 @@ bcmos_errno bcmolt_xpon_utils_init(void)
     if (object_hash == NULL)
         return BCM_ERR_NOMEM;
 
+    vlan_hash = hash_table_create(XPON_MAX_FLOWS,
+        sizeof(xpon_vlan_entry), sizeof(xpon_vlan_key), "xpon-vlan");
+    if (vlan_hash == NULL)
+    {
+        hash_table_delete(object_hash);
+        return BCM_ERR_NOMEM;
+    }
+
     TAILQ_INIT(&scheduled_request_list);
 
     return err;
@@ -1070,12 +1166,6 @@ bcmos_errno bcmolt_xpon_utils_init(void)
 void bcmolt_xpon_utils_exit(void)
 {
     xpon_scheduled_request *req, *req_tmp;
-
-    if (object_hash)
-    {
-        hash_table_clear(object_hash);
-        //hash_table_destroy(&interface_hash);
-    }
 
     TAILQ_FOREACH_SAFE(req, &scheduled_request_list, next, req_tmp)
     {
@@ -1090,5 +1180,19 @@ void bcmolt_xpon_utils_exit(void)
         xpon_scheduled_request_free(req);
     }
     bcmos_mutex_destroy(&scheduled_request_lock);
+
+    if (object_hash)
+    {
+        hash_table_clear(object_hash);
+        hash_table_delete(object_hash);
+        object_hash = NULL;
+    }
+    if (vlan_hash)
+    {
+        hash_table_clear(vlan_hash);
+        hash_table_delete(vlan_hash);
+        vlan_hash = NULL;
+    }
+
     bcmos_mutex_destroy(&xpon_lock);
 }

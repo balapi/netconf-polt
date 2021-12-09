@@ -22,7 +22,7 @@
  *****************************************************************************/
 
 /*
- * bbf-xpon-vlan_subif.c
+ * bbf-xpon-apply-flow-config.c
  */
 #include "bbf-xpon-internal.h"
 #include <onu_mgmt.h>
@@ -40,7 +40,6 @@ static uint16_t global_group_id = 1;
    As of now it is not required because ONU management stack does it automatically,
    symmetrically with the upstrteam flow */
 /* #define CREATE_DOWNSTREAM_ONU_FLOWS */
-
 
 static bcmos_errno xpon_find_rule_gem(
     sr_session_ctx_t *srs,
@@ -135,7 +134,22 @@ bcmos_errno xpon_apply_flow_delete(sr_session_ctx_t *srs, xpon_vlan_subif *subif
                 rule->group_id = BCM_GROUP_ID_INVALID;
             }
         }
+
+#ifndef BCM_OPEN_SOURCE
+        if (bcmolt_is_per_flow_mode())
+        {
+            if (rule->ds_rule)
+            {
+                xpon_iwf_delete_ds_flows(srs, rule);
+            }
+            else
+            {
+                xpon_iwf_delete_us_flows(srs, rule);
+            }
+        }
+#endif
     }
+
     if (forwarder != NULL)
     {
         /* group forwarder or 1-1 ? */
@@ -202,7 +216,7 @@ static bcmos_errno xpon_map_bal_flow_classifier(bbf_subif_ingress_rule *rule, co
     bbf_match_criteria match = rule->match;
 
     /* Combine match cryteria with qos classifier */
-    if (qos_class != NULL)
+    if (qos_class != NULL && !bcmolt_is_per_flow_mode())
     {
         err = xpon_merge_match(&match, &qos_class->match);
     }
@@ -254,16 +268,19 @@ static bcmos_errno xpon_create_bal_flow(sr_session_ctx_t *srs, bcmolt_flow_type 
     bcmolt_tm_sched_id sched_id = 0;
     bcmos_errno err;
 
-    if (traffic_class >= BCM_SIZEOFARRAY(rule->flows))
-        return BCM_ERR_PARM;
-    if (tc_flow->gem == NULL || tc_flow->qos_class == NULL)
+    if (!bcmolt_is_per_flow_mode())
     {
-        err = BCM_ERR_INTERNAL;
-        NC_ERROR_REPLY(srs, NULL,
-            "GEM port and/or qos_class is unassigned. Failed to create %s OLT flow. Error %s\n",
-            bcmolt_enum_stringval(bcmolt_flow_type_string_table, type),
-            bcmos_strerror(err));
-        return err;
+        if (traffic_class >= BCM_SIZEOFARRAY(rule->flows))
+            return BCM_ERR_PARM;
+        if (tc_flow->gem == NULL || tc_flow->qos_class == NULL)
+        {
+            err = BCM_ERR_INTERNAL;
+            NC_ERROR_REPLY(srs, NULL,
+                "GEM port and/or qos_class is unassigned. Failed to create %s OLT flow. Error %s\n",
+                bcmolt_enum_stringval(bcmolt_flow_type_string_table, type),
+                bcmos_strerror(err));
+            return err;
+        }
     }
 
     /* ToDo: implement free flow_id assignment */
@@ -298,13 +315,27 @@ static bcmos_errno xpon_create_bal_flow(sr_session_ctx_t *srs, bcmolt_flow_type 
     }
 
     /* Attach to per-PON TM_SCHED, queue per traffic class, except when dealing with downstream N:1 or mcast */
-    if (rule->group_id == BCM_GROUP_ID_INVALID || type == BCMOLT_FLOW_TYPE_UPSTREAM)
+    if (!bcmolt_is_per_flow_mode())
     {
-        BCMOLT_MSG_FIELD_SET(&flow_cfg, egress_qos.type, BCMOLT_EGRESS_QOS_TYPE_FIXED_QUEUE);
-        BCMOLT_MSG_FIELD_SET(&flow_cfg, egress_qos.tm_sched.id, sched_id);
-        BCMOLT_MSG_FIELD_SET(&flow_cfg, egress_qos.u.fixed_queue.queue_id, traffic_class);
-        BCMOLT_MSG_FIELD_SET(&flow_cfg, onu_id, v_ani->onu_id);
-        BCMOLT_MSG_FIELD_SET(&flow_cfg, svc_port_id, tc_flow->gem->gemport_id);
+        if (rule->group_id == BCM_GROUP_ID_INVALID || type == BCMOLT_FLOW_TYPE_UPSTREAM)
+        {
+            BCMOLT_MSG_FIELD_SET(&flow_cfg, egress_qos.type,
+                (type == BCMOLT_FLOW_TYPE_UPSTREAM) ?
+                    BCMOLT_EGRESS_QOS_TYPE_PRIORITY_TO_QUEUE :
+                    BCMOLT_EGRESS_QOS_TYPE_FIXED_QUEUE);
+            BCMOLT_MSG_FIELD_SET(&flow_cfg, egress_qos.tm_sched.id, sched_id);
+            if (type == BCMOLT_FLOW_TYPE_UPSTREAM)
+            {
+                BCMOLT_MSG_FIELD_SET(&flow_cfg, egress_qos.u.priority_to_queue.tm_q_set_id, 0);
+                BCMOLT_MSG_FIELD_SET(&flow_cfg, egress_qos.u.priority_to_queue.tm_qmp_id, nni->intf_id);
+            }
+            else
+            {
+                BCMOLT_MSG_FIELD_SET(&flow_cfg, egress_qos.u.fixed_queue.queue_id, traffic_class);
+            }
+            BCMOLT_MSG_FIELD_SET(&flow_cfg, onu_id, v_ani->onu_id);
+            BCMOLT_MSG_FIELD_SET(&flow_cfg, svc_port_id, tc_flow->gem->gemport_id);
+        }
     }
 
     /* Map classifier */
@@ -321,6 +352,7 @@ static bcmos_errno xpon_create_bal_flow(sr_session_ctx_t *srs, bcmolt_flow_type 
     /* ToDo: add support for IP protocol and MAC address match */
 
     /* Map actions */
+
     if (actions != NULL && actions->num_pop_tags > actions->num_push_tags)
     {
         int num_pop_tags = actions->num_pop_tags - actions->num_push_tags;
@@ -406,6 +438,7 @@ static bcmos_errno xpon_create_bal_flows(sr_session_ctx_t *srs, bcmolt_flow_type
 {
     bcmos_errno err = BCM_ERR_OK;
     int i;
+
     for(i = 0; i < BCM_SIZEOFARRAY(rule->flows) && err == BCM_ERR_OK; i++)
     {
         if (rule->flows[i].gem != NULL && rule->flows[i].qos_class != NULL)
@@ -943,13 +976,7 @@ static bcmos_errno xpon_find_rule_gem(
         return BCM_ERR_NOENT;
     }
 
-    /* Iterate over qos classifiers and find the 1st one for which there is a provisioned GEM port.
-       NOTE: it is a temporary WaR. QoS handling must be implemented properly:
-       - for maple need to create a BAL flow per matching qos classifier based on
-         additional PBIT classification.
-       - for aspen need to create IWF mapping per matching qos classifier that
-         performs PBIT->GEM mapping and the outer tag manipulation
-    */
+    /* Iterate over qos classifiers and classifiers for which there is a provisioned GEM port. */
     qos_class = xpon_qos_classifier_get_next(prof, rule, NULL);
     while (qos_class != NULL)
     {
@@ -961,6 +988,22 @@ static bcmos_errno xpon_find_rule_gem(
                 rule->flows[qos_class->traffic_class].gem = gem;
                 rule->flows[qos_class->traffic_class].qos_class = qos_class;
                 ++num_assigned;
+
+                /* Populate priority_to_tc and base_gem for per-flow mode */
+                if (qos_class->match.vlan_tag_match.num_tags)
+                {
+                    const bbf_dot1q_tag *tag = &qos_class->match.vlan_tag_match.tags[0];
+                    if (BBF_DOT1Q_TAG_PROP_IS_SET(tag, pbit))
+                        rule->priority_to_tc[tag->pbit] = qos_class->traffic_class;
+                }
+                else
+                {
+                    for (int i = 0; i < 8; i++)
+                    {
+                        if (rule->priority_to_tc[i] < 0)
+                            rule->priority_to_tc[i] = qos_class->traffic_class;
+                    }
+                }
             }
         }
         qos_class = xpon_qos_classifier_get_next(prof, rule, qos_class);
@@ -1297,6 +1340,7 @@ bcmos_errno xpon_apply_flow_create(sr_session_ctx_t *srs, xpon_forwarder *fwd)
     {
         bbf_subif_ingress_rule *ds_rule;
         bbf_flexible_rewrite actions;
+        bbf_flexible_rewrite ds_actions;
         bbf_match_criteria to_match_plus_actions;
         xpon_vlan_subif *onu_subif = NULL;
         bbf_subif_ingress_rule *onu_rule = NULL;
@@ -1323,6 +1367,36 @@ bcmos_errno xpon_apply_flow_create(sr_session_ctx_t *srs, xpon_forwarder *fwd)
             }
         }
 
+        /* Now prepare downstream actions */
+        ds_rule->ds_rule = BCMOS_TRUE;
+
+        /* Copy GEM assignment from US rules to the DS */
+        for(int i = 0; i < BCM_SIZEOFARRAY(ds_rule->flows); i++)
+        {
+            ds_rule->flows[i].gem = rule->flows[i].gem;
+            ds_rule->flows[i].qos_class = rule->flows[i].qos_class;
+        }
+
+        /* Downstream actions */
+        ds_actions = ds_rule->rewrite;
+        err = xpon_merge_actions(&ds_actions, &acc_if->egress_rewrite);
+        if (err != BCM_ERR_OK)
+            break;
+
+        /* Make sure that actions and classification criteria match. That is,
+           Once downstream actions are applied to the downstream classification criteria, the result
+           should match the upstream classification criteria */
+        to_match_plus_actions = ds_rule->match;
+        xpon_apply_actions_to_match(&to_match_plus_actions, &ds_actions);
+        if (!xpon_is_match(&to_match_plus_actions, &rule->match))
+        {
+            NC_ERROR_REPLY(srs, NULL,
+                "DS classification rule '%s.%s' + actions doesn't match the US classification rule '%s.%s'\n",
+                net_if->hdr.name, ds_rule->name, acc_if->hdr.name, rule->name);
+            err = BCM_ERR_PARM;
+            break;
+        }
+
         /*
          * Upstream
          */
@@ -1347,49 +1421,69 @@ bcmos_errno xpon_apply_flow_create(sr_session_ctx_t *srs, xpon_forwarder *fwd)
             break;
         }
 
-        /* Create BAL upstream flow */
-        err = xpon_create_bal_flows(srs, BCMOLT_FLOW_TYPE_UPSTREAM, rule, &actions,
-            nni, v_ani, BCM_GROUP_ID_INVALID);
-        if (err != BCM_ERR_OK)
-            break;
+#ifndef BCM_OPEN_SOURCE
+        if (bcmolt_is_per_flow_mode())
+        {
+            /* Additional validations for per-flow mode */
+            err = xpon_iwf_validate_and_find_base_gem(srs, rule, ds_rule, &actions, v_ani);
+            if (err != BCM_ERR_OK)
+                break;
+
+            /* Create upstream IWF flows and a single upstream BAL flow if in per-flow mode. */
+            err = xpon_iwf_create_us_flows(srs, rule, &actions, v_ani, BCMOLT_VLAN_TO_FLOW_MAPPING_METHOD_VID);
+            if (err != BCM_ERR_OK)
+                break;
+
+            /* Create a single BAL flow without actions. Header manipulation is done by the IWF,
+             * hence we use ds_rule in both US and DS directions */
+            err = xpon_create_bal_flow(srs, BCMOLT_FLOW_TYPE_UPSTREAM, ds_rule, NULL, nni, v_ani, 0);
+            if (err != BCM_ERR_OK)
+                break;
+        }
+        else
+#endif /* #ifndef BCM_OPEN_SOURCE */
+        {
+            /* Create a BAL flow per traffic class */
+            err = xpon_create_bal_flows(srs, BCMOLT_FLOW_TYPE_UPSTREAM, rule, &actions,
+                nni, v_ani, BCM_GROUP_ID_INVALID);
+            if (err != BCM_ERR_OK)
+                break;
+        }
 
         /*
          * Downstream
          */
 
-        /* Copy GEM assignment from US rules to the DS */
+        /* Copy flow assignment from US rules to the DS */
+        ds_rule->base_gemport_id = rule->base_gemport_id;
         for(int i = 0; i < BCM_SIZEOFARRAY(ds_rule->flows); i++)
         {
             ds_rule->flows[i].flow_id = rule->flows[i].flow_id;
-            ds_rule->flows[i].gem = rule->flows[i].gem;
-            ds_rule->flows[i].qos_class = rule->flows[i].qos_class;
         }
 
-        /* Downstream actions */
-        actions = ds_rule->rewrite;
-        err = xpon_merge_actions(&actions, &acc_if->egress_rewrite);
-        if (err != BCM_ERR_OK)
-            break;
-
-        /* Make sure that actions and classification criteria match. That is,
-           Once downstream actions are applied to the downstream classification criteria, the result
-           should match the upstream classification criteria */
-        to_match_plus_actions = ds_rule->match;
-        xpon_apply_actions_to_match(&to_match_plus_actions, &actions);
-        if (!xpon_is_match(&to_match_plus_actions, &rule->match))
+#ifndef BCM_OPEN_SOURCE
+        /* Create downstream IWF flows and a single BAL flow if in per-flow mode */
+        if (bcmolt_is_per_flow_mode())
         {
-            NC_ERROR_REPLY(srs, NULL,
-                "DS classification rule '%s.%s' + actions doesn't match the US classification rule '%s.%s'\n",
-                net_if->hdr.name, ds_rule->name, acc_if->hdr.name, rule->name);
-            err = BCM_ERR_PARM;
-            break;
+            err = xpon_iwf_create_ds_flows(srs, ds_rule, &ds_actions, v_ani, BCMOLT_VLAN_TO_FLOW_MAPPING_METHOD_VID);
+            if (err != BCM_ERR_OK)
+                break;
+
+            /* Create a single BAL flow without actions. Packet header manipulation is done by the IWF */
+            err = xpon_create_bal_flow(srs, BCMOLT_FLOW_TYPE_DOWNSTREAM, ds_rule, NULL, nni, v_ani, 0);
+            if (err != BCM_ERR_OK)
+                break;
+        }
+        else
+#endif /* #ifndef BCM_OPEN_SOURCE */
+        {
+            /* Create BAL downstream flows, 1 per traffic class */
+            err = xpon_create_bal_flows(srs, BCMOLT_FLOW_TYPE_DOWNSTREAM, ds_rule, &ds_actions,
+                nni, v_ani, BCM_GROUP_ID_INVALID);
+            if (err != BCM_ERR_OK)
+                break;
         }
 
-        /* Create BAL downstream flow */
-        err = xpon_create_bal_flows(srs, BCMOLT_FLOW_TYPE_DOWNSTREAM, ds_rule, &actions,
-            nni, v_ani, BCM_GROUP_ID_INVALID);
-        if (err != BCM_ERR_OK)
-            break;
 
         /* If DS flow contains a DHCP relay profile reference - create a DHCP relay flow */
         if (acc_if->dhcpr.enabled && acc_if->dhcpr.profile != NULL)

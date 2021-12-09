@@ -647,6 +647,12 @@ struct bbf_subif_ingress_rule
     struct dhcp_relay_interface *dhcpr_iface;
     bbf_subif_ingress_rule_flow flows[8]; /* Indexed by TC */
     bcmolt_group_id group_id;
+    /* The following fileds are for per-flow mode support */
+    bcmos_bool ds_rule;
+    int base_gemport_id;   /* base GEM port id. -1=unset */
+    int priority_to_tc[8]; /* Indexed by pbit. -1=unset */
+    int ds_iwf_flow_id;
+    int pon_ni;
 };
 
 typedef struct xpon_dhcpr_ref
@@ -698,6 +704,7 @@ struct xpon_enet
     /* Config info */
     bbf_interface_usage usage;
     xpon_obj_hdr *lower_layer;
+    xpon_hardware *port_layer_if;
     bcmolt_interface intf_id;
 
     xpon_subif_list subifs;
@@ -709,6 +716,7 @@ typedef enum
 {
     xpon_enet_prop_id_usage,
     xpon_enet_prop_id_lower_layer,
+    xpon_enet_prop_id_port_layer_if,
 } xpon_enet_prop_id;
 
 
@@ -1189,5 +1197,42 @@ typedef enum
 
 bcmos_errno xpon_cfg_set_and_schedule_if_failed(sr_session_ctx_t *srs, bcmolt_cfg *cfg, uint32_t delay, bcmos_errno test_err, const char *test_text);
 bcmos_errno xpon_oper_submit_and_schedule_if_failed(sr_session_ctx_t *srs, bcmolt_oper *oper, uint32_t delay, bcmos_errno test_err, const char *test_text);
+
+
+typedef struct
+{
+    bcmolt_chip_family chip_family;
+    bcmolt_system_mode system_mode;
+    bcmolt_inni_mode inni_mode;
+    bcmolt_inni_mux inni_mux;
+} bbf_xpon_dev_info;
+
+bcmos_errno xpon_device_cfg_get(bcmolt_ldid device, bbf_xpon_dev_info *info);
+
+/*
+ * VLAN table
+ */
+bcmos_errno xpon_vlan_add(bcmolt_interface pon_ni, uint16_t vlan, bcmolt_flow_id flow_id);
+bcmos_errno xpon_vlan_delete(bcmolt_interface pon_ni, uint16_t vlan);
+
+/*
+ * Proprietary functions, not available in the github release
+ */
+
+#ifndef BCM_OPEN_SOURCE
+bcmos_errno xpon_iwf_create(bcmolt_devid dev, bcmolt_interface lif, const bcmolt_topology *olt_topology);
+bcmos_errno xpon_iwf_create_ds_flows(sr_session_ctx_t *srs,
+    bbf_subif_ingress_rule *rule, const bbf_flexible_rewrite *actions,
+    const xpon_v_ani *v_ani, bcmolt_vlan_to_flow_mapping_method mapping_method);
+bcmos_errno xpon_iwf_delete_ds_flows(sr_session_ctx_t *srs, bbf_subif_ingress_rule *rule);
+bcmos_errno xpon_iwf_create_us_flows(sr_session_ctx_t *srs,
+    bbf_subif_ingress_rule *rule, const bbf_flexible_rewrite *actions,
+    const xpon_v_ani *v_ani, bcmolt_vlan_to_flow_mapping_method mapping_method);
+bcmos_errno xpon_iwf_delete_us_flows(sr_session_ctx_t *srs, bbf_subif_ingress_rule *rule);
+bcmos_errno xpon_iwf_validate_and_find_base_gem(sr_session_ctx_t *srs,
+    bbf_subif_ingress_rule *rule, bbf_subif_ingress_rule *ds_rule,
+    const bbf_flexible_rewrite *actions, const xpon_v_ani *v_ani);
+#endif
+
 
 #endif /* _BBF_XPON_INTERNAL_H_ */

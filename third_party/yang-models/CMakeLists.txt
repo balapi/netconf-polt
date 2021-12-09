@@ -20,7 +20,7 @@ if(SYSREPO_SHM_PREFIX AND NOT "${SYSREPO_SHM_PREFIX}" STREQUAL "none")
 endif()
 
 bcm_make_normal_option(USE_OBBAA_YANG_MODELS bool "Use models from OB-BAA bundle" y)
-bcm_make_normal_option(OBBAA_DEVICE_ADAPTER_VERSION string "OB-BAA device adapter vesrion: 1.0 or 2.0" "1.0")
+bcm_make_normal_option(OBBAA_DEVICE_ADAPTER_VERSION string "OB-BAA device adapter vesrion: 1.0 or 2.0" "2.0")
 
 unset(_DIRS)
 if (USE_OBBAA_YANG_MODELS)
@@ -355,7 +355,7 @@ list(APPEND _IMPORT_MODELS
     ${_IETF_IANA_DIR}/nc-notifications.yang)
 set(ietf-tcp-client-features local-binding-supported)
 set(ietf-netconf-nmda-features origin with-defaults)
-set(ietf-netconf-features candidate writable-running rollback-on-error validate startup url xpath)
+set(ietf-netconf-features candidate writable-running rollback-on-error validate startup url xpath confirmed-commit)
 set(ietf-keystore-features keystore-supported)
 set(ietf-truststore-features truststore-supported public-keys certificates)
 set(ietf-tcp-common-features keepalives-supported)

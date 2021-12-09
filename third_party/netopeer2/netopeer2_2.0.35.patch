@@ -1,0 +1,125 @@
+diff -Naur netopeer2-2.0.35.org/CMakeLists.txt netopeer2-2.0.35/CMakeLists.txt
+--- netopeer2-2.0.35.org/CMakeLists.txt	2021-11-11 00:00:22.000000000 +1100
++++ netopeer2-2.0.35/CMakeLists.txt	2021-11-19 17:52:23.341524307 +1100
+@@ -247,6 +247,8 @@
+ find_library(LIBRT rt)
+ if(LIBRT)
+     target_link_libraries(netopeer2-server ${LIBRT})
++else()
++    target_link_libraries(netopeer2-server rt)
+ endif()
+ 
+ # libnetconf2 (was already found)
+@@ -311,6 +313,7 @@
+         set(ENV{NP2_MODULE_PERMS} \"${MODULES_PERMS}\")
+         set(ENV{NP2_MODULE_OWNER} \"${MODULES_OWNER}\")
+         set(ENV{NP2_MODULE_GROUP} \"${MODULES_GROUP}\")
++        set(ENV{SYSREPOCTL_EXECUTABLE} \"${SYSREPOCTL}\")
+         execute_process(COMMAND \"${SCRIPT_DIR}/setup.sh\" RESULT_VARIABLE SETUP_RES)
+         if(NOT SETUP_RES EQUAL \"0\")
+             message(FATAL_ERROR \" scripts/setup.sh failed: \${SETUP_RES}\")
+@@ -322,6 +325,8 @@
+ if(GENERATE_HOSTKEY)
+     install(CODE "
+         message(STATUS \"Generating a new RSA host key \\\"genkey\\\" if not already added...\")
++        set(ENV{OPENSSL_EXECUTABLE} \"${OPENSSL}\")
++        set(ENV{SYSREPOCFG_EXECUTABLE} \"${SYSREPOCFG}\")
+         execute_process(COMMAND ${SCRIPT_DIR}/merge_hostkey.sh RESULT_VARIABLE MERGE_HOSTKEY_RES)
+         if(NOT MERGE_HOSTKEY_RES EQUAL \"0\")
+             message(FATAL_ERROR \" scripts/merge_hostkey.sh failed: \${MERGE_HOSTKEY_RES}\")
+@@ -331,6 +336,7 @@
+ if(MERGE_LISTEN_CONFIG)
+     install(CODE "
+         message(STATUS \"Merging default server listen configuration if there is none...\")
++        set(ENV{SYSREPOCFG_EXECUTABLE} \"${SYSREPOCFG}\")
+         execute_process(COMMAND ${SCRIPT_DIR}/merge_config.sh RESULT_VARIABLE MERGE_CONFIG_RES)
+         if(NOT MERGE_CONFIG_RES EQUAL \"0\")
+             message(FATAL_ERROR \" scripts/merge_config.sh failed: \${MERGE_CONFIG_RES}\")
+diff -Naur netopeer2-2.0.35.org/scripts/merge_config.sh netopeer2-2.0.35/scripts/merge_config.sh
+--- netopeer2-2.0.35.org/scripts/merge_config.sh	2021-11-11 00:00:22.000000000 +1100
++++ netopeer2-2.0.35/scripts/merge_config.sh	2021-11-12 09:41:13.402048553 +1100
+@@ -43,8 +43,7 @@
+                     <client-authentication>
+                         <supported-authentication-methods>
+                             <publickey/>
+-                            <passsword/>
+-                            <other>interactive</other>
++                            <password/>
+                         </supported-authentication-methods>
+                         <users/>
+                     </client-authentication>
+diff -Naur netopeer2-2.0.35.org/scripts/merge_hostkey.sh netopeer2-2.0.35/scripts/merge_hostkey.sh
+--- netopeer2-2.0.35.org/scripts/merge_hostkey.sh	2021-11-11 00:00:22.000000000 +1100
++++ netopeer2-2.0.35/scripts/merge_hostkey.sh	2021-11-12 09:48:41.067910689 +1100
+@@ -34,13 +34,14 @@
+ PUBKEY=`echo "$PUBPEM" | grep -v -- "-----" | tr -d "\n"`
+ 
+ # generate edit config
+-CONFIG="<keystore xmlns=\"urn:ietf:params:xml:ns:yang:ietf-keystore\">
++CONFIG="<keystore xmlns=\"urn:ietf:params:xml:ns:yang:ietf-keystore\" xmlns:ct=\"urn:ietf:params:xml:ns:yang:ietf-crypto-types\">
+     <asymmetric-keys>
+         <asymmetric-key>
+             <name>genkey</name>
+-            <algorithm>rsa2048</algorithm>
++            <public-key-format>ct:ssh-public-key-format</public-key-format>
++            <private-key-format>ct:rsa-private-key-format</private-key-format>
+             <public-key>$PUBKEY</public-key>
+-            <private-key>$PRIVKEY</private-key>
++            <cleartext-private-key>$PRIVKEY</cleartext-private-key>
+         </asymmetric-key>
+     </asymmetric-keys>
+ </keystore>"
+diff -Naur netopeer2-2.0.35.org/src/netconf_server.c netopeer2-2.0.35/src/netconf_server.c
+--- netopeer2-2.0.35.org/src/netconf_server.c	2021-11-11 00:00:22.000000000 +1100
++++ netopeer2-2.0.35/src/netconf_server.c	2021-11-12 09:44:10.590789655 +1100
+@@ -34,29 +34,29 @@
+ int
+ np2srv_sr_get_privkey(const struct lyd_node *asym_key, char **privkey_data, NC_SSH_KEY_TYPE *privkey_type)
+ {
+-    struct lyd_node_term *alg = NULL;
++    struct lyd_node_term *privkey_format = NULL;
+     struct lyd_node *node, *privkey = NULL;
+ 
+     /* find the nodes */
+     LY_LIST_FOR(lyd_child(asym_key), node) {
+-        if (!strcmp(node->schema->name, "algorithm")) {
+-            alg = (struct lyd_node_term *)node;
+-        } else if (!strcmp(node->schema->name, "private-key")) {
++        if (!strcmp(node->schema->name, "private-key-format")) {
++            privkey_format = (struct lyd_node_term *)node;
++        } else if (!strcmp(node->schema->name, "cleartext-private-key")) {
+             privkey = node;
+         }
+     }
+-    if (!alg || !privkey) {
++    if (!privkey_format || !privkey) {
+         ERR("Failed to find asymmetric key information.");
+         return -1;
+     }
+ 
+-    /* set algorithm */
+-    if (!strncmp(alg->value.ident->name, "rsa", 3)) {
++    /* set private key format */
++    if (!strcmp(privkey_format->value.ident->name, "rsa-private-key-format")) {
+         *privkey_type = NC_SSH_KEY_RSA;
+-    } else if (!strncmp(alg->value.ident->name, "secp", 4)) {
++    } else if (!strcmp(privkey_format->value.ident->name, "ec-private-key-format")) {
+         *privkey_type = NC_SSH_KEY_ECDSA;
+     } else {
+-        ERR("Unknown private key algorithm \"%s\".", lyd_get_value(&alg->node));
++        ERR("Unknown private key format \"%s\".", privkey_format->value.ident->name);
+         return -1;
+     }
+ 
+diff -Naur netopeer2-2.0.35.org/src/netconf_server_ssh.c netopeer2-2.0.35/src/netconf_server_ssh.c
+--- netopeer2-2.0.35.org/src/netconf_server_ssh.c	2021-11-11 00:00:22.000000000 +1100
++++ netopeer2-2.0.35/src/netconf_server_ssh.c	2021-11-12 09:44:30.042870679 +1100
+@@ -282,7 +282,7 @@
+         } else if (op == SR_OP_DELETED) {
+             auth &= ~NC_SSH_AUTH_PUBLICKEY;
+         }
+-    } else if (!strcmp(node->schema->name, "passsword")) {
++    } else if (!strcmp(node->schema->name, "password")) {
+         if (op == SR_OP_CREATED) {
+             auth |= NC_SSH_AUTH_PASSWORD;
+         } else if (op == SR_OP_DELETED) {

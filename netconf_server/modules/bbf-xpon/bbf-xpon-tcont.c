@@ -37,7 +37,7 @@ static xpon_tcont *tcont_array[BCM_MAX_PONS_PER_OLT][MAX_DYN_TCONTS_PER_PON];
 
 #define TCONT_BW_GRANULARITY    16000
 #define TCONT_ROUND_BW_TO_GRANULARITY(_bw)  \
-    (((_bw + TCONT_BW_GRANULARITY - 1) / TCONT_BW_GRANULARITY) * TCONT_BW_GRANULARITY)
+    ((((_bw) + TCONT_BW_GRANULARITY - 1) / TCONT_BW_GRANULARITY) * TCONT_BW_GRANULARITY)
 
 
 /* Get free dynamic tcont index */

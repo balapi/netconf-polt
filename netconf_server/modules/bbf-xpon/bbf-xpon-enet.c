@@ -80,6 +80,8 @@ void xpon_enet_delete(xpon_enet *enet)
     xpon_unlink(&enet->linked_if);
     if (enet->lower_layer && enet->lower_layer->created_by_forward_reference)
         xpon_interface_delete(enet->lower_layer);
+    if (enet->port_layer_if && enet->port_layer_if->hdr.created_by_forward_reference)
+        xpon_hardware_delete(enet->port_layer_if);
     STAILQ_REMOVE_SAFE(&enet_list, &enet->hdr, xpon_obj_hdr, next);
     NC_LOG_INFO("enet %s deleted\n", enet->hdr.name);
     xpon_object_delete(&enet->hdr);
@@ -152,6 +154,42 @@ bcmos_errno xpon_enet_transaction(sr_session_ctx_t *srs, nc_transact *tr)
         {
             XPON_PROP_SET(&changes, enet, usage,
                 xpon_map_iface_usage(elem->new_val ? elem->new_val->data.identityref_val : NULL));
+        }
+        else if (strstr(leaf, "port-layer-if") != NULL)
+        {
+            xpon_hardware *port = NULL;
+            if (elem->new_val != NULL)
+            {
+                const char *_name = elem->new_val ? elem->new_val->data.string_val : elem->old_val->data.string_val;
+                err = xpon_hardware_get_populate(srs, _name, &port);
+                if (err != BCM_ERR_OK)
+                {
+                    NC_ERROR_REPLY(srs, iter_xpath, "interface %s references hardware component %s which doesn't exist\n",
+                        keyname, _name);
+                    err = BCM_ERR_PARM;
+                    break;
+                }
+                XPON_PROP_SET(&changes, enet, port_layer_if, port);
+                if (port != NULL)
+                {
+#ifdef OB_BAA
+                    /* OB-BAA derives PON interface id from the port name */
+                    if (!memcmp(_name, "PORT", 4) || !memcmp(_name, "port", 4))
+                    {
+                        const char *_port_id = _name + 4;
+                        if (_port_id[0] == '_' || _port_id[0] == '-')
+                            ++_port_id;
+                        changes.intf_id = atoi(_port_id) - 1;
+                    }
+                    else
+#endif
+                    /* Note that parent-rel-pos numbering normally starts from 1 (RFC 6933) */
+                    if (XPON_PROP_IS_SET(port, hardware, parent_rel_pos))
+                        changes.intf_id = enet->intf_id = port->parent_rel_pos - 1;
+                    else if (port->parent != NULL && XPON_PROP_IS_SET(port->parent, hardware, parent_rel_pos))
+                        changes.intf_id = enet->intf_id = port->parent->parent_rel_pos - 1;
+                }
+            }
         }
     }
 

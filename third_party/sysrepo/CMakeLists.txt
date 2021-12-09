@@ -7,7 +7,7 @@ bcm_make_normal_option(SYSREPO_SHM_PREFIX STRING "sysrepo SHM file prefix" "none
 if(NETCONF_TOOLS_FROM_DEVEL)
     set(_VERSION "devel")
 elseif(NETOPEER2_VERSION_2X)
-    set(_VERSION "2.0.1")
+    set(_VERSION "2.0.53")
 else()
     set(_VERSION "1.4.140")
 endif()

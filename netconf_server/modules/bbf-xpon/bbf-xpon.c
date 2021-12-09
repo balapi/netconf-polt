@@ -70,6 +70,59 @@ static const char* bbf_hardware_features[] = {
 static sr_session_ctx_t *sr_session;
 
 static bcmos_bool device_connection_status[BCM_MAX_DEVS_PER_OLT];
+static bbf_xpon_dev_info device_info[BCM_MAX_DEVS_PER_OLT];
+static bcmolt_topology olt_topology;
+
+bcmos_errno xpon_device_cfg_get(bcmolt_ldid device, bbf_xpon_dev_info *info)
+{
+    bcmolt_device_key key = { .device_id = device };
+    bcmolt_device_cfg cfg;
+    bcmos_errno err;
+
+    if (device >= BCM_MAX_DEVS_PER_OLT)
+        return BCM_ERR_PARM;
+
+    /* Already have configuration ? */
+    if (device_info[device].chip_family)
+    {
+        *info = device_info[device];
+        return BCM_ERR_OK;
+    }
+
+    BCMOLT_CFG_INIT(&cfg, device, key);
+    BCMOLT_FIELD_SET_PRESENT(&cfg.data, device_cfg_data, system_mode);
+    BCMOLT_FIELD_SET_PRESENT(&cfg.data, device_cfg_data, chip_family);
+    BCMOLT_FIELD_SET_PRESENT(&cfg.data, device_cfg_data, inni_config);
+    err = bcmolt_cfg_get(netconf_agent_olt_id(), &cfg.hdr);
+    if (err != BCM_ERR_OK)
+        return err;
+
+    /* Per-flow mode is supported only for aspen */
+    if (bcmolt_is_per_flow_mode() &&
+        cfg.data.chip_family == BCMOLT_CHIP_FAMILY_CHIP_FAMILY_6862_X)
+    {
+        NC_LOG_ERR("Per-flow mode is not supported for BCM6862x devices. Disabled.\n");
+        bcmolt_per_flow_mode_disable();
+    }
+
+#ifdef BCM_OPEN_SOURCE
+    if (bcmolt_is_per_flow_mode())
+    {
+        NC_LOG_ERR("Per-flow mode is not supported in the Open Source release. Disabled.\n");
+        bcmolt_per_flow_mode_disable();
+    }
+#endif
+
+    device_info[device].chip_family = cfg.data.chip_family;
+    device_info[device].system_mode = cfg.data.system_mode;
+    device_info[device].inni_mode = cfg.data.inni_config.mode;
+    device_info[device].inni_mux = cfg.data.inni_config.mux;
+
+    if (info != NULL)
+        *info = device_info[device];
+
+    return BCM_ERR_OK;
+}
 
 static int num_connected_devices(void)
 {
@@ -522,31 +575,25 @@ static void _pon_interface_indication_cb(bcmolt_oltid olt, bcmolt_msg *msg)
     bcmolt_msg_free(msg);
 }
 
-/* Check if device is connected */
-static bcmos_bool _device_is_connected(bcmolt_oltid olt, bcmolt_devid device)
+static bcmos_errno _create_pon_tm_scheds_and_iwf(bcmolt_devid dev)
 {
-    bcmolt_device_cfg cfg;
-    bcmolt_device_key key = { .device_id = device };
-    bcmos_errno err;
-
-    BCMOLT_CFG_INIT(&cfg, device, key);
-    BCMOLT_FIELD_SET_PRESENT(&cfg.data, device_cfg_data, system_mode);
-    err = bcmolt_cfg_get(olt, &cfg.hdr);
-    return (err == BCM_ERR_OK);
-}
-
-static bcmos_errno _create_pon_tm_scheds(bcmolt_devid dev)
-{
-    bcmolt_topology topo;
-    bcmos_errno err;
+    bcmos_errno err = BCM_ERR_OK;
     int i;
 
-    err = xpon_get_olt_topology(&topo);
-    /* Create TM_SCHED objects for all PONs on the device */
-    for (i = 0; i < topo.topology_maps.len && err == BCM_ERR_OK; i++)
+    /* Create TM_SCHED objects and configure iwf for all PONs on the device */
+    for (i = 0; i < olt_topology.topology_maps.len; i++)
     {
-        if (topo.topology_maps.arr[i].olt_device_id == dev)
+        if (olt_topology.topology_maps.arr[i].olt_device_id == dev)
+        {
             err = xpon_tm_sched_create(BCMOLT_INTERFACE_TYPE_PON, i);
+            if (err != BCM_ERR_OK)
+                break;
+#ifndef BCM_OPEN_SOURCE
+            err = xpon_iwf_create(dev, i, &olt_topology);
+            if (err != BCM_ERR_OK)
+                break;
+#endif
+        }
     }
     return err;
 }
@@ -560,7 +607,10 @@ static void _device_indication_cb(bcmolt_oltid olt, bcmolt_msg *msg)
             {
                 bcmolt_device_connection_complete *cc = (bcmolt_device_connection_complete *)msg;
                 NC_LOG_INFO("Got device.connection_complete(%u) indication\n", cc->key.device_id);
-                _create_pon_tm_scheds(cc->key.device_id);
+                /// workaround. small delay here to avoid race condition in BAL
+                bcmos_usleep(100*1000);
+                ///
+                _create_pon_tm_scheds_and_iwf(cc->key.device_id);
                 if (!num_connected_devices())
                     bbf_xpon_subscribe(sr_session);
                 device_connection_status[cc->key.device_id] = BCMOS_TRUE;
@@ -572,7 +622,7 @@ static void _device_indication_cb(bcmolt_oltid olt, bcmolt_msg *msg)
             {
                 bcmolt_device_disconnection_complete *dc = (bcmolt_device_disconnection_complete *)msg;
                 NC_LOG_INFO("Got device.disconnection_complete/device.connection_failure indication\n");
-                device_connection_status[dc->key.device_id] = BCMOS_TRUE;
+                device_connection_status[dc->key.device_id] = BCMOS_FALSE;
                 if (!num_connected_devices())
                     bbf_xpon_unsubscribe(sr_session);
             }
@@ -756,7 +806,6 @@ bcmos_errno bbf_xpon_module_start(sr_session_ctx_t *srs, struct ly_ctx *ly_ctx)
 {
     bcmos_errno err = BCM_ERR_OK;
     bcmolt_devid dev;
-    bcmolt_oltid olt = 0;
 
     do  {
         int sr_rc;
@@ -771,19 +820,26 @@ bcmos_errno bbf_xpon_module_start(sr_session_ctx_t *srs, struct ly_ctx *ly_ctx)
         }
 
         //_reset_bal();
-
-        /* Create NNI tm_sched */
-        err = xpon_tm_sched_create(BCMOLT_INTERFACE_TYPE_NNI, 0);
+        /* Read topology */
+        err = xpon_get_olt_topology(&olt_topology);
         if (err != BCM_ERR_OK)
             break;
+
+        /* Create NNI tm_sched objects */
+        for (int i = 0; i < olt_topology.num_switch_ports; i++)
+        {
+            err = xpon_tm_sched_create(BCMOLT_INTERFACE_TYPE_NNI, i);
+            if (err != BCM_ERR_OK)
+                break;
+        }
 
         /* Subscribe to changes if device is already active */
         for (dev = 0; dev < BCM_MAX_DEVS_PER_OLT && err == BCM_ERR_OK; dev++)
         {
-            if (_device_is_connected(olt, dev))
+            if (xpon_device_cfg_get(dev, NULL) == BCM_ERR_OK)
             {
                 device_connection_status[dev] = BCMOS_TRUE;
-                err = _create_pon_tm_scheds(dev);
+                err = _create_pon_tm_scheds_and_iwf(dev);
             }
         }
 

@@ -140,6 +140,14 @@ bcmos_errno xpon_vlan_subif_ingress_rule_get(xpon_vlan_subif *subif, const char 
         rule->flows[i].flow_id = BCM_FLOW_ID_INVALID;
     }
     rule->group_id = BCM_GROUP_ID_INVALID;
+    rule->base_gemport_id = -1;
+    for(int i = 0; i < BCM_SIZEOFARRAY(rule->priority_to_tc); i++)
+    {
+        rule->priority_to_tc[i] = -1;
+    }
+    rule->ds_iwf_flow_id = -1;
+    rule->pon_ni = -1;
+
     STAILQ_INSERT_TAIL(&subif->ingress, rule, next);
     *is_added = BCMOS_TRUE;
     *p_rule = rule;
