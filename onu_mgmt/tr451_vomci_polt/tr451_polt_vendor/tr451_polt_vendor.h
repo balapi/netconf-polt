@@ -64,11 +64,7 @@ typedef struct
 {
    const char *cterm_name;          /* Channel termination name */
    tr451_polt_onu_serial_number serial_number;
-   union
-   {
-      uint8_t password[10];         /* ITU.T G.984.3 */
-      uint8_t registration_id[36];  /* ITU.T G.987.3, G.989.3, G.9807 */
-   };
+   uint8_t *registration_id;
    uint16_t pon_interface_id;       /* PON interface ID on the front panel */
 #define POLT_PON_ID_UNDEFINED    0xffff
    uint16_t onu_id;

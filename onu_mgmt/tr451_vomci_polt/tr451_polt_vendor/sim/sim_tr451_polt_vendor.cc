@@ -43,7 +43,8 @@ static char tr451_onu_sim_tx_buf[OMCI_MAX_MTU + sizeof(tr451_onu_sim_packet_head
 
 /* Prepare onu_info */
 static bcmos_errno tr451_prepare_onu_info(const char *cterm_name, uint16_t onu_id,
-    const tr451_polt_onu_serial_number *serial_number, tr451_polt_onu_info *onu_info)
+    const tr451_polt_onu_serial_number *serial_number, uint8_t* registration_id,
+    tr451_polt_onu_info *onu_info)
 {
     if (vendor_event_cfg.tr451_onu_state_change_cb == nullptr)
     {
@@ -61,18 +62,20 @@ static bcmos_errno tr451_prepare_onu_info(const char *cterm_name, uint16_t onu_i
     }
 
     memcpy(&onu_info->serial_number, serial_number, 8);
+    onu_info->registration_id = registration_id;
 
     return BCM_ERR_OK;
 }
 
 /* Report ONU discovered */
 bcmos_errno sim_tr451_vendor_onu_added(const char *cterm_name, uint16_t onu_id,
-   const tr451_polt_onu_serial_number *serial, xpon_onu_presence_flags flags)
+   const tr451_polt_onu_serial_number *serial, uint8_t *registration_id,
+   xpon_onu_presence_flags flags)
 {
     tr451_polt_onu_info onu_info;
     bcmos_errno err;
 
-    err = tr451_prepare_onu_info(cterm_name, onu_id, serial, &onu_info);
+    err = tr451_prepare_onu_info(cterm_name, onu_id, serial, registration_id, &onu_info);
     if (err != BCM_ERR_OK)
         return err;
     onu_info.presence_flags = flags ? flags : XPON_ONU_PRESENCE_FLAG_ONU;
@@ -92,7 +95,7 @@ bcmos_errno sim_tr451_vendor_onu_removed(const char *cterm_name, uint16_t onu_id
     tr451_polt_onu_info onu_info;
     bcmos_errno err;
 
-    err = tr451_prepare_onu_info(cterm_name, onu_id, serial, &onu_info);
+    err = tr451_prepare_onu_info(cterm_name, onu_id, serial, NULL, &onu_info);
     if (err != BCM_ERR_OK)
         return err;
     onu_info.presence_flags = flags ? flags : XPON_ONU_PRESENCE_FLAG_V_ANI;
@@ -314,9 +317,9 @@ bcmos_errno sim_tr451_vendor_rx_cfg_set(const tr451_polt_sim_rx_cfg *cfg)
 
         // create RX task
         bcmos_task_parm tp = {};
-        tp.name = "cm_rx",
-        tp.priority = TASK_PRIORITY_TRANSPORT_RX,
-        tp.handler = _onu_sim_rx_task_handler,
+        tp.name = "cm_rx";
+        tp.priority = TASK_PRIORITY_TRANSPORT_RX;
+        tp.handler = _onu_sim_rx_task_handler;
         err = bcmos_task_create(&tr451_onu_sim_rx_task, &tp);
         if (err != BCM_ERR_OK)
         {

@@ -67,7 +67,8 @@ bcmos_errno sim_tr451_vendor_rx_cfg_set(const tr451_polt_sim_rx_cfg *cfg);
 
 /* Report ONU discovered */
 bcmos_errno sim_tr451_vendor_onu_added(const char *cterm, uint16_t onu_id,
-   const tr451_polt_onu_serial_number *serial, xpon_onu_presence_flags flags);
+   const tr451_polt_onu_serial_number *serial, uint8_t *registration_id,
+   xpon_onu_presence_flags flags);
 
 /* Report ONU removed */
 bcmos_errno sim_tr451_vendor_onu_removed(const char *cterm, uint16_t onu_id,

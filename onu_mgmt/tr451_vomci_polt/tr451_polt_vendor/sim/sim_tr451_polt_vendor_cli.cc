@@ -27,6 +27,7 @@
 
 #define TR451_POLT_DEFAULT_LISTEN_FROM_ONU_SIM_PORT 50500
 static uint8_t inject_buffer[44];
+static uint8_t registration_id_buffer[36];
 
 /* Inject OMCI_RX packet */
 static bcmos_errno polt_cli_inject_omci_rx(bcmcli_session *session, const bcmcli_cmd_parm parm[], uint16_t nparms)
@@ -78,6 +79,8 @@ static bcmos_errno polt_cli_onu_add(bcmcli_session *session, const bcmcli_cmd_pa
     const char *vendor_id = (const char *)parm[2].value.string;
     uint32_t vendor_specific = (uint32_t)parm[3].value.unumber;
     xpon_onu_presence_flags flags = (xpon_onu_presence_flags)parm[4].value.unumber;
+    uint8_t *registration_id = bcmcli_parm_is_set(session, &parm[5]) ? registration_id_buffer : NULL;
+    bcmos_errno rc;
 
     tr451_polt_onu_serial_number serial_number = {};
     strncpy((char *)&serial_number.data[0], vendor_id, sizeof(serial_number));
@@ -86,7 +89,9 @@ static bcmos_errno polt_cli_onu_add(bcmcli_session *session, const bcmcli_cmd_pa
     serial_number.data[6] = (vendor_specific >> 8) & 0xff;
     serial_number.data[7] = vendor_specific & 0xff;
 
-    return sim_tr451_vendor_onu_added(cterm_name, onu_id, &serial_number, flags);
+    rc = sim_tr451_vendor_onu_added(cterm_name, onu_id, &serial_number, registration_id, flags);
+    memset(registration_id_buffer, 0, sizeof(registration_id_buffer));
+    return rc;
 }
 
 /* Delete ONU */
@@ -147,8 +152,11 @@ bcmos_errno tr451_vendor_cli_init(bcmcli_entry *dir)
             BCMCLI_MAKE_PARM("serial_vendor_id", "serial_number: 4 bytes ASCII vendor id", BCMCLI_PARM_STRING, 0),
             BCMCLI_MAKE_PARM("serial_vendor_specific", "serial_number: vendor-specific id", BCMCLI_PARM_HEX, 0),
             BCMCLI_MAKE_PARM_ENUM_MASK_DEFVAL("flags", "notification flags", onu_flags_table, 0, "expected+present+in_o5"),
+            BCMCLI_MAKE_PARM("registration_id", "Optional registration id", BCMCLI_PARM_BUFFER, BCMCLI_PARM_FLAG_OPTIONAL),
             { 0 }
         } ;
+        cmd_parms[5].value.buffer.len = sizeof(registration_id_buffer);
+        cmd_parms[5].value.buffer.start = cmd_parms[5].value.buffer.curr = registration_id_buffer;
         bcmcli_cmd_add(dir, "onu_add", polt_cli_onu_add, "Add ONU",
             BCMCLI_ACCESS_ADMIN, NULL, cmd_parms);
     }
