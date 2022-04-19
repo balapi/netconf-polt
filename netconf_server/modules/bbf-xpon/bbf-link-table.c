@@ -32,6 +32,7 @@ static bcmos_errno _link_apply(sr_session_ctx_t *srs, const char *xpath,
     xpon_obj_hdr *from_if, xpon_obj_hdr *to_if, bcmos_bool deleted)
 {
     xpon_obj_hdr **p_from_link = NULL, **p_to_link = NULL;
+    bcmos_errno err = BCM_ERR_OK;
 
     BUG_ON(from_if == NULL);
 
@@ -86,8 +87,13 @@ static bcmos_errno _link_apply(sr_session_ctx_t *srs, const char *xpath,
                     p_to_link = &((xpon_v_ani_v_enet *)to_if)->linked_if;
                 else if (to_if->obj_type == XPON_OBJ_TYPE_ANI_V_ENET)
                     p_to_link = &((xpon_ani_v_enet *)to_if)->linked_if;
-                /* Try to create ONU flows */
-                xpon_create_onu_flows_on_uni(srs, from_if);
+                if (p_from_link != NULL && p_to_link != NULL)
+                {
+                    *p_from_link = to_if;
+                    *p_to_link = from_if;
+                    /* Try to create ONU flows */
+                    err = xpon_create_onu_flows_on_uni(srs, from_if);
+                }
             }
             break;
         }
@@ -111,8 +117,13 @@ static bcmos_errno _link_apply(sr_session_ctx_t *srs, const char *xpath,
                 {
                     p_to_link = &((xpon_ani_v_enet *)to_if)->linked_if;
                 }
-                /* Try to create ONU flows */
-                xpon_create_onu_flows_on_uni(srs, to_if);
+                if (p_from_link != NULL && p_to_link != NULL)
+                {
+                    *p_from_link = to_if;
+                    *p_to_link = from_if;
+                    /* Try to create ONU flows */
+                    err = xpon_create_onu_flows_on_uni(srs, to_if);
+                }
             }
             break;
         }
@@ -132,8 +143,13 @@ static bcmos_errno _link_apply(sr_session_ctx_t *srs, const char *xpath,
                     p_to_link = &((xpon_enet *)to_if)->linked_if;
                 else if (to_if->obj_type == XPON_OBJ_TYPE_V_ANI_V_ENET)
                     p_to_link = &((xpon_v_ani_v_enet *)to_if)->linked_if;
-                /* Try to create ONU flows */
-                xpon_create_onu_flows_on_uni(srs, from_if);
+                if (p_from_link != NULL && p_to_link != NULL)
+                {
+                    *p_from_link = to_if;
+                    *p_to_link = from_if;
+                    /* Try to create ONU flows */
+                    err = xpon_create_onu_flows_on_uni(srs, from_if);
+                }
             }
             break;
         }
@@ -147,6 +163,15 @@ static bcmos_errno _link_apply(sr_session_ctx_t *srs, const char *xpath,
         NC_ERROR_REPLY(srs, xpath, "link-table: unexpected link between interfaces %s and %s\n",
             from_if->name, to_if->name);
         return BCM_ERR_PARM;
+    }
+
+    if (err != BCM_ERR_OK)
+    {
+        if (p_from_link != NULL)
+            *p_from_link = NULL;
+        if (p_to_link != NULL)
+            *p_to_link = NULL;
+        return BCM_ERR_OK;
     }
 
     if (p_from_link != NULL && p_to_link != NULL)

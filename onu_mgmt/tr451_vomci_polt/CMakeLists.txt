@@ -3,9 +3,9 @@ bcm_make_normal_option(TR451_VOMCI_POLT    BOOL    "Enable TR-451 vOMCI ONU Mana
 if(TR451_VOMCI_POLT)
     bcm_module_name(tr451_polt)
     bcm_module_definitions(PUBLIC -DTR451_VOMCI)
-    bcm_module_dependencies(PUBLIC os dev_log cli tr451_polt_vendor)
+    bcm_module_dependencies(PUBLIC os dev_log cli tr451_polt_vendor grpc)
     bcm_module_dependencies(PRIVATE tr451_sbi grpc)
-    bcm_module_header_paths(PUBLIC .)
+    bcm_module_header_paths(PUBLIC . ${netconf_modules_SRC_DIR})
     bcm_module_srcs(bcm_tr451_polt_common.cc bcm_tr451_polt_client.cc bcm_tr451_polt_server.cc bcm_tr451_polt_cli.cc)
     bcm_create_lib_target()
 

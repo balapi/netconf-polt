@@ -1,31 +1,32 @@
 /*
  *  <:copyright-BRCM:2016-2020:Apache:standard
- *  
+ *
  *   Copyright (c) 2016-2020 Broadcom. All Rights Reserved
- *  
+ *
  *   The term “Broadcom” refers to Broadcom Inc. and/or its subsidiaries
- *  
+ *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
  *   You may obtain a copy of the License at
- *  
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *   Unless required by applicable law or agreed to in writing, software
  *   distributed under the License is distributed on an "AS IS" BASIS,
  *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
- *  
+ *
  *  :>
  *
  *****************************************************************************/
 
 #include <bcmolt_api.h>
-#include <bcm_dev_log.h>
+#include <bcmolt_host_dev_log.h>
 #include <onu_mgmt_model_funcs.h>
 #include <onu_mgmt_test.h>
 #include <omci_svc.h>
+#include <bcmolt_string.h>
 #ifdef ONU_MGMT_DPOE_SVC
 #include <dpoe2_svc.h>
 #endif
@@ -173,7 +174,7 @@ static void onu_mgmt_parse_config(void)
     fclose(fp);
 }
 
-bcmos_errno bcmonu_mgmt_init(bcmos_module_id module_id)
+bcmos_errno bcmonu_mgmt_init(bcmos_module_id module_id, int is_issu)
 {
     bcmos_errno rc;
     uint16_t o;
@@ -182,7 +183,7 @@ bcmos_errno bcmonu_mgmt_init(bcmos_module_id module_id)
     if (onu_mgmt_log_id == DEV_LOG_INVALID_ID)
     {
         onu_mgmt_log_id = bcm_dev_log_id_register("onu_mgmt", DEV_LOG_LEVEL_INFO, DEV_LOG_ID_TYPE_BOTH);
-        BUG_ON(onu_mgmt_log_id == DEV_LOG_INVALID_ID);
+        bcm_dev_log_group_add_log_id(log_group_onu_mgmt, onu_mgmt_log_id);
     }
 #endif
 
@@ -198,6 +199,12 @@ bcmos_errno bcmonu_mgmt_init(bcmos_module_id module_id)
         return BCM_ERR_PARM;
     }
 
+    if (is_issu)
+    {
+        BCM_LOG(INFO, onu_mgmt_log_id, "ONU Mgmt: issu=%d\n", is_issu);
+        BCM_LOG(INFO, onu_mgmt_log_id, "ONU Mgmt: Note issu is just a stub mode of warm restart of ONU mgmt module\n");
+    }
+
     onu_mgmt_context.module_id = module_id;
     SLIST_INIT(&onu_mgmt_context.onu_notify_entities);
     SLIST_INIT(&onu_mgmt_context.flow_notify_entities);
@@ -209,7 +216,7 @@ bcmos_errno bcmonu_mgmt_init(bcmos_module_id module_id)
     switch (onu_mgmt_context.onu_mgmt_svc)
     {
     case BCM_ONU_MGMT_SVC_OMCI:
-        rc = omci_svc_init(onu_mgmt_onu_state_changed_notify);
+        rc = omci_svc_init(onu_mgmt_onu_state_changed_notify, is_issu);
         BCMOS_RETURN_IF_ERROR(rc);
         break;
 #ifdef ONU_MGMT_DPOE_SVC
@@ -563,7 +570,7 @@ void onu_mgmt_util_parse_config(FILE *fp, config_line_cb line_cb)
         }
         else
         {
-            strncpy(name, s, MAX_CONFIG_PARAM_NAME_LEN);
+            bcmolt_strncpy(name, s, MAX_CONFIG_PARAM_NAME_LEN);
         }
 
         s = strtok(NULL, "=");
@@ -574,7 +581,7 @@ void onu_mgmt_util_parse_config(FILE *fp, config_line_cb line_cb)
         }
         else
         {
-            strncpy(value, s, MAX_CONFIG_PARAM_VALUE_LEN);
+            bcmolt_strncpy(value, s, MAX_CONFIG_PARAM_VALUE_LEN);
         }
 
         trim(value);

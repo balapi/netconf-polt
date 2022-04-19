@@ -37,6 +37,9 @@
 
 #include <libnetconf2/log.h>
 #include <bcmolt_netconf_module_utils.h>
+#ifdef MFC_RELAY
+#include <bbf-mfc.h>
+#endif
 
 #define BBF_XPON_MAX_NAME_LENGTH    64
 
@@ -193,6 +196,9 @@ typedef STAILQ_HEAD(xpon_tcont_list, xpon_tcont) xpon_tcont_list;
 
 /* GEM port list head */
 typedef STAILQ_HEAD(xpon_gem_list, xpon_gem) xpon_gem_list;
+
+/* v-ani-v-enet port list head */
+typedef STAILQ_HEAD(xpon_v_ani_v_enet_list, xpon_v_ani_v_enet) xpon_v_ani_v_enet_list;
 
 /*
  * Scheduling support. See TR-383: bbf-qos-traffic0mngt.yang, bbf-qos-enhanced-scheduling.yang
@@ -397,6 +403,8 @@ struct xpon_v_ani
     uint8_t num_unis;
     xpon_tcont_list tconts;
     xpon_gem_list gems;
+    xpon_v_ani_v_enet_list v_anis;
+    bcmos_bool recreating_flows;
 
     bcmolt_interface pon_ni;
     xpon_ani *linked_ani;
@@ -445,6 +453,7 @@ struct xpon_v_ani_v_enet
     xpon_v_ani *v_ani;
     xpon_obj_hdr *linked_if;
     xpon_subif_list subifs;
+    STAILQ_ENTRY(xpon_v_ani_v_enet) next; /* next on v_ani */
 };
 
 /* v-ani_v_enet properties */
@@ -653,6 +662,14 @@ struct bbf_subif_ingress_rule
     int priority_to_tc[8]; /* Indexed by pbit. -1=unset */
     int ds_iwf_flow_id;
     int pon_ni;
+#ifdef MFC_RELAY
+    bbf_mfc_action mfc_action;
+    const char *mfc_endpoint;
+    bcmolt_access_control_id mfc_acl_id;
+#ifndef BCMOLT_ACCESS_CONTROL_ID_INVALID
+#define BCMOLT_ACCESS_CONTROL_ID_INVALID 0xffff
+#endif
+#endif
 };
 
 typedef struct xpon_dhcpr_ref
@@ -1041,6 +1058,14 @@ bbf_subif_ingress_rule *xpon_vlan_subif_ingress_rule_get_match(const bbf_subif_i
     xpon_vlan_subif *to_subif);
 bcmos_errno xpon_vlan_subif_subif_rule_get_next_match(const bbf_subif_ingress_rule *from_rule,
     xpon_obj_hdr *to_if, xpon_vlan_subif **to_subif, bbf_subif_ingress_rule **to_rule);
+#ifdef MFC_RELAY
+bcmos_errno bbf_xpon_get_vsi_and_rule_by_acl_id(bcmolt_access_control_id acl_id,
+    const char **p_vsi_name, const char **p_rule_name, const char **p_endpoint_name);
+bcmos_errno bbf_xpon_get_intf_by_vsi_rule_prty(
+    const char *vsi_name, const char *rule_name, uint8_t prty,
+    bcmolt_flow_key *flow_key, bcmolt_flow_intf_ref *intf_ref,
+    bcmolt_service_port_id *svc_port_id);
+#endif
 
 bcmos_errno xpon_tcont_init(sr_session_ctx_t *srs);
 bcmos_errno xpon_tcont_start(sr_session_ctx_t *srs);
@@ -1171,6 +1196,7 @@ bcmos_errno xpon_match_diff(const bbf_match_criteria *from_match, const bbf_matc
     bbf_flexible_rewrite *actions);
 bcmos_errno xpon_tm_qmp_create(bcmolt_tm_qmp_id id, bcmolt_tm_queue_set_id tmq_set_id, uint8_t pbit_to_queue_map[]);
 bcmos_errno xpon_default_tm_qmp_create(bcmolt_tm_qmp_id id);
+uint16_t xpon_map_protocol_match_to_ether_type(const bbf_protocol_match *protocol_match);
 
 /* tm-mgmt */
 bcmos_errno xpon_tm_root_attribute_populate(sr_session_ctx_t *srs,
@@ -1185,6 +1211,7 @@ bcmos_errno xpon_apply_flow_delete(sr_session_ctx_t *srs, xpon_vlan_subif *subif
 bcmos_errno xpon_apply_flow_create(sr_session_ctx_t *srs, xpon_forwarder *fwd);
 bcmos_errno xpon_create_onu_flows_on_subif(sr_session_ctx_t *srs, xpon_obj_hdr *uni, xpon_vlan_subif *subif);
 bcmos_errno xpon_create_onu_flows_on_uni(sr_session_ctx_t *srs, xpon_obj_hdr *uni);
+bcmos_errno xpon_create_onu_flows_on_onu(sr_session_ctx_t *srs, xpon_v_ani *v_ani);
 
 /*
  * Scheduled requests

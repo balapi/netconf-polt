@@ -1,22 +1,22 @@
 /*
  *  <:copyright-BRCM:2016-2020:Apache:standard
- *  
+ *
  *   Copyright (c) 2016-2020 Broadcom. All Rights Reserved
- *  
+ *
  *   The term “Broadcom” refers to Broadcom Inc. and/or its subsidiaries
- *  
+ *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
  *   You may obtain a copy of the License at
- *  
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *   Unless required by applicable law or agreed to in writing, software
  *   distributed under the License is distributed on an "AS IS" BASIS,
  *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
- *  
+ *
  *  :>
  *
  *****************************************************************************/
@@ -37,7 +37,7 @@
 #include "omci_stack_enc_dec.h"
 #include "omci_stack_me_tl_intf.h"
 #ifdef ENABLE_LOG
-#include <bcm_dev_log.h>
+#include <bcmolt_host_dev_log.h>
 #endif
 
 #ifdef ENABLE_LOG
@@ -90,8 +90,7 @@ bcmos_errno bcm_omci_stack_init(const bcm_omci_stack_init_parms *init_parms)
     if (DEV_LOG_INVALID_ID == log_id_bcm_omci_stack_me_layer)
     {
         log_id_bcm_omci_stack_me_layer = bcm_dev_log_id_register("OMCI_ME_LAYER", DEV_LOG_LEVEL_INFO, DEV_LOG_ID_TYPE_BOTH);
-        if (log_id_bcm_omci_stack_me_layer == DEV_LOG_INVALID_ID)
-            return BCM_ERR_INTERNAL;
+        bcm_dev_log_group_add_log_id(log_group_onu_mgmt, log_id_bcm_omci_stack_me_layer);
     }
 #endif
     BCM_LOG(INFO, log_id_bcm_omci_stack_me_layer, "Using Broadcom OMCI Stack\n");
@@ -511,4 +510,3 @@ void bcm_omci_me_free(bcm_omci_me_hdr *me_hdr)
     if (me_hdr->me_free != NULL)
         me_hdr->me_free(me_hdr);
 }
-

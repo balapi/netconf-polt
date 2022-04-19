@@ -47,6 +47,8 @@
 #define IETF_HARDWARE_MODULE_NAME                   "ietf-hardware"
 #define BBF_L2_DHCPV4_RELAY_MODULE_NAME             "bbf-l2-dhcpv4-relay"
 #define BBF_INTERFACE_PON_REFERENCE                 "bbf-interface-port-reference"
+#define BBF_OBBAA_XPON_ONU_TYPES                    "bbf-obbaa-xpon-onu-types"
+#define BBF_OBBAA_XPON_ONU_AUTHENTICATION           "bbf-obbaa-xpon-onu-authentication"
 
 #define BBF_XPON_XPON_PATH_BASE                     "/bbf-xpon:xpon"
 #define BBF_XPON_XPON_STATE_PATH_BASE               "/bbf-xpon:xpon-state"

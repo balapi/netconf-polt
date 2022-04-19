@@ -32,37 +32,7 @@
 sr_subscription_ctx_t *sr_ctx;
 static sr_subscription_ctx_t *sr_ctx_intf;
 
-static const char* ietf_interfaces_features[] = {
-    "*",
-    NULL
-};
-
-static const char* xponvani_features[] = {
-    "configurable-v-ani-onu-id",
-    "configurable-v-ani-management-gem-port-id",
-    NULL
-};
-
-static const char* xpongemtcont_features[] = {
-    "configurable-gemport-id",
-    "configurable-alloc-id",
-    NULL
-};
-
-static const char* l2_forwarding_features[] = {
-    "forwarding-databases",
-    "shared-forwarding-databases",
-    "mac-learning",
-    "split-horizon-profiles",
-    NULL
-};
-
-static const char* ietf_hardware_features[] = {
-    "*",
-    NULL
-};
-
-static const char* bbf_hardware_features[] = {
+static const char* all_features[] = {
     "*",
     NULL
 };
@@ -689,30 +659,32 @@ bcmos_errno bbf_xpon_module_init(sr_session_ctx_t *srs, struct ly_ctx *ly_ctx)
     const struct lys_module *onu_states_mod;
     const struct lys_module *dhcpr_mod;
     const struct lys_module *bbf_interface_pon_ref_mod;
+    const struct lys_module *obbaa_onu_types_mod;
+    const struct lys_module *obbaa_onu_authentication_mod;
 
     do  {
         ietf_intf_mod = nc_ly_ctx_load_module(ly_ctx, IETF_INTERFACES_MODULE_NAME,
-            NULL, ietf_interfaces_features, BCMOS_TRUE);
+            NULL, all_features, BCMOS_TRUE);
         if (ietf_intf_mod == NULL)
             break;
 
         xponvani_mod = nc_ly_ctx_load_module(ly_ctx, BBF_XPONVANI_MODULE_NAME,
-            NULL, xponvani_features, BCMOS_TRUE);
+            NULL, all_features, BCMOS_TRUE);
         if (xponvani_mod == NULL)
             break;
 
         xpongemtcont_mod = nc_ly_ctx_load_module(ly_ctx, BBF_XPONGEMTCONT_MODULE_NAME,
-            NULL, xpongemtcont_features, BCMOS_TRUE);
+            NULL, all_features, BCMOS_TRUE);
         if (xpongemtcont_mod == NULL)
             break;
 
         l2_forwarding_mod = nc_ly_ctx_load_module(ly_ctx, BBF_L2_FORWARDING_MODULE_NAME,
-            NULL, l2_forwarding_features, BCMOS_TRUE);
+            NULL, all_features, BCMOS_TRUE);
         if (l2_forwarding_mod == NULL)
             break;
 
         ietf_hardware_mod = nc_ly_ctx_load_module(ly_ctx, IETF_HARDWARE_MODULE_NAME,
-            NULL, ietf_hardware_features, BCMOS_TRUE);
+            NULL, all_features, BCMOS_TRUE);
         if (ietf_hardware_mod == NULL)
             break;
 
@@ -722,7 +694,7 @@ bcmos_errno bbf_xpon_module_init(sr_session_ctx_t *srs, struct ly_ctx *ly_ctx)
             break;
 
         bbf_hardware_mod = nc_ly_ctx_load_module(ly_ctx, BBF_HARDWARE_MODULE_NAME,
-            NULL, bbf_hardware_features, BCMOS_FALSE);
+            NULL, all_features, BCMOS_FALSE);
 
         bbf_interface_pon_ref_mod = nc_ly_ctx_load_module(ly_ctx, BBF_INTERFACE_PON_REFERENCE,
             NULL, NULL, BCMOS_FALSE);
@@ -745,6 +717,19 @@ bcmos_errno bbf_xpon_module_init(sr_session_ctx_t *srs, struct ly_ctx *ly_ctx)
         if (dhcpr_mod == NULL)
             break;
 
+#ifdef OB_BAA_DEVICE_ADAPTER_VERSION
+        if (strcmp(OB_BAA_DEVICE_ADAPTER_VERSION, "1.0") && strcmp(OB_BAA_DEVICE_ADAPTER_VERSION, "2.0"))
+        {
+            obbaa_onu_types_mod = nc_ly_ctx_load_module(ly_ctx, BBF_OBBAA_XPON_ONU_TYPES,
+                NULL, all_features, BCMOS_FALSE);
+            if (obbaa_onu_types_mod == NULL)
+                break;
+            obbaa_onu_authentication_mod = nc_ly_ctx_load_module(ly_ctx, BBF_OBBAA_XPON_ONU_AUTHENTICATION,
+                NULL, all_features, BCMOS_FALSE);
+            if (obbaa_onu_authentication_mod == NULL)
+                break;
+        }
+#endif
 #if 0
         /* Reset stored configuration if requested */
         if (!netconf_agent_startup_options_get()->reset_cfg)

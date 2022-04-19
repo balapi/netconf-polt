@@ -62,14 +62,16 @@ typedef struct
 /** ONU information */
 typedef struct
 {
-   const char *cterm_name;          /* Channel termination name */
-   tr451_polt_onu_serial_number serial_number;
-   uint8_t *registration_id;
    uint16_t pon_interface_id;       /* PON interface ID on the front panel */
 #define POLT_PON_ID_UNDEFINED    0xffff
    uint16_t onu_id;
 #define POLT_ONU_ID_UNDEFINED    0xffff
+   const char *cterm_name;          /* Channel termination name */
+   tr451_polt_onu_serial_number serial_number;
+   uint8_t *registration_id;
    xpon_onu_presence_flags presence_flags; /* ONU presence flags */
+   xpon_onu_management_state management_state;
+   const uint8_t *loid;
 } tr451_polt_onu_info;
 
 /**

@@ -39,4 +39,10 @@
  */
 bcmos_errno tr451_vendor_cli_init(bcmcli_entry *dir);
 
+
+#ifdef __cplusplus
+extern "C"
+#endif
+void tr451_onu_auth_report_status_set_cb_set(void (*cb)(xpon_onu_auth_action_status status));
+
 #endif /* TR451_POLT_VENDOR_SPECIFIC_H_ */

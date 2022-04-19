@@ -4,7 +4,7 @@
 # with BAL API
 
 # BAL API version. Must match of of the versions released in github
-bcm_make_normal_option(BAL_API_VERSION STRING "BAL API Version" "3.8.8.8")
+bcm_make_normal_option(BAL_API_VERSION STRING "BAL API Version" "3.10.2.2")
 
 set(_SUBDIR_LIST bal_api_subdir_list.txt)
 if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${_SUBDIR_LIST})

@@ -5,7 +5,7 @@ diff -Naur netopeer2-1.1.76.org/CMakeLists.txt netopeer2-1.1.76/CMakeLists.txt
          set(ENV{NP2_MODULE_PERMS} \"${MODULES_PERMS}\")
          set(ENV{NP2_MODULE_OWNER} \"${MODULES_OWNER}\")
          set(ENV{NP2_MODULE_GROUP} \"${MODULES_GROUP}\")
-+        set(ENV{SYSREPOCTL_EXECUTABLE} \"${SYSREPOCTL}\")
++        set(ENV{SYSREPOCTL_EXECUTABLE} \"${SYSREPOCTL_EXECUTABLE}\")
          execute_process(COMMAND \"${SCRIPT_DIR}/setup.sh\" RESULT_VARIABLE SETUP_RES)
          if(NOT SETUP_RES EQUAL \"0\")
              message(FATAL_ERROR \" scripts/setup.sh failed: \${SETUP_RES}\")
@@ -13,8 +13,8 @@ diff -Naur netopeer2-1.1.76.org/CMakeLists.txt netopeer2-1.1.76/CMakeLists.txt
  if(GENERATE_HOSTKEY)
      install(CODE "
          message(STATUS \"Generating a new RSA host key \\\"genkey\\\" if not already added...\")
-+        set(ENV{OPENSSL_EXECUTABLE} \"${OPENSSL}\")
-+        set(ENV{SYSREPOCFG_EXECUTABLE} \"${SYSREPOCFG}\")
++        set(ENV{OPENSSL_EXECUTABLE} \"${OPENSSL_EXECUTABLE}\")
++        set(ENV{SYSREPOCFG_EXECUTABLE} \"${SYSREPOCFG_EXECUTABLE}\")
          execute_process(COMMAND ${SCRIPT_DIR}/merge_hostkey.sh RESULT_VARIABLE MERGE_HOSTKEY_RES)
          if(NOT MERGE_HOSTKEY_RES EQUAL \"0\")
              message(FATAL_ERROR \" scripts/merge_hostkey.sh failed: \${MERGE_HOSTKEY_RES}\")
@@ -22,7 +22,7 @@ diff -Naur netopeer2-1.1.76.org/CMakeLists.txt netopeer2-1.1.76/CMakeLists.txt
  if(MERGE_LISTEN_CONFIG)
      install(CODE "
          message(STATUS \"Merging default server listen configuration if there is none...\")
-+        set(ENV{SYSREPOCFG_EXECUTABLE} \"${SYSREPOCFG}\")
++        set(ENV{SYSREPOCFG_EXECUTABLE} \"${SYSREPOCFG_EXECUTABLE}\")
          execute_process(COMMAND ${SCRIPT_DIR}/merge_config.sh RESULT_VARIABLE MERGE_CONFIG_RES)
          if(NOT MERGE_CONFIG_RES EQUAL \"0\")
              message(FATAL_ERROR \" scripts/merge_config.sh failed: \${MERGE_CONFIG_RES}\")
@@ -44,7 +44,7 @@ diff -Naur netopeer2-1.1.76.org/scripts/merge_hostkey.sh netopeer2-1.1.76/script
 +++ netopeer2-1.1.76/scripts/merge_hostkey.sh	2021-06-17 18:00:14.932694732 +1000
 @@ -39,13 +39,14 @@
  STDIN`
- 
+
  # generate edit config
 -CONFIG="<keystore xmlns=\"urn:ietf:params:xml:ns:yang:ietf-keystore\">
 +CONFIG="<keystore xmlns=\"urn:ietf:params:xml:ns:yang:ietf-keystore\" xmlns:ct=\"urn:ietf:params:xml:ns:yang:ietf-crypto-types\">
@@ -70,7 +70,7 @@ diff -Naur netopeer2-1.1.76.org/src/netconf_server.c netopeer2-1.1.76/src/netcon
 -    struct lyd_node_leaf_list *alg = NULL, *privkey = NULL;
 +    struct lyd_node_leaf_list *privkey_format = NULL, *privkey = NULL;
      struct lyd_node *node;
- 
+
      /* find the nodes */
      LY_TREE_FOR(asym_key->child, node) {
 -        if (!strcmp(node->schema->name, "algorithm")) {
@@ -87,7 +87,7 @@ diff -Naur netopeer2-1.1.76.org/src/netconf_server.c netopeer2-1.1.76/src/netcon
          ERR("Failed to find asymmetric key information.");
          return -1;
      }
- 
+
 -    /* set algorithm */
 -    if (!strncmp(alg->value.ident->name, "rsa", 3)) {
 +    /* set private key format */
@@ -101,7 +101,7 @@ diff -Naur netopeer2-1.1.76.org/src/netconf_server.c netopeer2-1.1.76/src/netcon
 +        ERR("Unknown private key format \"%s\".", privkey_format->value_str);
          return -1;
      }
- 
+
 diff -Naur netopeer2-1.1.76.org/src/netconf_server_ssh.c netopeer2-1.1.76/src/netconf_server_ssh.c
 --- netopeer2-1.1.76.org/src/netconf_server_ssh.c	2021-06-02 18:18:52.000000000 +1000
 +++ netopeer2-1.1.76/src/netconf_server_ssh.c	2021-06-17 22:50:51.144560299 +1000

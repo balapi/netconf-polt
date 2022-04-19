@@ -80,16 +80,20 @@ static bcmos_errno polt_cli_onu_add(bcmcli_session *session, const bcmcli_cmd_pa
     uint32_t vendor_specific = (uint32_t)parm[3].value.unumber;
     xpon_onu_presence_flags flags = (xpon_onu_presence_flags)parm[4].value.unumber;
     uint8_t *registration_id = bcmcli_parm_is_set(session, &parm[5]) ? registration_id_buffer : NULL;
+    xpon_onu_management_state management_state = bcmcli_parm_is_set(session, &parm[6]) ?
+        (xpon_onu_management_state)parm[6].value.number : XPON_ONU_MANAGEMENT_STATE_UNSET;
+    const uint8_t *loid = bcmcli_parm_is_set(session, &parm[7]) ? (const uint8_t *)parm[7].value.string : NULL;
     bcmos_errno rc;
 
     tr451_polt_onu_serial_number serial_number = {};
-    strncpy((char *)&serial_number.data[0], vendor_id, sizeof(serial_number));
+    strncpy((char *)&serial_number.data[0], vendor_id, 4);
     serial_number.data[4] = (vendor_specific >> 24) & 0xff;
     serial_number.data[5] = (vendor_specific >> 16) & 0xff;
     serial_number.data[6] = (vendor_specific >> 8) & 0xff;
     serial_number.data[7] = vendor_specific & 0xff;
 
-    rc = sim_tr451_vendor_onu_added(cterm_name, onu_id, &serial_number, registration_id, flags);
+    rc = sim_tr451_vendor_onu_added(cterm_name, onu_id, &serial_number, registration_id, flags,
+        management_state, loid);
     memset(registration_id_buffer, 0, sizeof(registration_id_buffer));
     return rc;
 }
@@ -104,7 +108,7 @@ static bcmos_errno polt_cli_onu_delete(bcmcli_session *session, const bcmcli_cmd
     xpon_onu_presence_flags flags = (xpon_onu_presence_flags)parm[4].value.unumber;
 
     tr451_polt_onu_serial_number serial_number = {};
-    strncpy((char *)&serial_number.data[0], vendor_id, sizeof(serial_number));
+    strncpy((char *)&serial_number.data[0], vendor_id, 4);
     serial_number.data[4] = (vendor_specific >> 24) & 0xff;
     serial_number.data[5] = (vendor_specific >> 16) & 0xff;
     serial_number.data[6] = (vendor_specific >> 8) & 0xff;
@@ -134,6 +138,26 @@ static bcmos_errno polt_cli_set_rx_mode(bcmcli_session *session, const bcmcli_cm
     return sim_tr451_vendor_rx_cfg_set(&rx_cfg);
 }
 
+static void (*onu_auth_report_status_set_cb)(xpon_onu_auth_action_status status);
+
+void tr451_onu_auth_report_status_set_cb_set(void (*cb)(xpon_onu_auth_action_status status))
+{
+    onu_auth_report_status_set_cb = cb;
+}
+
+/* Set onu-authentication-report action status */
+static bcmos_errno polt_cli_auth_report(bcmcli_session *session, const bcmcli_cmd_parm parm[], uint16_t nparms)
+{
+    xpon_onu_auth_action_status status = (xpon_onu_auth_action_status)parm[0].value.number;
+    if (onu_auth_report_status_set_cb == NULL)
+    {
+        bcmcli_print(session, "Can't set onu-authentication-report action status\n");
+        return BCM_ERR_NOT_SUPPORTED;
+    }
+    onu_auth_report_status_set_cb(status);
+    return BCM_ERR_OK;
+}
+
 bcmos_errno tr451_vendor_cli_init(bcmcli_entry *dir)
 {
     static bcmcli_enum_val onu_flags_table[] = {
@@ -141,6 +165,23 @@ bcmos_errno tr451_vendor_cli_init(bcmcli_entry *dir)
         { .name = "present",            .val=XPON_ONU_PRESENCE_FLAG_ONU },
         { .name = "in_o5",              .val=XPON_ONU_PRESENCE_FLAG_ONU_IN_O5 },
         { .name = "activation_failed",  .val=XPON_ONU_PRESENCE_FLAG_ONU_ACTIVATION_FAILED },
+        { .name = "unclaimed",          .val=XPON_ONU_PRESENCE_FLAG_UNCLAIMED },
+        BCMCLI_ENUM_LAST
+    };
+    static bcmcli_enum_val onu_management_state_table[] = {
+        { .name = "unset",              .val=XPON_ONU_MANAGEMENT_STATE_UNSET },
+        { .name = "relying-on-vomci",   .val=XPON_ONU_MANAGEMENT_STATE_RELYING_ON_VOMCI },
+        { .name = "eomci-being-used",   .val=XPON_ONU_MANAGEMENT_STATE_EOMCI_BEING_USED },
+        { .name = "management-mode-mismatch",  .val=XPON_ONU_MANAGEMENT_STATE_VANI_MANAGEMENT_MODE_MISMATCH },
+        { .name = "eomci-expected-missing-configuration",          .val=XPON_ONU_MANAGEMENT_STATE_EOMCI_EXPECTED_BUT_MISSING_ONU_CONFIGURATION },
+        { .name = "undetermined",       .val=XPON_ONU_MANAGEMENT_STATE_EOMCI_EXPECTED_BUT_MISSING_ONU_CONFIGURATION },
+        BCMCLI_ENUM_LAST
+    };
+    static bcmcli_enum_val onu_auth_action_status_table[] = {
+        { .name = "ok",                         .val=XPON_ONU_MANAGEMENT_STATE_UNSET },
+        { .name = "management-mode-mismatch",   .val=XPON_ONU_AUTH_ACTION_STATUS_MANAGEMENT_MODE_MISMATCH_WITH_V_ANI },
+        { .name = "onu-name-mismatch",          .val=XPON_ONU_AUTH_ACTION_STATUS_NAME_MISMATCH_WITH_V_ANI },
+        { .name = "undermined-error",           .val=XPON_ONU_AUTH_ACTION_STATUS_UNDETERMINED_ERROR },
         BCMCLI_ENUM_LAST
     };
 
@@ -151,12 +192,17 @@ bcmos_errno tr451_vendor_cli_init(bcmcli_entry *dir)
             BCMCLI_MAKE_PARM("onu_id", "onu_id", BCMCLI_PARM_NUMBER, 0),
             BCMCLI_MAKE_PARM("serial_vendor_id", "serial_number: 4 bytes ASCII vendor id", BCMCLI_PARM_STRING, 0),
             BCMCLI_MAKE_PARM("serial_vendor_specific", "serial_number: vendor-specific id", BCMCLI_PARM_HEX, 0),
-            BCMCLI_MAKE_PARM_ENUM_MASK_DEFVAL("flags", "notification flags", onu_flags_table, 0, "expected+present+in_o5"),
-            BCMCLI_MAKE_PARM("registration_id", "Optional registration id", BCMCLI_PARM_BUFFER, BCMCLI_PARM_FLAG_OPTIONAL),
+            BCMCLI_MAKE_PARM_ENUM_MASK_DEFVAL("flags", "notification flags. Use + to combine",
+                onu_flags_table, 0, "expected+present+in_o5"),
+            BCMCLI_MAKE_PARM("registration_id", "Optional registration id", BCMCLI_PARM_BUFFER,
+                BCMCLI_PARM_FLAG_OPTIONAL),
+            BCMCLI_MAKE_PARM("management_state", "Management State", BCMCLI_PARM_ENUM, BCMCLI_PARM_FLAG_OPTIONAL),
+            BCMCLI_MAKE_PARM("loid", "Optional LOID", BCMCLI_PARM_STRING, BCMCLI_PARM_FLAG_OPTIONAL),
             { 0 }
         } ;
         cmd_parms[5].value.buffer.len = sizeof(registration_id_buffer);
         cmd_parms[5].value.buffer.start = cmd_parms[5].value.buffer.curr = registration_id_buffer;
+        cmd_parms[6].enum_table = onu_management_state_table;
         bcmcli_cmd_add(dir, "onu_add", polt_cli_onu_add, "Add ONU",
             BCMCLI_ACCESS_ADMIN, NULL, cmd_parms);
     }
@@ -227,6 +273,18 @@ bcmos_errno tr451_vendor_cli_init(bcmcli_entry *dir)
         bcmcli_cmd_add(dir, "rx_mode", polt_cli_set_rx_mode, "Set Receive handling mode",
             BCMCLI_ACCESS_ADMIN, NULL, cmd_parms);
 
+    }
+
+    /* Set onu-authentication-report action status */
+    {
+        static bcmcli_cmd_parm cmd_parms[] = {
+            BCMCLI_MAKE_PARM("status", "Action status", BCMCLI_PARM_ENUM, 0),
+            { 0 }
+        } ;
+        cmd_parms[0].enum_table = onu_auth_action_status_table;
+        bcmcli_cmd_add(dir, "auth-report", polt_cli_auth_report,
+            "Set onnu-authentication-report action status",
+            BCMCLI_ACCESS_ADMIN, NULL, cmd_parms);
     }
 
     return BCM_ERR_OK;

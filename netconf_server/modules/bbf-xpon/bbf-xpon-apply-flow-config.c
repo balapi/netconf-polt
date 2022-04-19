@@ -173,7 +173,7 @@ bcmos_errno xpon_apply_flow_delete(sr_session_ctx_t *srs, xpon_vlan_subif *subif
 
 
 /* Map protocol match type to ether type */
-static uint16_t xpon_map_protocol_match_to_ether_type(const bbf_protocol_match *protocol_match)
+uint16_t xpon_map_protocol_match_to_ether_type(const bbf_protocol_match *protocol_match)
 {
     uint16_t eth_type = 0;
     switch(protocol_match->match_type)
@@ -252,6 +252,10 @@ static bcmos_errno xpon_map_bal_flow_classifier(bbf_subif_ingress_rule *rule, co
         BCMOLT_MSG_FIELD_SET(flow_cfg, classifier.ether_type,
             xpon_map_protocol_match_to_ether_type(&match.protocol_match));
     }
+    if (match.dest_ip.ipv4.u32)
+    {
+        BCMOLT_MSG_FIELD_SET(flow_cfg, classifier.dst_ip, match.dest_ip.ipv4);
+    }
 
     return err;
 }
@@ -289,22 +293,22 @@ static bcmos_errno xpon_create_bal_flow(sr_session_ctx_t *srs, bcmolt_flow_type 
     BCMOLT_MSG_FIELD_SET(&flow_cfg, statistics, BCMOS_TRUE);
     if (type == BCMOLT_FLOW_TYPE_DOWNSTREAM || type == BCMOLT_FLOW_TYPE_MULTICAST)
     {
-        BCMOLT_MSG_FIELD_SET(&flow_cfg, ingress_intf.intf_type, BCMOLT_FLOW_INTERFACE_TYPE_NNI);
+        BCMOLT_MSG_FIELD_SET(&flow_cfg, ingress_intf.intf_type, BCMOLT_INTERFACE_TYPE_NNI);
         BCMOLT_MSG_FIELD_SET(&flow_cfg, ingress_intf.intf_id, nni->intf_id);
 
         if (rule->group_id == BCM_GROUP_ID_INVALID)
         {
-            BCMOLT_MSG_FIELD_SET(&flow_cfg, egress_intf.intf_type, BCMOLT_FLOW_INTERFACE_TYPE_PON);
+            BCMOLT_MSG_FIELD_SET(&flow_cfg, egress_intf.intf_type, BCMOLT_INTERFACE_TYPE_PON);
             BCMOLT_MSG_FIELD_SET(&flow_cfg, egress_intf.intf_id, v_ani->pon_ni);
             sched_id =  xpon_tm_sched_id(BCMOLT_INTERFACE_TYPE_PON, v_ani->pon_ni);
         }
     }
     else
     {
-        BCMOLT_MSG_FIELD_SET(&flow_cfg, ingress_intf.intf_type, BCMOLT_FLOW_INTERFACE_TYPE_PON);
+        BCMOLT_MSG_FIELD_SET(&flow_cfg, ingress_intf.intf_type, BCMOLT_INTERFACE_TYPE_PON);
         BCMOLT_MSG_FIELD_SET(&flow_cfg, ingress_intf.intf_id, v_ani->pon_ni);
 
-        BCMOLT_MSG_FIELD_SET(&flow_cfg, egress_intf.intf_type, BCMOLT_FLOW_INTERFACE_TYPE_NNI);
+        BCMOLT_MSG_FIELD_SET(&flow_cfg, egress_intf.intf_type, BCMOLT_INTERFACE_TYPE_NNI);
         BCMOLT_MSG_FIELD_SET(&flow_cfg, egress_intf.intf_id, nni->intf_id);
         sched_id =  xpon_tm_sched_id(BCMOLT_INTERFACE_TYPE_NNI, 0);
     }
@@ -368,14 +372,38 @@ static bcmos_errno xpon_create_bal_flow(sr_session_ctx_t *srs, bcmolt_flow_type 
         {
             cmd_id |= BCMOLT_ACTION_CMD_ID_REMARK_OUTER_PBITS | BCMOLT_ACTION_CMD_ID_XLATE_OUTER_TAG;
         }
+        else if (actions->num_pop_tags > actions->num_push_tags)
+        {
+            cmd_id |= BCMOLT_ACTION_CMD_ID_REMARK_INNER_PBITS | BCMOLT_ACTION_CMD_ID_XLATE_INNER_TAG;
+        }
         else
         {
             cmd_id |= BCMOLT_ACTION_CMD_ID_ADD_OUTER_TAG;
         }
-        if (BBF_DOT1Q_TAG_PROP_IS_SET(tag, vlan_id))
-            BCMOLT_MSG_FIELD_SET(&flow_cfg, action.o_vid, tag->vlan_id);
-        if (BBF_DOT1Q_TAG_PROP_IS_SET(tag, pbit))
-            BCMOLT_MSG_FIELD_SET(&flow_cfg, action.o_pbits, tag->pbit);
+        if (actions->num_pop_tags <= actions->num_push_tags)
+        {
+            /* Start adding/translating from the outer tag */
+            if (BBF_DOT1Q_TAG_PROP_IS_SET(tag, vlan_id))
+                BCMOLT_MSG_FIELD_SET(&flow_cfg, action.o_vid, tag->vlan_id);
+            else
+                cmd_id &= ~BCMOLT_ACTION_CMD_ID_XLATE_OUTER_TAG;
+            if (BBF_DOT1Q_TAG_PROP_IS_SET(tag, pbit))
+                BCMOLT_MSG_FIELD_SET(&flow_cfg, action.o_pbits, tag->pbit);
+            else
+                cmd_id &= ~BCMOLT_ACTION_CMD_ID_REMARK_OUTER_PBITS;
+        }
+        else
+        {
+            /* Translate inner */
+            if (BBF_DOT1Q_TAG_PROP_IS_SET(tag, vlan_id))
+                BCMOLT_MSG_FIELD_SET(&flow_cfg, action.i_vid, tag->vlan_id);
+            else
+                cmd_id &= ~BCMOLT_ACTION_CMD_ID_XLATE_INNER_TAG;
+            if (BBF_DOT1Q_TAG_PROP_IS_SET(tag, pbit))
+                BCMOLT_MSG_FIELD_SET(&flow_cfg, action.i_pbits, tag->pbit);
+            else
+                cmd_id &= ~BCMOLT_ACTION_CMD_ID_REMARK_INNER_PBITS;
+        }
 
         if (actions->num_push_tags > 1)
         {
@@ -408,7 +436,7 @@ static bcmos_errno xpon_create_bal_flow(sr_session_ctx_t *srs, bcmolt_flow_type 
     }
 
     tc_flow->flow_id = flow_cfg.key.flow_id;
-    tc_flow->flow_dir |= ((type == BCMOLT_FLOW_TYPE_DOWNSTREAM) ? XPON_FLOW_DIR_DOWNSTREAM : XPON_FLOW_DIR_UPSTREAM);
+    tc_flow->flow_dir |= ((type == BCMOLT_FLOW_TYPE_UPSTREAM) ? XPON_FLOW_DIR_UPSTREAM : XPON_FLOW_DIR_DOWNSTREAM);
 
     NC_LOG_DBG("Created %s BAL flow %u\n",
         bcmolt_enum_stringval(bcmolt_flow_type_string_table, type), flow_cfg.key.flow_id);
@@ -504,6 +532,8 @@ static bcmos_errno xpon_create_onu_flow(sr_session_ctx_t *srs, xpon_v_ani *v_ani
     bbf_flexible_rewrite actions = {};
     const xpon_gem *gem;
     bcmonu_mgmt_flow_action_type_id cmd_id = 0;
+    bcmolt_interface uni_port = 0;
+    const xpon_enet *uni = (xpon_enet *)subif->subif_lower_layer;
     bcmos_errno err = BCM_ERR_OK;
 
     /* Sanity checks */
@@ -514,11 +544,9 @@ static bcmos_errno xpon_create_onu_flow(sr_session_ctx_t *srs, xpon_v_ani *v_ani
     if (gem == NULL)
         return BCM_ERR_INTERNAL;
 
-    if (tc_flow->flow_id != BCM_FLOW_ID_INVALID)
-        return BCM_ERR_OK;
-
     key.id = tc_flow->flow_id;
     key.dir = dir;
+
     if (key.id == BCM_FLOW_ID_INVALID)
         key.id = ++global_onu_flow_id;
     BCMONU_MGMT_CFG_INIT(&cfg, flow, key);
@@ -557,6 +585,9 @@ static bcmos_errno xpon_create_onu_flow(sr_session_ctx_t *srs, xpon_v_ani *v_ani
     BCMONU_MGMT_FIELD_SET(&cfg.data, flow_cfg_data, svc_port_id, gem->gemport_id);
     if (dir == BCMONU_MGMT_FLOW_DIR_ID_UPSTREAM)
         BCMONU_MGMT_FIELD_SET(&cfg.data, flow_cfg_data, agg_port_id, gem->tcont->alloc_id);
+    if (uni != NULL && uni->hdr.obj_type == XPON_OBJ_TYPE_ENET)
+        uni_port = uni->intf_id;
+    BCMONU_MGMT_FIELD_SET(&cfg.data, flow_cfg_data, uni_port, uni_port);
 
     /* Map classifier */
     if (match.vlan_tag_match.tag_match_types[BBF_TAG_INDEX_TYPE_OUTER] != BBF_VLAN_TAG_MATCH_TYPE_ALL)
@@ -853,7 +884,7 @@ static bcmos_errno xpon_create_onu_flows(sr_session_ctx_t *srs, xpon_v_ani *v_an
     for (int i = 0; i < BCM_SIZEOFARRAY(rule->flows); i++)
     {
         bbf_subif_ingress_rule_flow *tc_flow = &rule->flows[i];
-        if (tc_flow->flow_id != BCM_FLOW_ID_INVALID)
+        if (tc_flow->flow_id != BCM_FLOW_ID_INVALID && !v_ani->recreating_flows)
             continue;
         if (tc_flow->gem == NULL)
             continue;
@@ -883,27 +914,29 @@ static bcmos_errno xpon_create_onu_flows(sr_session_ctx_t *srs, xpon_v_ani *v_an
 /* Create ONU flows on subif */
 bcmos_errno xpon_create_onu_flows_on_subif(sr_session_ctx_t *srs, xpon_obj_hdr *uni, xpon_vlan_subif *subif)
 {
-    xpon_v_ani_v_enet *v_ani_v_enet;
-    xpon_ani *ani;
-    xpon_v_ani *v_ani;
+    xpon_v_ani_v_enet *v_ani_v_enet = NULL;
+    xpon_ani *ani = NULL;
+    xpon_v_ani *v_ani = NULL;
     bbf_subif_ingress_rule *rule, *rule_tmp;
 
     if (uni->obj_type == XPON_OBJ_TYPE_ANI_V_ENET)
     {
         v_ani_v_enet = (xpon_v_ani_v_enet *)((xpon_ani_v_enet *)uni)->linked_if;
-        ani = (xpon_ani *)((xpon_ani_v_enet *)uni)->lower_layer;
     }
     else if (uni->obj_type == XPON_OBJ_TYPE_ENET)
     {
         v_ani_v_enet = (xpon_v_ani_v_enet *)((xpon_enet *)uni)->linked_if;
-        ani = (xpon_ani *)((xpon_enet *)uni)->lower_layer;
     }
     else
     {
         NC_LOG_ERR("Unexpected object %s\n", uni->name);
         return BCM_ERR_PARM;
     }
-    v_ani = (ani == NULL) ? NULL : ani->linked_v_ani;
+    if (v_ani_v_enet != NULL)
+    {
+        v_ani = v_ani_v_enet->v_ani;
+        ani = v_ani->linked_ani;
+    }
     if (v_ani_v_enet == NULL || v_ani == NULL || ani->hdr.obj_type != XPON_OBJ_TYPE_ANI)
     {
         NC_LOG_ERR("Couldn't create ONU flows: v_ani_v_enet:%s v_ani:%s ani:%s ani_obj_type:%d\n",
@@ -956,6 +989,25 @@ bcmos_errno xpon_create_onu_flows_on_uni(sr_session_ctx_t *srs, xpon_obj_hdr *un
     }
 
     return BCM_ERR_OK;
+}
+
+bcmos_errno xpon_create_onu_flows_on_onu(sr_session_ctx_t *srs, xpon_v_ani *v_ani)
+{
+    xpon_v_ani_v_enet *v_enet, *v_enet_tmp;
+    bcmos_errno err = BCM_ERR_OK;
+
+    if (v_ani->linked_ani == NULL)
+        return BCM_ERR_OK;
+    v_ani->recreating_flows = BCMOS_TRUE;
+    STAILQ_FOREACH_SAFE(v_enet, &v_ani->v_anis, next, v_enet_tmp)
+    {
+        if (v_enet->linked_if != NULL)
+        {
+            err = (err != BCM_ERR_OK) ? err : xpon_create_onu_flows_on_uni(srs, v_enet->linked_if);
+        }
+    }
+    v_ani->recreating_flows = BCMOS_FALSE;
+    return err;
 }
 
 static bcmos_errno xpon_find_rule_gem(

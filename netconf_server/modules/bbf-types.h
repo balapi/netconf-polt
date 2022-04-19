@@ -139,6 +139,7 @@ typedef enum
 {
     BBF_PROTOCOL_MATCH_ANY              = 0,
     BBF_PROTOCOL_MATCH_IGMP             = 0x1,      /* IP protocol type = 2 */
+#define IGMP_IP_PROTO  0x2
     BBF_PROTOCOL_MATCH_MLD              = 0x2,      /* IPv6 protocol type = 58 */
     BBF_PROTOCOL_MATCH_DHCPV4           = 0x4,      /* client: UDP src port=68, dst port=67 server: src port=67, dst port=68 */
     BBF_PROTOCOL_MATCH_DHCPV6           = 0x8,      /* client: UDP src port=547, dst port=548 server: src port=548, dst port=547 */
@@ -170,6 +171,7 @@ typedef struct bbf_match_criteria
     bbf_mac_address_match frame_destination_match;
     bbf_multiple_vlan_tag_match vlan_tag_match;
     bbf_protocol_match protocol_match;
+    bcmos_ip_address dest_ip;
 } bbf_match_criteria;
 
 /* flixible-rewrite */

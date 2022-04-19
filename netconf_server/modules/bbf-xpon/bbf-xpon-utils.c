@@ -1153,7 +1153,7 @@ bcmos_errno bcmolt_xpon_utils_init(void)
         sizeof(xpon_vlan_entry), sizeof(xpon_vlan_key), "xpon-vlan");
     if (vlan_hash == NULL)
     {
-        //hash_table_delete(object_hash);
+        hash_table_delete(object_hash);
         return BCM_ERR_NOMEM;
     }
 
@@ -1184,13 +1184,13 @@ void bcmolt_xpon_utils_exit(void)
     if (object_hash)
     {
         hash_table_clear(object_hash);
-        //hash_table_delete(object_hash);
+        hash_table_delete(object_hash);
         object_hash = NULL;
     }
     if (vlan_hash)
     {
         hash_table_clear(vlan_hash);
-        //hash_table_delete(vlan_hash);
+        hash_table_delete(vlan_hash);
         vlan_hash = NULL;
     }
 

@@ -101,7 +101,7 @@ bcmos_errno bcmonu_mgmt_multi_cfg_get(bcmolt_oltid olt_id, bcmonu_mgmt_multi_cfg
 
 
 /* 'module_id' is the module on behalf the proxy messages will be handled. */
-bcmos_errno bcmonu_mgmt_init(bcmos_module_id module_id);
+bcmos_errno bcmonu_mgmt_init(bcmos_module_id module_id, int is_issu);
 bcmos_errno bcmonu_mgmt_deinit(bcmos_module_id module_id);
 bcmos_errno bcmonu_mgmt_olt_init(bcmolt_oltid olt_id);
 

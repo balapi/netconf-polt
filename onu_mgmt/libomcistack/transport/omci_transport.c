@@ -1,28 +1,28 @@
 /*
  *  <:copyright-BRCM:2016-2020:Apache:standard
- *  
+ *
  *   Copyright (c) 2016-2020 Broadcom. All Rights Reserved
- *  
+ *
  *   The term “Broadcom” refers to Broadcom Inc. and/or its subsidiaries
- *  
+ *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
  *   You may obtain a copy of the License at
- *  
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *   Unless required by applicable law or agreed to in writing, software
  *   distributed under the License is distributed on an "AS IS" BASIS,
  *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
- *  
+ *
  *  :>
  *
  *****************************************************************************/
 
 #include <bcmos_system.h>
-#include <bcm_dev_log.h>
+#include <bcmolt_host_dev_log.h>
 #include "omci_transport.h"
 #include "omci_stack_internal.h"
 #include "omci_stack_common.h"
@@ -263,7 +263,7 @@ bcmos_errno omci_transport_init(const bcm_omci_stack_init_parms *init_parms)
     if (omci_transport_log_id == DEV_LOG_INVALID_ID)
     {
         omci_transport_log_id = bcm_dev_log_id_register("OMCI_TRANSPORT", DEV_LOG_LEVEL_INFO, DEV_LOG_ID_TYPE_BOTH);
-        BUG_ON(omci_transport_log_id == DEV_LOG_INVALID_ID);
+        bcm_dev_log_group_add_log_id(log_group_onu_mgmt, omci_transport_log_id);
     }
 #endif
 
@@ -1159,4 +1159,3 @@ bcmos_errno bcm_omci_recv_msg(bcm_omci_me_key *me_key, void *omci_msg, uint16_t 
 
     return BCM_ERR_OK;
 }
-

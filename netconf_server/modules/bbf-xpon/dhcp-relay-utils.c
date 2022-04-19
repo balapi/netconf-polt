@@ -53,9 +53,6 @@ static dev_log_id log_id_dhcpr;
 
 static bcmolt_access_control_id dhcr_access_control_id = 0;
 
-/* DHCP relay profile. Onlky 1 profile is supported in the moment */
-static xpon_dhcpr_profile *dhcpr_profile;
-
 /* DHCP relay interface list head */
 static STAILQ_HEAD(, dhcp_relay_interface) dhcp_relay_interface_list;
 
@@ -962,13 +959,6 @@ bcmos_errno dhcp_relay_profile_add(struct xpon_dhcpr_profile *profile)
 {
     if (profile == NULL || profile->hdr.name == NULL)
         return BCM_ERR_PARM;
-    if (dhcpr_profile != NULL)
-    {
-        BCM_LOG(ERROR, log_id_dhcpr, "Only 1 DHCP relay profile is supported. Attempt to add profile %s when profile %s already exists\n",
-            profile->hdr.name, dhcpr_profile->hdr.name);
-        return BCM_ERR_TOO_MANY;
-    }
-    dhcpr_profile = profile;
     return BCM_ERR_OK;
 }
 
@@ -976,11 +966,6 @@ bcmos_errno dhcp_relay_profile_add(struct xpon_dhcpr_profile *profile)
  */
 bcmos_errno dhcp_relay_profile_delete(const char *profile_name)
 {
-    if (profile_name == NULL)
-        return BCM_ERR_PARM;
-    if (dhcpr_profile == NULL || strcmp(dhcpr_profile->hdr.name, profile_name))
-        return BCM_ERR_NOENT;
-    dhcpr_profile = NULL;
     return BCM_ERR_OK;
 }
 

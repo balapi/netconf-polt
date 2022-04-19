@@ -130,10 +130,11 @@ bcmos_errno xpon_v_ani_get_by_name(const char *name, xpon_v_ani **p_v_ani, bcmos
         *p_v_ani = (xpon_v_ani *)obj;
         if (is_added != NULL && *is_added)
         {
-            (*p_v_ani)->pon_ni = BCMOLT_INTERFACE_ID_INVALID;
+            (*p_v_ani)->pon_ni = BCMOLT_INTERFACE_UNDEFINED;
             (*p_v_ani)->onu_id = BCMOLT_ONU_ID_INVALID;
             STAILQ_INIT(&(*p_v_ani)->gems);
             STAILQ_INIT(&(*p_v_ani)->tconts);
+            STAILQ_INIT(&(*p_v_ani)->v_anis);
             STAILQ_INSERT_TAIL(&v_ani_list, obj, next);
         }
     } while (0);
@@ -147,10 +148,11 @@ void xpon_v_ani_delete(xpon_v_ani *v_ani)
 {
     xpon_tcont *tcont, *tcont_tmp;
     xpon_gem *gem, *gem_tmp;
+    xpon_v_ani_v_enet *v_enet, *v_enet_tmp;
 
     bcmos_mutex_lock(&onu_config_lock);
     STAILQ_REMOVE_SAFE(&v_ani_list, &v_ani->hdr, xpon_obj_hdr, next);
-    if (v_ani->pon_ni != BCMOLT_INTERFACE_ID_INVALID &&
+    if (v_ani->pon_ni != BCMOLT_INTERFACE_UNDEFINED &&
         v_ani->onu_id != BCMOLT_ONU_ID_INVALID &&
         v_ani_array[v_ani->pon_ni][v_ani->onu_id] == v_ani)
     {
@@ -164,6 +166,10 @@ void xpon_v_ani_delete(xpon_v_ani *v_ani)
     STAILQ_FOREACH_SAFE(gem, &v_ani->gems, next, gem_tmp)
     {
         gem->v_ani = NULL;
+    }
+    STAILQ_FOREACH_SAFE(v_enet, &v_ani->v_anis, next, v_enet_tmp)
+    {
+        v_enet->v_ani = NULL;
     }
     if (v_ani->linked_ani != NULL)
         v_ani->linked_ani->linked_v_ani = NULL;
@@ -391,6 +397,12 @@ static void _omci_onu_indication_cb(bcmonu_mgmt_cfg *omci_obj)
             {
                 _onu_populate_from_omci(onu);
             }
+            if (onu_info->omci_ready)
+            {
+                bcmos_errno err = xpon_create_onu_flows_on_onu(NULL, onu_info);
+                NC_LOG_INFO("onu %s: re-instated flows, if any. status='%s'\n",
+                    onu_info->hdr.name, bcmos_strerror(err));
+            }
         }
     }
     else
@@ -466,6 +478,7 @@ static void _onu_send_state_change_event(bcmolt_interface pon_ni, bcmolt_onu_id 
     xpon_channel_termination *cterm = xpon_cterm_get_by_id(
         netconf_agent_olt_id(), pon_ni);
     xpon_v_ani *v_ani = xpon_v_ani_get_by_id(pon_ni, onu_id);
+    xpon_v_ani_state_info state_info = {};
     uint8_t serial_number[8];
 
     if (cterm == NULL)
@@ -481,7 +494,12 @@ static void _onu_send_state_change_event(bcmolt_interface pon_ni, bcmolt_onu_id 
     if (v_ani != NULL)
         presence_flags |= XPON_ONU_PRESENCE_FLAG_V_ANI;
 
-    bcmolt_xpon_v_ani_state_change(cterm->hdr.name, onu_id, serial_number, registration_id, presence_flags);
+    state_info.cterm_name = cterm->hdr.name;
+    state_info.onu_id = onu_id;
+    state_info.serial_number = serial_number;
+    state_info.registration_id = registration_id;
+    state_info.presence_flags = presence_flags;
+    bcmolt_xpon_v_ani_state_change(&state_info);
 }
 
 
@@ -873,7 +891,7 @@ bcmos_errno xpon_v_ani_transaction(sr_session_ctx_t *srs, nc_transact *tr)
             const char *endpoint_name = val->data.string_val;
             XPON_PROP_SET_PRESENT(&onu_changes, v_ani, vomci_endpoint);
             if (endpoint_name)
-                strncpy(onu_changes.vomci_endpoint, endpoint_name, sizeof(onu_changes.vomci_endpoint));
+                strncpy(onu_changes.vomci_endpoint, endpoint_name, sizeof(onu_changes.vomci_endpoint) - 1);
             else
                 *onu_changes.vomci_endpoint = 0;
         }
@@ -1098,7 +1116,7 @@ bcmos_errno xpon_v_ani_init(sr_session_ctx_t *srs)
     err = err ? err : bcmos_mutex_create(&onu_config_lock, 0, "nc_onu_lock");
     if (!bcm_tr451_onu_management_is_enabled())
     {
-        err = err ? err : bcmonu_mgmt_init(BCMOS_MODULE_ID_NETCONF_SERVER);
+        err = err ? err : bcmonu_mgmt_init(BCMOS_MODULE_ID_NETCONF_SERVER, 0);
         err = err ? err : bcmonu_mgmt_olt_init(netconf_agent_olt_id());
         err = err ? err : _omci_onu_ind_register_unregister(BCMOS_TRUE);
     }

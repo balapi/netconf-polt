@@ -44,6 +44,9 @@
 #ifdef NETCONF_MODULE_BBF_POLT_VOMCI
 #include <bcm_tr451_polt.h>
 #endif
+#ifdef MFC_RELAY
+#include <mfc_relay.h>
+#endif
 
 #define BCM_NETCONF_LOG_SIZE               (10*1000*1000)
 
@@ -285,6 +288,9 @@ int main(int argc, char *argv[])
     bcm_dev_log_level sr_log_level = DEV_LOG_LEVEL_INFO;
 #ifdef NETCONF_MODULE_BBF_POLT_VOMCI
     tr451_polt_init_parms tr451_init_parms = { .log_level = DEV_LOG_LEVEL_INFO };
+#endif
+#ifdef MFC_RELAY
+    mfc_relay_init_parms mfc_init_parms = { .log_level = DEV_LOG_LEVEL_INFO };
 #endif
 #ifdef ENABLE_LOG
     char *config_log_names[NUM_LOG_CONFIG_SELECTIONS] = { };
@@ -621,6 +627,11 @@ int main(int argc, char *argv[])
     }
 #endif
 
+#ifdef MFC_RELAY
+    rc = bcm_mfc_relay_init(&mfc_init_parms);
+    BUG_ON(rc != BCM_ERR_OK);
+#endif
+
 #ifdef ENABLE_LOG
     /* Set log levels as per configuration in the command line */
     for (i=0; i<config_log_cntr; i++)
@@ -744,6 +755,10 @@ int main(int argc, char *argv[])
 
     /* Cleanup */
     bcm_netconf_shutdown();
+
+#ifdef MFC_RELAY
+    bcm_mfc_relay_exit();
+#endif
 
     return 0;
 }

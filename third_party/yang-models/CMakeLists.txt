@@ -2,11 +2,11 @@
 #
 include(third_party)
 
-set(YANG_MODEL_PACKAGE_VERSION "2.0")
+bcm_make_normal_option(OBBAA_DEVICE_ADAPTER_VERSION string "OB-BAA device adapter vesrion: 1.0, 2.0 or 2.1" "2.1")
 
 # Netopeer2 consists from multiple components
 # Umbrella module
-bcm_3rdparty_module_name(yang-models ${YANG_MODEL_PACKAGE_VERSION})
+bcm_3rdparty_module_name(yang-models ${OBBAA_DEVICE_ADAPTER_VERSION})
 bcm_3rdparty_add_dependencies(sysrepo)
 
 if(BCM_CONFIG_HOST MATCHES "x86")
@@ -20,11 +20,12 @@ if(SYSREPO_SHM_PREFIX AND NOT "${SYSREPO_SHM_PREFIX}" STREQUAL "none")
 endif()
 
 bcm_make_normal_option(USE_OBBAA_YANG_MODELS bool "Use models from OB-BAA bundle" y)
-bcm_make_normal_option(OBBAA_DEVICE_ADAPTER_VERSION string "OB-BAA device adapter vesrion: 1.0 or 2.0" "2.0")
 
 unset(_DIRS)
 if (USE_OBBAA_YANG_MODELS)
-    if(NOT ("${OBBAA_DEVICE_ADAPTER_VERSION}" STREQUAL "1.0") AND NOT ("${OBBAA_DEVICE_ADAPTER_VERSION}" STREQUAL "2.0"))
+    if(NOT ("${OBBAA_DEVICE_ADAPTER_VERSION}" STREQUAL "1.0") AND
+       NOT ("${OBBAA_DEVICE_ADAPTER_VERSION}" STREQUAL "2.0") AND
+       NOT ("${OBBAA_DEVICE_ADAPTER_VERSION}" STREQUAL "2.1"))
         message(FATAL_ERROR "OBBAA_DEVICE_ADAPTER_VERSION '${OBBAA_DEVICE_ADAPTER_VERSION}' is invalid. Must be 1.0 or 2.0")
     endif()
     if("${OBBAA_DEVICE_ADAPTER_VERSION}" STREQUAL "1.0")
@@ -251,6 +252,14 @@ if (USE_OBBAA_YANG_MODELS)
             ${_OB_BAA_MODEL_DIR}/ieee802-ethernet-interface.yang
             ${_OB_BAA_MODEL_DIR}/bbf-obbaa-mfc-conf.yang
         )
+        if("${OBBAA_DEVICE_ADAPTER_VERSION}" STREQUAL "2.1")
+            set(_IMPORT_MODELS ${_IMPORT_MODELS}
+                ${_OB_BAA_MODEL_DIR}/bbf-obbaa-xpon-onu-types.yang
+                ${_OB_BAA_MODEL_DIR}/bbf-obbaa-xpon-onu-authentication.yang
+                ${_OB_BAA_MODEL_DIR}/bbf-obbaa-xponvani-onu-authentication.yang
+            )
+        endif()
+
         set(ietf-hardware-features entity-mib hardware-state hardware-sensor)
         set(bbf-hardware-features interface-hardware-management)
         set(bbf-xpon-power-management-features xpon-power-management)
@@ -410,13 +419,13 @@ foreach(_IMPORT ${_IMPORT_MODELS})
         endforeach(_FEATURE)
     endif()
     if(_FEATURES_OPT)
-        set(_FEATURES_OPT_CMD COMMAND ${_SYSREPOTOOL_WRAPPER} ${_SYSREPOCTL} --change ${_IMPORT_NAME_UNVERSIONED} -a ${_FEATURES_OPT})
-        set(_FEATURES_OPT_CMD_ECHO COMMAND echo ${_SYSREPOTOOL_WRAPPER} ${_SYSREPOCTL} --change ${_IMPORT_NAME_UNVERSIONED} -a ${_FEATURES_OPT})
+        set(_FEATURES_OPT_CMD COMMAND ${_SYSREPOTOOL_WRAPPER} ${_SYSREPOCTL} --change ${_IMPORT_NAME_UNVERSIONED} ${_FEATURES_OPT})
+        set(_FEATURES_OPT_CMD_ECHO COMMAND echo ${_SYSREPOTOOL_WRAPPER} ${_SYSREPOCTL} --change ${_IMPORT_NAME_UNVERSIONED} ${_FEATURES_OPT})
     endif()
     add_custom_command(OUTPUT ${_IMPORT_INSTALLED}
         COMMAND mkdir -p ${CMAKE_CURRENT_BINARY_DIR}
-        COMMAND echo ${_SYSREPOTOOL_WRAPPER} ${_SYSREPOCTL} --install ${_IMPORT} -a ${_SEARCH_DIRS}
-        COMMAND ${_SYSREPOTOOL_WRAPPER} ${_SYSREPOCTL} --install ${_IMPORT} -a ${_SEARCH_DIRS}
+        COMMAND echo ${_SYSREPOTOOL_WRAPPER} ${_SYSREPOCTL} --install ${_IMPORT} ${_SEARCH_DIRS}
+        COMMAND ${_SYSREPOTOOL_WRAPPER} ${_SYSREPOCTL} --install ${_IMPORT} ${_SEARCH_DIRS}
         ${_FEATURES_OPT_CMD_ECHO}
         ${_FEATURES_OPT_CMD}
         COMMAND echo ${_IMPORT} imported to sysrepo
