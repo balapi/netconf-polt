@@ -48,6 +48,7 @@ set(BCM_EXTRA_WARNINGS ${BCM_EXTRA_WARNINGS} -Wparentheses -Wswitch -Wswitch-def
 set(BCM_EXTRA_WARNINGS ${BCM_EXTRA_WARNINGS} -Wunused-but-set-variable -Wno-unused-parameter)
 set(BCM_EXTRA_WARNINGS ${BCM_EXTRA_WARNINGS} -Wno-sign-compare -Wshadow -Wno-inline)
 set(BCM_EXTRA_WARNINGS ${BCM_EXTRA_WARNINGS} -Wno-strict-aliasing -Wno-missing-field-initializers)
+set(BCM_EXTRA_WARNINGS ${BCM_EXTRA_WARNINGS} -Wno-stringop-truncation)
 
 set(BCM_EXTRA_C_WARNINGS ${BCM_EXTRA_WARNINGS} -Wbad-function-cast -Wmissing-prototypes -Wnested-externs)
 set(BCM_EXTRA_C_WARNINGS ${BCM_EXTRA_C_WARNINGS} -Wstrict-prototypes)
