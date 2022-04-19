@@ -9,7 +9,7 @@ bcm_make_normal_option(BAL_API_VERSION STRING "BAL API Version" "3.10.2.2")
 set(_SUBDIR_LIST bal_api_subdir_list.txt)
 if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${_SUBDIR_LIST})
     set(_UNPACKED_DIR_NAME bal-sdk-${BAL_API_VERSION})
-    set(_BAL_API_DOMAIN https://github.com/balapi/bal-sdk/archive)
+    set(_BAL_API_DOMAIN https://github.com/balapi/bal-sdk/archive/refs/tags)
     set(_BAL_API_ARCHIVE ${BAL_API_VERSION}.tar.gz)
     if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${_BAL_API_ARCHIVE})
         execute_process(
