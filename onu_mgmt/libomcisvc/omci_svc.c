@@ -22,7 +22,6 @@
  *****************************************************************************/
 
 #include <bcmolt_api.h>
-#include <bcmolt_host_dev_log.h>
 #include "onu_mgmt_test.h"
 #include "omci_svc_adapter_common.h"
 #include "omci_svc_common.h"
@@ -67,7 +66,6 @@ bcmos_errno omci_svc_init(onu_state_changed_cb onu_cb, int is_issu)
     if (omci_svc_log_id == DEV_LOG_INVALID_ID)
     {
         omci_svc_log_id = bcm_dev_log_id_register("OMCI_SVC", DEV_LOG_LEVEL_INFO, DEV_LOG_ID_TYPE_BOTH);
-        bcm_dev_log_group_add_log_id(log_group_onu_mgmt, omci_svc_log_id);
     }
 
     /** @todo this logging is only for OCS stack, if and when it is migrated to Aspen tree */

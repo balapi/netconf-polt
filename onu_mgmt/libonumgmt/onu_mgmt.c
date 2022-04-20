@@ -22,7 +22,6 @@
  *****************************************************************************/
 
 #include <bcmolt_api.h>
-#include <bcmolt_host_dev_log.h>
 #include <onu_mgmt_model_funcs.h>
 #include <onu_mgmt_test.h>
 #include <omci_svc.h>
@@ -183,7 +182,6 @@ bcmos_errno bcmonu_mgmt_init(bcmos_module_id module_id, int is_issu)
     if (onu_mgmt_log_id == DEV_LOG_INVALID_ID)
     {
         onu_mgmt_log_id = bcm_dev_log_id_register("onu_mgmt", DEV_LOG_LEVEL_INFO, DEV_LOG_ID_TYPE_BOTH);
-        bcm_dev_log_group_add_log_id(log_group_onu_mgmt, onu_mgmt_log_id);
     }
 #endif
 

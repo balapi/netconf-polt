@@ -36,9 +36,6 @@
 #include "omci_stack_protocol_prop.h"
 #include "omci_stack_enc_dec.h"
 #include "omci_stack_me_tl_intf.h"
-#ifdef ENABLE_LOG
-#include <bcmolt_host_dev_log.h>
-#endif
 
 #ifdef ENABLE_LOG
 /* The logging device id for the OMCI Stack ME Layer */
@@ -90,7 +87,6 @@ bcmos_errno bcm_omci_stack_init(const bcm_omci_stack_init_parms *init_parms)
     if (DEV_LOG_INVALID_ID == log_id_bcm_omci_stack_me_layer)
     {
         log_id_bcm_omci_stack_me_layer = bcm_dev_log_id_register("OMCI_ME_LAYER", DEV_LOG_LEVEL_INFO, DEV_LOG_ID_TYPE_BOTH);
-        bcm_dev_log_group_add_log_id(log_group_onu_mgmt, log_id_bcm_omci_stack_me_layer);
     }
 #endif
     BCM_LOG(INFO, log_id_bcm_omci_stack_me_layer, "Using Broadcom OMCI Stack\n");

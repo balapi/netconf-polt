@@ -1,7 +1,7 @@
 if(${ONU_MGMT})
     bcm_module_name(omci_svc)
     bcm_module_cflags(PRIVATE -Wno-redundant-decls)
-    bcm_module_dependencies(PUBLIC system_types host_dev_log api onu_mgmt_model omci_stack onu_mgmt_test)
+    bcm_module_dependencies(PUBLIC system_types api onu_mgmt_model omci_stack onu_mgmt_test)
 
 #if(${ONU_MGMT_OCS_STACK})
 #    bcm_module_definitions(PUBLIC -DUSE_OCS_OMCI_STACK)

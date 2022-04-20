@@ -22,7 +22,6 @@
  *****************************************************************************/
 
 #include <bcmos_system.h>
-#include <bcmolt_host_dev_log.h>
 #include "omci_transport.h"
 #include "omci_stack_internal.h"
 #include "omci_stack_common.h"
@@ -263,7 +262,6 @@ bcmos_errno omci_transport_init(const bcm_omci_stack_init_parms *init_parms)
     if (omci_transport_log_id == DEV_LOG_INVALID_ID)
     {
         omci_transport_log_id = bcm_dev_log_id_register("OMCI_TRANSPORT", DEV_LOG_LEVEL_INFO, DEV_LOG_ID_TYPE_BOTH);
-        bcm_dev_log_group_add_log_id(log_group_onu_mgmt, omci_transport_log_id);
     }
 #endif
 
