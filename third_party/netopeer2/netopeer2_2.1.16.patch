@@ -1,6 +1,6 @@
 diff -Naur netopeer2-2.1.16.org/CMakeLists.txt netopeer2-2.1.16/CMakeLists.txt
 --- netopeer2-2.1.16.org/CMakeLists.txt	2022-03-15 22:27:32.000000000 +1100
-+++ netopeer2-2.1.16/CMakeLists.txt	2022-03-23 14:58:50.085722060 +1100
++++ netopeer2-2.1.16/CMakeLists.txt	2022-04-21 11:23:48.511386541 +1000
 @@ -252,6 +252,8 @@
  find_library(LIBRT rt)
  if(LIBRT)
@@ -36,7 +36,7 @@ diff -Naur netopeer2-2.1.16.org/CMakeLists.txt netopeer2-2.1.16/CMakeLists.txt
              message(FATAL_ERROR \" scripts/merge_hostkey.sh failed: \${MERGE_HOSTKEY_RES}\")
 diff -Naur netopeer2-2.1.16.org/scripts/merge_config.sh netopeer2-2.1.16/scripts/merge_config.sh
 --- netopeer2-2.1.16.org/scripts/merge_config.sh	2022-03-15 22:27:32.000000000 +1100
-+++ netopeer2-2.1.16/scripts/merge_config.sh	2022-03-16 09:29:18.331747055 +1100
++++ netopeer2-2.1.16/scripts/merge_config.sh	2022-04-21 11:23:48.511386541 +1000
 @@ -43,8 +43,7 @@
                      <client-authentication>
                          <supported-authentication-methods>
@@ -49,7 +49,7 @@ diff -Naur netopeer2-2.1.16.org/scripts/merge_config.sh netopeer2-2.1.16/scripts
                      </client-authentication>
 diff -Naur netopeer2-2.1.16.org/scripts/merge_hostkey.sh netopeer2-2.1.16/scripts/merge_hostkey.sh
 --- netopeer2-2.1.16.org/scripts/merge_hostkey.sh	2022-03-15 22:27:32.000000000 +1100
-+++ netopeer2-2.1.16/scripts/merge_hostkey.sh	2022-03-16 09:30:16.745300752 +1100
++++ netopeer2-2.1.16/scripts/merge_hostkey.sh	2022-04-21 11:23:48.511386541 +1000
 @@ -35,13 +35,14 @@
  PUBKEY=`echo "$PUBPEM" | grep -v -- "-----" | tr -d "\n"`
  
@@ -68,9 +68,60 @@ diff -Naur netopeer2-2.1.16.org/scripts/merge_hostkey.sh netopeer2-2.1.16/script
          </asymmetric-key>
      </asymmetric-keys>
  </keystore>"
+diff -Naur netopeer2-2.1.16.org/src/main.c netopeer2-2.1.16/src/main.c
+--- netopeer2-2.1.16.org/src/main.c	2022-03-15 22:27:32.000000000 +1100
++++ netopeer2-2.1.16/src/main.c	2022-04-21 11:51:24.531728192 +1000
+@@ -795,14 +795,14 @@
+     xpath = "/ietf-netconf-server:netconf-server/listen/endpoint/tls/tcp-server-parameters";
+     SR_CONFIG_SUBSCR(mod_name, xpath, np2srv_endpt_tcp_params_cb);
+ 
+-    xpath = "/ietf-netconf-server:netconf-server/listen/endpoint/tls/tls-server-parameters/server-identity/keystore-reference";
++    xpath = "/ietf-netconf-server:netconf-server/listen/endpoint/tls/tls-server-parameters/server-identity/certificate/keystore-reference";
+     SR_CONFIG_SUBSCR(mod_name, xpath, np2srv_endpt_tls_servercert_cb);
+ 
+     xpath = "/ietf-netconf-server:netconf-server/listen/endpoint/tls/tls-server-parameters/client-authentication";
+     SR_CONFIG_SUBSCR(mod_name, xpath, np2srv_endpt_tls_client_auth_cb);
+ 
+-    xpath = "/ietf-netconf-server:netconf-server/listen/endpoint/tls/tls-server-parameters/client-authentication/cert-maps";
+-    SR_CONFIG_SUBSCR(mod_name, xpath, np2srv_endpt_tls_client_ctn_cb);
++    // xpath = "/ietf-netconf-server:netconf-server/listen/endpoint/tls/tls-server-parameters/client-authentication/cert-maps";
++    // SR_CONFIG_SUBSCR(mod_name, xpath, np2srv_endpt_tls_client_ctn_cb);
+ #endif
+ 
+ #if defined (NC_ENABLED_SSH) || defined (NC_ENABLED_TLS)
+@@ -843,16 +843,16 @@
+     SR_CONFIG_SUBSCR(mod_name, xpath, np2srv_ch_client_endpt_tcp_params_cb);
+ 
+     xpath = "/ietf-netconf-server:netconf-server/call-home/netconf-client/endpoints/endpoint/tls/tls-server-parameters/"
+-            "server-identity/keystore-reference";
++            "server-identity/certificate/keystore-reference";
+     SR_CONFIG_SUBSCR(mod_name, xpath, np2srv_ch_client_endpt_tls_servercert_cb);
+ 
+     xpath = "/ietf-netconf-server:netconf-server/call-home/netconf-client/endpoints/endpoint/tls/tls-server-parameters/"
+             "client-authentication";
+     SR_CONFIG_SUBSCR(mod_name, xpath, np2srv_ch_client_endpt_tls_client_auth_cb);
+ 
+-    xpath = "/ietf-netconf-server:netconf-server/call-home/netconf-client/endpoints/endpoint/tls/tls-server-parameters/"
+-            "client-authentication/cert-maps";
+-    SR_CONFIG_SUBSCR(mod_name, xpath, np2srv_ch_client_endpt_tls_client_ctn_cb);
++    // xpath = "/ietf-netconf-server:netconf-server/call-home/netconf-client/endpoints/endpoint/tls/tls-server-parameters/"
++    //         "client-authentication/cert-maps";
++    // SR_CONFIG_SUBSCR(mod_name, xpath, np2srv_ch_client_endpt_tls_client_ctn_cb);
+ #endif
+ 
+ #if defined (NC_ENABLED_SSH) || defined (NC_ENABLED_TLS)
+@@ -867,7 +867,7 @@
+      * ietf-truststore (just for in-use operational data)
+      */
+     mod_name = "ietf-truststore";
+-    xpath = "/ietf-truststore:truststore/certificates";
++    xpath = "/ietf-truststore:truststore/certificate-bags";
+     SR_CONFIG_SUBSCR(mod_name, xpath, np2srv_dummy_cb);
+ #endif
+ 
 diff -Naur netopeer2-2.1.16.org/src/netconf_server.c netopeer2-2.1.16/src/netconf_server.c
 --- netopeer2-2.1.16.org/src/netconf_server.c	2022-03-15 22:27:32.000000000 +1100
-+++ netopeer2-2.1.16/src/netconf_server.c	2022-03-16 09:32:24.153761678 +1100
++++ netopeer2-2.1.16/src/netconf_server.c	2022-04-21 11:23:48.511386541 +1000
 @@ -34,29 +34,29 @@
  int
  np2srv_sr_get_privkey(const struct lyd_node *asym_key, char **privkey_data, NC_SSH_KEY_TYPE *privkey_type)
@@ -112,7 +163,7 @@ diff -Naur netopeer2-2.1.16.org/src/netconf_server.c netopeer2-2.1.16/src/netcon
  
 diff -Naur netopeer2-2.1.16.org/src/netconf_server_ssh.c netopeer2-2.1.16/src/netconf_server_ssh.c
 --- netopeer2-2.1.16.org/src/netconf_server_ssh.c	2022-03-15 22:27:32.000000000 +1100
-+++ netopeer2-2.1.16/src/netconf_server_ssh.c	2022-03-16 09:32:44.888252077 +1100
++++ netopeer2-2.1.16/src/netconf_server_ssh.c	2022-04-21 11:23:48.511386541 +1000
 @@ -282,7 +282,7 @@
          } else if (op == SR_OP_DELETED) {
              auth &= ~NC_SSH_AUTH_PUBLICKEY;
