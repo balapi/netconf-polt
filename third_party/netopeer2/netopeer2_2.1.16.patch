@@ -70,8 +70,8 @@ diff -Naur netopeer2-2.1.16.org/scripts/merge_hostkey.sh netopeer2-2.1.16/script
  </keystore>"
 diff -Naur netopeer2-2.1.16.org/src/main.c netopeer2-2.1.16/src/main.c
 --- netopeer2-2.1.16.org/src/main.c	2022-03-15 22:27:32.000000000 +1100
-+++ netopeer2-2.1.16/src/main.c	2022-04-21 11:51:24.531728192 +1000
-@@ -795,14 +795,14 @@
++++ netopeer2-2.1.16/src/main.c	2022-04-22 11:08:32.353020777 +1000
+@@ -795,13 +795,13 @@
      xpath = "/ietf-netconf-server:netconf-server/listen/endpoint/tls/tcp-server-parameters";
      SR_CONFIG_SUBSCR(mod_name, xpath, np2srv_endpt_tcp_params_cb);
  
@@ -83,13 +83,11 @@ diff -Naur netopeer2-2.1.16.org/src/main.c netopeer2-2.1.16/src/main.c
      SR_CONFIG_SUBSCR(mod_name, xpath, np2srv_endpt_tls_client_auth_cb);
  
 -    xpath = "/ietf-netconf-server:netconf-server/listen/endpoint/tls/tls-server-parameters/client-authentication/cert-maps";
--    SR_CONFIG_SUBSCR(mod_name, xpath, np2srv_endpt_tls_client_ctn_cb);
-+    // xpath = "/ietf-netconf-server:netconf-server/listen/endpoint/tls/tls-server-parameters/client-authentication/cert-maps";
-+    // SR_CONFIG_SUBSCR(mod_name, xpath, np2srv_endpt_tls_client_ctn_cb);
++    xpath = "/ietf-netconf-server:netconf-server/listen/endpoint/tls/netconf-server-parameters/client-identity-mappings/cert-to-name";
+     SR_CONFIG_SUBSCR(mod_name, xpath, np2srv_endpt_tls_client_ctn_cb);
  #endif
  
- #if defined (NC_ENABLED_SSH) || defined (NC_ENABLED_TLS)
-@@ -843,16 +843,16 @@
+@@ -843,15 +843,15 @@
      SR_CONFIG_SUBSCR(mod_name, xpath, np2srv_ch_client_endpt_tcp_params_cb);
  
      xpath = "/ietf-netconf-server:netconf-server/call-home/netconf-client/endpoints/endpoint/tls/tls-server-parameters/"
@@ -103,13 +101,11 @@ diff -Naur netopeer2-2.1.16.org/src/main.c netopeer2-2.1.16/src/main.c
  
 -    xpath = "/ietf-netconf-server:netconf-server/call-home/netconf-client/endpoints/endpoint/tls/tls-server-parameters/"
 -            "client-authentication/cert-maps";
--    SR_CONFIG_SUBSCR(mod_name, xpath, np2srv_ch_client_endpt_tls_client_ctn_cb);
-+    // xpath = "/ietf-netconf-server:netconf-server/call-home/netconf-client/endpoints/endpoint/tls/tls-server-parameters/"
-+    //         "client-authentication/cert-maps";
-+    // SR_CONFIG_SUBSCR(mod_name, xpath, np2srv_ch_client_endpt_tls_client_ctn_cb);
++    xpath = "/ietf-netconf-server:netconf-server/call-home/netconf-client/endpoints/endpoint/tls/netconf-server-parameters/"
++            "client-identity-mappings/cert-to-name";
+     SR_CONFIG_SUBSCR(mod_name, xpath, np2srv_ch_client_endpt_tls_client_ctn_cb);
  #endif
  
- #if defined (NC_ENABLED_SSH) || defined (NC_ENABLED_TLS)
 @@ -867,7 +867,7 @@
       * ietf-truststore (just for in-use operational data)
       */
@@ -173,3 +169,27 @@ diff -Naur netopeer2-2.1.16.org/src/netconf_server_ssh.c netopeer2-2.1.16/src/ne
          if (op == SR_OP_CREATED) {
              auth |= NC_SSH_AUTH_PASSWORD;
          } else if (op == SR_OP_DELETED) {
+diff -Naur netopeer2-2.1.16.org/src/netconf_server_tls.c netopeer2-2.1.16/src/netconf_server_tls.c
+--- netopeer2-2.1.16.org/src/netconf_server_tls.c	2022-03-15 22:27:32.000000000 +1100
++++ netopeer2-2.1.16/src/netconf_server_tls.c	2022-04-22 11:08:51.125121959 +1000
+@@ -345,7 +345,8 @@
+     return ret;
+ }
+ 
+-/* /ietf-netconf-server:netconf-server/listen/endpoint/tls/tls-server-parameters/client-authentication/cert-maps */
++/* /ietf-netconf-server:netconf-server/listen/endpoint/tls/netconf-server-parameters/
++ * client-identity-mappings/cert-to-name */
+ int
+ np2srv_endpt_tls_client_ctn_cb(sr_session_ctx_t *session, uint32_t UNUSED(sub_id), const char *UNUSED(module_name),
+         const char *xpath, sr_event_t UNUSED(event), uint32_t UNUSED(request_id), void *UNUSED(private_data))
+@@ -576,8 +577,8 @@
+     return SR_ERR_OK;
+ }
+ 
+-/* /ietf-netconf-server:netconf-server/call-home/netconf-client/endpoints/endpoint/tls/tls-server-parameters/"
+- * client-authentication/cert-maps */
++/* /ietf-netconf-server:netconf-server/call-home/netconf-client/endpoints/endpoint/tls/netconf-server-parameters/"
++ * client-identity-mappings/cert-to-name */
+ int
+ np2srv_ch_client_endpt_tls_client_ctn_cb(sr_session_ctx_t *session, uint32_t UNUSED(sub_id),
+         const char *UNUSED(module_name), const char *xpath, sr_event_t UNUSED(event), uint32_t UNUSED(request_id),
