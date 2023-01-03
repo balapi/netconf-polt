@@ -31,7 +31,7 @@
 static bcmos_errno _link_apply(sr_session_ctx_t *srs, const char *xpath,
     xpon_obj_hdr *from_if, xpon_obj_hdr *to_if, bcmos_bool deleted)
 {
-    xpon_obj_hdr **p_from_link = NULL, **p_to_link = NULL;
+    bcmos_errno err = BCM_ERR_PARM;
 
     BUG_ON(from_if == NULL);
 
@@ -47,9 +47,14 @@ static bcmos_errno _link_apply(sr_session_ctx_t *srs, const char *xpath,
             }
             else
             {
-                p_from_link = (xpon_obj_hdr **)&v_ani->linked_ani;
                 if (to_if->obj_type == XPON_OBJ_TYPE_ANI)
-                    p_to_link = (xpon_obj_hdr **)&((xpon_ani *)to_if)->linked_v_ani;
+                {
+                    xpon_ani *ani = (xpon_ani *)to_if;
+                    ani->linked_v_ani = v_ani;
+                    v_ani->linked_ani = ani;
+                    /* Try to create ONU flows */
+                    err = xpon_create_onu_flows_on_onu(srs, v_ani);
+                }
             }
             break;
         }
@@ -64,76 +69,79 @@ static bcmos_errno _link_apply(sr_session_ctx_t *srs, const char *xpath,
             }
             else
             {
-                p_from_link = (xpon_obj_hdr **)&ani->linked_v_ani;
                 if (to_if->obj_type == XPON_OBJ_TYPE_V_ANI)
-                    p_to_link = (xpon_obj_hdr **)&((xpon_v_ani *)to_if)->linked_ani;
+                {
+                    xpon_v_ani *v_ani = (xpon_v_ani *)to_if;
+                    ani->linked_v_ani = v_ani;
+                    v_ani->linked_ani = ani;
+                    /* Try to create ONU flows */
+                    err = xpon_create_onu_flows_on_onu(srs, (xpon_v_ani *)to_if);
+                }
             }
             break;
         }
 
         case XPON_OBJ_TYPE_ENET:
+        case XPON_OBJ_TYPE_ANI_V_ENET:
         {
-            xpon_enet *enet = (xpon_enet *)from_if;
+            xpon_obj_hdr **p_from_linked_if;
+            if (from_if->obj_type == XPON_OBJ_TYPE_ENET)
+            {
+                p_from_linked_if = &((xpon_enet *)from_if)->linked_if;
+            }
+            else
+            {
+                p_from_linked_if = &((xpon_ani_v_enet *)from_if)->linked_if;
+            }
             if (deleted || to_if == NULL)
             {
-                xpon_unlink(&enet->linked_if);
+                xpon_unlink(p_from_linked_if);
                 deleted = BCMOS_TRUE;
             }
             else
             {
-                p_from_link = &enet->linked_if;
                 if (to_if->obj_type == XPON_OBJ_TYPE_V_ANI_V_ENET)
-                    p_to_link = &((xpon_v_ani_v_enet *)to_if)->linked_if;
-                else if (to_if->obj_type == XPON_OBJ_TYPE_ANI_V_ENET)
-                    p_to_link = &((xpon_ani_v_enet *)to_if)->linked_if;
-                /* Try to create ONU flows */
-                xpon_create_onu_flows_on_uni(srs, from_if);
+                {
+                    xpon_v_ani_v_enet *v_enet = (xpon_v_ani_v_enet *)to_if;
+                    v_enet->linked_if = from_if;
+                    *p_from_linked_if = to_if;
+                    err = BCM_ERR_OK;
+                    /* Try to create ONU flows only if ani and v-ani are already linked */
+                    if (v_enet->v_ani != NULL && v_enet->v_ani->linked_ani != NULL)
+                        err = xpon_create_onu_flows_on_uni(srs, from_if);
+                }
             }
             break;
         }
 
         case XPON_OBJ_TYPE_V_ANI_V_ENET:
         {
-            xpon_v_ani_v_enet *enet = (xpon_v_ani_v_enet *)from_if;
+            xpon_v_ani_v_enet *v_enet = (xpon_v_ani_v_enet *)from_if;
             if (deleted || to_if == NULL)
             {
-                xpon_unlink(&enet->linked_if);
+                xpon_unlink(&v_enet->linked_if);
                 deleted = BCMOS_TRUE;
             }
             else
             {
-                p_from_link = &enet->linked_if;
+                xpon_obj_hdr **p_to_linked_if = NULL;
                 if (to_if->obj_type == XPON_OBJ_TYPE_ENET)
                 {
-                    p_to_link = &((xpon_enet *)to_if)->linked_if;
+                    p_to_linked_if = &((xpon_enet *)to_if)->linked_if;
                 }
                 else if (to_if->obj_type == XPON_OBJ_TYPE_ANI_V_ENET)
                 {
-                    p_to_link = &((xpon_ani_v_enet *)to_if)->linked_if;
+                    p_to_linked_if = &((xpon_ani_v_enet *)to_if)->linked_if;
                 }
-                /* Try to create ONU flows */
-                xpon_create_onu_flows_on_uni(srs, to_if);
-            }
-            break;
-        }
-
-        case XPON_OBJ_TYPE_ANI_V_ENET:
-        {
-            xpon_ani_v_enet *enet = (xpon_ani_v_enet *)from_if;
-            if (deleted || to_if == NULL)
-            {
-                xpon_unlink(&enet->linked_if);
-                deleted = BCMOS_TRUE;
-            }
-            else
-            {
-                p_from_link = &enet->linked_if;
-                if (to_if->obj_type == XPON_OBJ_TYPE_ENET)
-                    p_to_link = &((xpon_enet *)to_if)->linked_if;
-                else if (to_if->obj_type == XPON_OBJ_TYPE_V_ANI_V_ENET)
-                    p_to_link = &((xpon_v_ani_v_enet *)to_if)->linked_if;
-                /* Try to create ONU flows */
-                xpon_create_onu_flows_on_uni(srs, from_if);
+                if (p_to_linked_if != NULL)
+                {
+                    v_enet->linked_if = to_if;
+                    *p_to_linked_if = from_if;
+                    err = BCM_ERR_OK;
+                    /* Try to create ONU flows only if ani and v-ani are already linked */
+                    if (v_enet->v_ani != NULL && v_enet->v_ani->linked_ani != NULL)
+                        err = xpon_create_onu_flows_on_uni(srs, to_if);
+                }
             }
             break;
         }
@@ -142,19 +150,18 @@ static bcmos_errno _link_apply(sr_session_ctx_t *srs, const char *xpath,
             break;
     }
 
-    if (!deleted && ((p_from_link == NULL && to_if != NULL) || (p_from_link != NULL && to_if == NULL)))
+    if (deleted)
+        err = BCM_ERR_OK;
+
+    if (err != BCM_ERR_OK)
     {
-        NC_ERROR_REPLY(srs, xpath, "link-table: unexpected link between interfaces %s and %s\n",
-            from_if->name, to_if->name);
-        return BCM_ERR_PARM;
+        NC_ERROR_REPLY(srs, xpath, "link-table: failed to link interfaces %s and %s. Error '%s'\n",
+            from_if ? from_if->name : "<none>", to_if ? to_if->name : "<none>", bcmos_strerror(err));
+        return err;
     }
 
-    if (p_from_link != NULL && p_to_link != NULL)
-    {
-        *p_from_link = to_if;
-        *p_to_link = from_if;
-        NC_LOG_DBG("Linking interfaces %s and %s\n", from_if->name, to_if->name);
-    }
+    NC_LOG_DBG("%s interfaces %s and %s\n", deleted ? "Unlinked" : "Linked",
+        from_if ? from_if->name : "<none>", to_if ? to_if->name : "<none>");
 
     return BCM_ERR_OK;
 }

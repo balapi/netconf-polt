@@ -52,7 +52,7 @@ syntax = "proto3";
 package tr451_vomci_sbi_message.v1;
 
 message Hello {
-  string endpoint_name = 1; //vOMCI function or OLT name
+  string endpoint_name = 1; //OLT, vOMCI Proxy or vOMCI function endpoint name
 }
 
 message HelloVomciRequest {
@@ -68,6 +68,8 @@ message VomciMessage {
   oneof msg{
     VomciError error_msg = 2;
     OmciPacket omci_packet_msg = 3;
+    OmciPacket tod_packet_msg = 4;
+    OltInfoMessage olt_info_msg = 5;
   }
 }
 
@@ -75,8 +77,9 @@ message VomciMessage {
 message VomciError {
   enum VomciErrorCode  {
     ERROR_GENERAL = 0;
-    NO_ROUTE= 1; //The entity does know which remote endpoint to send the message
-    REQUEST_TIMEOUT = 2; //The entity did not receive an expected response for a request
+    NO_ROUTE_TO_ONU = 1; //The entity does not know which remote endpoint to send the message to the ONU
+    NO_RESPONSE_FROM_ONU = 2; //The entity did not receive an expected response for a request from the ONU
+    UNSUPPORTED_REQUEST = 3; //The entity does not support the request
   }
   VomciErrorCode error_code = 1;
   string error_description = 2; //Optional: Error description
@@ -90,8 +93,8 @@ message OnuHeader {
 }
 
 message OmciMsgRetrans {
-  uint32 t_maxi = 1; //Optional: The maximum threshold value, in milliseconds, for timer expiration as defined in ITU G.988/B.2. A value of 0 indicates that the field is not defined.
-  uint32 r_maxi = 2; //Optional: The maximum retries associated with this message as defined in ITU G.988/B.2 plus 1 (e.g., Value 1 is the first retry) A value of 0 indicates that the field is not defined.
+  uint32 t_maxi = 1; //Optional: The maximum threshold value, in milliseconds, for timer expiration as defined in ITU-T G.988/B.2. A value of 0 indicates that the field is not defined.
+  uint32 r_maxi = 2; //Optional: The maximum retries associated with this message as defined in ITU-T G.988/B.2 plus 1 (e.g., Value 1 is the first retry) A value of 0 indicates that the field is not defined.
 }
 
 message MessageInfo {
@@ -105,4 +108,19 @@ message OmciPacket {
   bytes    payload   = 3; //OMCI message payload without the CRC/MIC
 }
 
+message OltInfoMessage {
+  oneof msg {
+    OltOnuInfoReq olt_onu_info_req = 1;
+    OltOnuInfoRsp olt_onu_info_rsp = 2;
+  }
+}
 
+message OltOnuInfoReq {
+  OnuHeader header  = 1; //OLT information is scoped toward a specific ONU
+}
+
+message OltOnuInfoRsp {
+  OnuHeader header  = 1; //OLT information is scoped toward a specific ONU
+  uint32 gem_superframe_seq = 2; //The sequence number of the specified GEM superframe as defined in the OLT-G ME in ITU-T G.988
+  string tstampn = 3; //The TstampN as defined in the OLT-G ME in ITU-T G.988
+}

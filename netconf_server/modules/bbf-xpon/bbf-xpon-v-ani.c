@@ -130,10 +130,11 @@ bcmos_errno xpon_v_ani_get_by_name(const char *name, xpon_v_ani **p_v_ani, bcmos
         *p_v_ani = (xpon_v_ani *)obj;
         if (is_added != NULL && *is_added)
         {
-            (*p_v_ani)->pon_ni = BCMOLT_INTERFACE_ID_INVALID;
+            (*p_v_ani)->pon_ni = BCMOLT_INTERFACE_UNDEFINED;
             (*p_v_ani)->onu_id = BCMOLT_ONU_ID_INVALID;
             STAILQ_INIT(&(*p_v_ani)->gems);
             STAILQ_INIT(&(*p_v_ani)->tconts);
+            STAILQ_INIT(&(*p_v_ani)->v_anis);
             STAILQ_INSERT_TAIL(&v_ani_list, obj, next);
         }
     } while (0);
@@ -147,10 +148,11 @@ void xpon_v_ani_delete(xpon_v_ani *v_ani)
 {
     xpon_tcont *tcont, *tcont_tmp;
     xpon_gem *gem, *gem_tmp;
+    xpon_v_ani_v_enet *v_enet, *v_enet_tmp;
 
     bcmos_mutex_lock(&onu_config_lock);
     STAILQ_REMOVE_SAFE(&v_ani_list, &v_ani->hdr, xpon_obj_hdr, next);
-    if (v_ani->pon_ni != BCMOLT_INTERFACE_ID_INVALID &&
+    if (v_ani->pon_ni != BCMOLT_INTERFACE_UNDEFINED &&
         v_ani->onu_id != BCMOLT_ONU_ID_INVALID &&
         v_ani_array[v_ani->pon_ni][v_ani->onu_id] == v_ani)
     {
@@ -164,6 +166,10 @@ void xpon_v_ani_delete(xpon_v_ani *v_ani)
     STAILQ_FOREACH_SAFE(gem, &v_ani->gems, next, gem_tmp)
     {
         gem->v_ani = NULL;
+    }
+    STAILQ_FOREACH_SAFE(v_enet, &v_ani->v_anis, next, v_enet_tmp)
+    {
+        v_enet->v_ani = NULL;
     }
     if (v_ani->linked_ani != NULL)
         v_ani->linked_ani->linked_v_ani = NULL;
@@ -391,6 +397,12 @@ static void _omci_onu_indication_cb(bcmonu_mgmt_cfg *omci_obj)
             {
                 _onu_populate_from_omci(onu);
             }
+            if (onu_info->omci_ready)
+            {
+                bcmos_errno err = xpon_create_onu_flows_on_onu(NULL, onu_info);
+                NC_LOG_INFO("onu %s: re-instated flows, if any. status='%s'\n",
+                    onu_info->hdr.name, bcmos_strerror(err));
+            }
         }
     }
     else
@@ -466,6 +478,7 @@ static void _onu_send_state_change_event(bcmolt_interface pon_ni, bcmolt_onu_id 
     xpon_channel_termination *cterm = xpon_cterm_get_by_id(
         netconf_agent_olt_id(), pon_ni);
     xpon_v_ani *v_ani = xpon_v_ani_get_by_id(pon_ni, onu_id);
+    xpon_v_ani_state_info state_info = {};
     uint8_t serial_number[8];
 
     if (cterm == NULL)
@@ -479,9 +492,23 @@ static void _onu_send_state_change_event(bcmolt_interface pon_ni, bcmolt_onu_id 
     memcpy(serial_number + 4, serial->vendor_specific.arr, 4);
 
     if (v_ani != NULL)
+    {
         presence_flags |= XPON_ONU_PRESENCE_FLAG_V_ANI;
+        state_info.v_ani_name = v_ani->hdr.name;
+    }
 
-    bcmolt_xpon_v_ani_state_change(cterm->hdr.name, onu_id, serial_number, registration_id, presence_flags);
+    state_info.cterm_name = cterm->hdr.name;
+    state_info.onu_id = onu_id;
+    state_info.serial_number = serial_number;
+    state_info.registration_id = registration_id;
+    state_info.presence_flags = presence_flags;
+    if ((presence_flags & XPON_ONU_PRESENCE_FLAG_ONU_IN_O5) != 0)
+    {
+        state_info.management_state = bcm_tr451_onu_management_is_enabled() ?
+            XPON_ONU_MANAGEMENT_STATE_RELYING_ON_VOMCI : 
+            XPON_ONU_MANAGEMENT_STATE_EOMCI_BEING_USED;
+    }
+    bcmolt_xpon_v_ani_state_change(&state_info);
 }
 
 
@@ -549,24 +576,40 @@ void bbf_xpon_onu_discovered(bcmolt_oltid olt, bcmolt_msg *msg)
         const xpon_v_ani *onu_info = xpon_v_ani_get_by_id(od->key.pon_ni, od->data.onu_id);
         if (onu_info != NULL && onu_info->admin_state == XPON_ADMIN_STATE_ENABLED)
         {
+            bcmolt_onu_cfg onu_cfg;
             bcmolt_onu_set_onu_state set_state;
             bcmolt_onu_key key = { .pon_ni = od->key.pon_ni, .onu_id = od->data.onu_id };
 
-            /* Deactivate first in case it is already active */
-            _onu_deactivate(od->key.pon_ni, od->data.onu_id);
-
-            /* Now activate */
-            BCMOLT_OPER_INIT(&set_state, onu, set_onu_state, key);
-            BCMOLT_MSG_FIELD_SET(&set_state, onu_state, BCMOLT_ONU_OPERATION_ACTIVE);
-            err = bcmolt_oper_submit(netconf_agent_olt_id(), &set_state.hdr);
-            if (err == BCM_ERR_OK)
+            /* Check the current state */
+            BCMOLT_CFG_INIT(&onu_cfg, onu, key);
+            BCMOLT_MSG_FIELD_GET(&onu_cfg, onu_state);
+            err = bcmolt_cfg_get(netconf_agent_olt_id(), &onu_cfg.hdr);
+            if (err != BCM_ERR_OK)
             {
-                auto_activated = BCMOS_TRUE;
+                NC_LOG_ERR("Unable to read ONU configuration for %s. Error %s-%s\n",
+                    onu_info->hdr.name, bcmos_strerror(err), onu_cfg.hdr.hdr.err_text);
             }
-            else if (!(err == BCM_ERR_STATE && strstr(set_state.hdr.hdr.err_text, "processing") != NULL))
+
+            if (onu_cfg.data.onu_state != BCMOLT_ONU_STATE_ACTIVE)
             {
-                NC_LOG_ERR("ONU activation failed for %s. Error %s-%s\n",
-                    onu_info->hdr.name, bcmos_strerror(err), set_state.hdr.hdr.err_text);
+                if (onu_cfg.data.onu_state != BCMOLT_ONU_STATE_INACTIVE)
+                {
+                    /* Deactivate first */
+                    _onu_deactivate(od->key.pon_ni, od->data.onu_id);
+                }
+                /* Now activate */
+                BCMOLT_OPER_INIT(&set_state, onu, set_onu_state, key);
+                BCMOLT_MSG_FIELD_SET(&set_state, onu_state, BCMOLT_ONU_OPERATION_ACTIVE);
+                err = bcmolt_oper_submit(netconf_agent_olt_id(), &set_state.hdr);
+                if (err == BCM_ERR_OK)
+                {
+                    auto_activated = BCMOS_TRUE;
+                }
+                else if (!(err == BCM_ERR_STATE && strstr(set_state.hdr.hdr.err_text, "processing") != NULL))
+                {
+                    NC_LOG_ERR("ONU activation failed for %s. Error %s-%s\n",
+                        onu_info->hdr.name, bcmos_strerror(err), set_state.hdr.hdr.err_text);
+                }
             }
         }
     }
@@ -873,7 +916,7 @@ bcmos_errno xpon_v_ani_transaction(sr_session_ctx_t *srs, nc_transact *tr)
             const char *endpoint_name = val->data.string_val;
             XPON_PROP_SET_PRESENT(&onu_changes, v_ani, vomci_endpoint);
             if (endpoint_name)
-                strncpy(onu_changes.vomci_endpoint, endpoint_name, sizeof(onu_changes.vomci_endpoint));
+                strncpy(onu_changes.vomci_endpoint, endpoint_name, sizeof(onu_changes.vomci_endpoint) - 1);
             else
                 *onu_changes.vomci_endpoint = 0;
         }
@@ -963,6 +1006,18 @@ static int xpon_v_ani_state_populate1(sr_session_ctx_t *session, const char *xpa
     bcmos_bool entire_v_ani = (*xpath && xpath[strlen(xpath) - 1] == ']');
     bcmos_bool is_state = strstr(xpath, "interfaces-state") != NULL;
 
+    NC_LOG_DBG("%s: xpath=%s. entire_v_ani=%s\n", __FUNCTION__, xpath, entire_v_ani ? "YES" : "NO");
+    if (entire_v_ani)
+    {
+        *parent = nc_ly_sub_value_add(ctx, *parent, xpath,
+            "type", "bbf-xpon-if-type:v-ani");
+        snprintf(v_ani_xpath, sizeof(v_ani_xpath) - 1, "%s/bbf-xponvani:v-ani", xpath);
+    }
+    else
+    {
+        strncpy(v_ani_xpath, xpath, sizeof(v_ani_xpath) - 1);
+    }
+
     if (entire_v_ani || strstr(xpath, "-status"))
     {
         *parent = nc_ly_sub_value_add(ctx, *parent, xpath, "admin-status",
@@ -973,11 +1028,6 @@ static int xpon_v_ani_state_populate1(sr_session_ctx_t *session, const char *xpa
         *parent = nc_ly_sub_value_add(ctx, *parent, xpath, "oper-status",
             v_ani->registered ? "up" : "down");
     }
-
-    if (entire_v_ani)
-        snprintf(v_ani_xpath, sizeof(v_ani_xpath) - 1, "%s/bbf-xponvani:v-ani", xpath);
-    else
-        strncpy(v_ani_xpath, xpath, sizeof(v_ani_xpath) - 1);
 
     if (is_state && (entire_v_ani || strstr(xpath, "v-ani")))
     {

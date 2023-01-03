@@ -4,7 +4,8 @@
 #set -x
 
 fs_bin_dir=`dirname $0`
-tool_name=$fs_bin_dir/netopeer2-server
+export PATH=$fs_bin_dir:$fs_bin_dir/../sbin:$PATH
+tool_name=netopeer2-server
 pushd $fs_bin_dir/../sysrepo
 sysrepo_dir=`pwd`
 popd
@@ -15,7 +16,17 @@ export SYSREPO_REPOSITORY_PATH=$sysrepo_dir
 export LIBYANG_EXTENSIONS_PLUGINS_DIR=$lib_dir/libyang/extensions
 export LIBYANG_USER_TYPES_PLUGINS_DIR=$lib_dir/libyang/user_types
 if [ "$1" = "gdb" ]; then
-    GDB="gdb --args"
+    INSTR="gdb --args"
+    shift
+fi
+if [ "$1" = "valgrind" ]; then
+    INSTR="valgrind"
+    shift
+fi
+if [ "$1" = "perf" ]; then
+    INSTR="perf record -T --delay 120000 -o perf.data --call-graph dwarf"
+    echo "netopeer2-server is instrumented by perf"
+    echo "$INSTR"
     shift
 fi
 
@@ -48,4 +59,4 @@ if ! $PS | grep bcmolt_netconf_server | grep -v grep > /dev/null; then
     fi
     rm -fr /dev/shm/${SHM_PREFIX}_* /dev/shm/${SHM_PREFIX}sub_* $sysrepo_dir/sr_evpipe* /tmp/netopeer2-server.pid
 fi
-$GDB $tool_name $*
+$INSTR $tool_name $*

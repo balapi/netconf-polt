@@ -34,6 +34,7 @@
 #include <bbf-vomci.h>
 #endif
 
+bcmos_bool bcmolt_per_flow_mode;
 static nc_startup_options startup_options;
 static sr_session_ctx_t *netconf_session;
 
@@ -43,6 +44,7 @@ bcmos_errno bcm_netconf_modules_init(sr_session_ctx_t *srs, struct ly_ctx *ly_ct
 
     startup_options = *startup_opts;
     netconf_session = srs;
+    bcmolt_per_flow_mode = startup_options.per_flow_mode;
 
     /*
      * Initialize modules

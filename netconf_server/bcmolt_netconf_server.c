@@ -44,6 +44,9 @@
 #ifdef NETCONF_MODULE_BBF_POLT_VOMCI
 #include <bcm_tr451_polt.h>
 #endif
+#ifdef MFC_RELAY
+#include <mfc_relay.h>
+#endif
 
 #define BCM_NETCONF_LOG_SIZE               (10*1000*1000)
 
@@ -83,6 +86,9 @@ static int print_help(const char *cmd)
 #endif
         " [-f init_script]"
         " [-d]"
+#ifndef BCM_OPEN_SOURCE
+        " [-per_flow_mode]"
+#endif
         " [-log level]"
         " [-srlog level]"
 #ifdef NETCONF_MODULE_BBF_POLT_VOMCI
@@ -97,6 +103,9 @@ static int print_help(const char *cmd)
 #endif
             "\t\t -f init_script\trun CLI script\n"
             "\t\t -d - debug mode. Stay in the foreground\n"
+#ifndef BCM_OPEN_SOURCE
+            "\t\t -per_flow_mode - Use per-flow mode for 6865x devices.\n"
+#endif
             "\t\t -syslog - Log to syslog\n"
 #ifdef BCM_OPEN_SOURCE_SIM
             "\t\t -dummy_tr385 - Dummy TR-385 management. Register for some TR-385 events\n"
@@ -109,12 +118,13 @@ static int print_help(const char *cmd)
 #endif
             "\t\t -log error|info|debug - netconf server log level\n"
 #ifdef ENABLE_LOG
-            "\t\t -config_log\tlogging level with comma-delimited-list-of-log-type-name or ALL\t\tEnable specified logging level at startup for the specified modules, or ALL for all modules\n"
-            "\t\t  One or more -config_log entries may be specified\n"
-            "\t\t  Logging level is one of:\n"
-            "\t\t    d (for debug), e (for error), w (for warn), f (for fatal), i (for info), n (for none)\n"
-            "\t\t  Example 1: -config_log d NETCONF -config_log d api\n"
-            "\t\t  Example 2: -config_log e ALL\n"
+            "\t\t -config_log\tlogging level with comma-delimited-list-of-log-type-name or ALL"
+            "\t\t\tEnable specified logging level at startup for the specified modules, or ALL for all modules\n"
+            "\t\t\t  One or more -config_log entries may be specified\n"
+            "\t\t\t  Logging level is one of:\n"
+            "\t\t\t    d (for debug), e (for error), w (for warn), f (for fatal), i (for info), n (for none)\n"
+            "\t\t\t  Example 1: -config_log d NETCONF -config_log d api\n"
+            "\t\t\t  Example 2: -config_log e ALL\n"
 #endif
             "\t\t -srlog error|info|debug - sysrepo log level\n"
             );
@@ -279,6 +289,9 @@ int main(int argc, char *argv[])
 #ifdef NETCONF_MODULE_BBF_POLT_VOMCI
     tr451_polt_init_parms tr451_init_parms = { .log_level = DEV_LOG_LEVEL_INFO };
 #endif
+#ifdef MFC_RELAY
+    mfc_relay_init_parms mfc_init_parms = { .log_level = DEV_LOG_LEVEL_INFO };
+#endif
 #ifdef ENABLE_LOG
     char *config_log_names[NUM_LOG_CONFIG_SELECTIONS] = { };
     int config_log_cntr = 0;
@@ -359,6 +372,12 @@ int main(int argc, char *argv[])
         else if (!strcmp(argv[i], "-dummy_tr385"))
         {
             startup_opts.dummy_tr385_management = BCMOS_TRUE;
+        }
+#endif
+#ifndef BCM_OPEN_SOURCE
+        else if (!strcmp(argv[i], "-per_flow_mode"))
+        {
+            startup_opts.per_flow_mode = BCMOS_TRUE;
         }
 #endif
 #ifdef NETCONF_MODULE_BBF_POLT_VOMCI
@@ -608,6 +627,11 @@ int main(int argc, char *argv[])
     }
 #endif
 
+#ifdef MFC_RELAY
+    rc = bcm_mfc_relay_init(&mfc_init_parms);
+    BUG_ON(rc != BCM_ERR_OK);
+#endif
+
 #ifdef ENABLE_LOG
     /* Set log levels as per configuration in the command line */
     for (i=0; i<config_log_cntr; i++)
@@ -731,6 +755,10 @@ int main(int argc, char *argv[])
 
     /* Cleanup */
     bcm_netconf_shutdown();
+
+#ifdef MFC_RELAY
+    bcm_mfc_relay_exit();
+#endif
 
     return 0;
 }

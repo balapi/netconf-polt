@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Adapter type="OLT" interfaceVersion="2.1" model="standard" vendor="BBF"
+         xmlns="http://www.bbf.org/obbaa/schemas/adapter/1.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://www.bbf.org/obbaa/schemas/adapter/1.0
+                    ../../../../../adapter-schema-fwk/src/main/xsd/device-adapter.xsd">
+ 
+    <capabilities>
+        <value>urn:ietf:params:netconf:base:1.0</value>
+        <value>urn:ietf:params:netconf:base:1.1</value>
+        <value>urn:ietf:params:netconf:capability:writable-running:1.0</value>
+        <value>urn:ietf:params:netconf:capability:notification:1.0</value>
+        <value>urn:ietf:params:netconf:capability:interleave:1.0</value>
+    </capabilities>
+ 
+    <developer>BBF</developer>
+    <revisions>
+        <revision>2021-11-15</revision>
+    </revisions>
+</Adapter>

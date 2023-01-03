@@ -42,8 +42,9 @@ static char tr451_onu_sim_tx_buf[OMCI_MAX_MTU + sizeof(tr451_onu_sim_packet_head
 //
 
 /* Prepare onu_info */
-static bcmos_errno tr451_prepare_onu_info(const char *cterm_name, uint16_t onu_id,
-    const tr451_polt_onu_serial_number *serial_number, uint8_t* registration_id,
+static bcmos_errno tr451_prepare_onu_info(const char *cterm_name, const char *v_ani_name,
+    uint16_t onu_id, const tr451_polt_onu_serial_number *serial_number,
+    uint8_t* registration_id, xpon_onu_management_state management_state, const uint8_t *loid,
     tr451_polt_onu_info *onu_info)
 {
     if (vendor_event_cfg.tr451_onu_state_change_cb == nullptr)
@@ -51,15 +52,18 @@ static bcmos_errno tr451_prepare_onu_info(const char *cterm_name, uint16_t onu_i
         BCM_POLT_LOG(ERROR, "No tr451_onu_state_change_cb registration\n");
         return BCM_ERR_NOT_SUPPORTED;;
     }
-    memset(onu_info, 0, sizeof(*onu_info));
-    onu_info->cterm_name = cterm_name;
-    onu_info->pon_interface_id = POLT_PON_ID_UNDEFINED;
-    onu_info->onu_id = onu_id;
-    if (onu_info->onu_id >= TR451_POLT_MAX_ONUS_PER_PON)
+    if (onu_id >= TR451_POLT_MAX_ONUS_PER_PON)
     {
-        BCM_POLT_LOG(ERROR, "onu_id out of range\n");
+        BCM_POLT_LOG(ERROR, "onu_id %u out of range\n", onu_id);
         return BCM_ERR_PARM;
     }
+    memset(onu_info, 0, sizeof(*onu_info));
+    onu_info->cterm_name = cterm_name;
+    onu_info->v_ani_name = v_ani_name;
+    onu_info->pon_interface_id = POLT_PON_ID_UNDEFINED;
+    onu_info->onu_id = onu_id;
+    onu_info->management_state = management_state;
+    onu_info->loid = loid;
 
     memcpy(&onu_info->serial_number, serial_number, 8);
     onu_info->registration_id = registration_id;
@@ -68,14 +72,16 @@ static bcmos_errno tr451_prepare_onu_info(const char *cterm_name, uint16_t onu_i
 }
 
 /* Report ONU discovered */
-bcmos_errno sim_tr451_vendor_onu_added(const char *cterm_name, uint16_t onu_id,
-   const tr451_polt_onu_serial_number *serial, uint8_t *registration_id,
-   xpon_onu_presence_flags flags)
+bcmos_errno sim_tr451_vendor_onu_added(const char *cterm, const char *v_ani,
+    uint16_t onu_id, const tr451_polt_onu_serial_number *serial, uint8_t *registration_id,
+   xpon_onu_presence_flags flags, xpon_onu_management_state management_state,
+   const uint8_t *loid)
 {
     tr451_polt_onu_info onu_info;
     bcmos_errno err;
 
-    err = tr451_prepare_onu_info(cterm_name, onu_id, serial, registration_id, &onu_info);
+    err = tr451_prepare_onu_info(cterm, v_ani, onu_id, serial, registration_id,
+        management_state, loid, &onu_info);
     if (err != BCM_ERR_OK)
         return err;
     onu_info.presence_flags = flags ? flags : XPON_ONU_PRESENCE_FLAG_ONU;
@@ -95,7 +101,8 @@ bcmos_errno sim_tr451_vendor_onu_removed(const char *cterm_name, uint16_t onu_id
     tr451_polt_onu_info onu_info;
     bcmos_errno err;
 
-    err = tr451_prepare_onu_info(cterm_name, onu_id, serial, NULL, &onu_info);
+    err = tr451_prepare_onu_info(cterm_name, NULL, onu_id, serial, NULL,
+        XPON_ONU_MANAGEMENT_STATE_UNSET, NULL, &onu_info);
     if (err != BCM_ERR_OK)
         return err;
     onu_info.presence_flags = flags ? flags : XPON_ONU_PRESENCE_FLAG_V_ANI;

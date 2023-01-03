@@ -6,7 +6,7 @@
             <remote-endpoint>
                <name>ep1</name>
                <grpc>
-                  <!--local-endpoint-name>polt0</local-endpoint-name-->
+                  <local-endpoint-name>polt0</local-endpoint-name>
                </grpc>
                <!-- type>bbf-network-function-types:access-vnf-type</type -->
                <access-point>

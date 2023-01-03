@@ -1017,13 +1017,20 @@ static void tr451_polt_onu_state_change_cb(void *user_handle, const tr451_polt_o
 // Usually it is only needed when adding ONU via CLI for debugging
 static bcmos_errno tr451_polt_onu_state_change_notify_cb(void *user_handle, const tr451_polt_onu_info *onu_info)
 {
+    xpon_v_ani_state_info state_info = {
+        .cterm_name = onu_info->cterm_name,
+        .v_ani_name = onu_info->v_ani_name,
+        .onu_id = onu_info->onu_id,
+        .serial_number = onu_info->serial_number.data,
+        .registration_id = onu_info->registration_id,
+        .presence_flags = onu_info->presence_flags,
+        .management_state = onu_info->management_state,
+        .loid = onu_info->loid
+    };
     if (tr451_onu_status_change_cb == nullptr)
         return BCM_ERR_OK;
     bcmos_errno err;
-    err = tr451_onu_status_change_cb(
-        onu_info->cterm_name, onu_info->onu_id,
-        onu_info->serial_number.data, onu_info->registration_id,
-        onu_info->presence_flags);
+    err = tr451_onu_status_change_cb(&state_info);
     return err;
 }
 

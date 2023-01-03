@@ -35,6 +35,7 @@ extern "C"
 #include <bcmos_system.h>
 #include <bcmcli.h>
 #include <bcm_dev_log.h>
+#include <bcmolt_netconf_notifications.h>
 
 /* Include vendor-specific services that can be used for integration with vendor's NETCONF server */
 #include <tr451_polt_vendor_specific.h>
@@ -126,18 +127,6 @@ bcmos_errno bcm_tr451_polt_grpc_client_delete(const char *endpoint_name);
 bcmos_errno bcm_tr451_polt_grpc_client_connect_disconnect_cb_register(
    bcm_tr451_polt_grpc_client_connect_disconnect_cb cb, void *data);
 
-#ifndef XPON_ONU_PRESENCE_FLAGS_DEFINED
-typedef enum
-{
-    XPON_ONU_PRESENCE_FLAG_NONE                      = 0,
-    XPON_ONU_PRESENCE_FLAG_V_ANI                     = 0x01,
-    XPON_ONU_PRESENCE_FLAG_ONU                       = 0x02,
-    XPON_ONU_PRESENCE_FLAG_ONU_IN_O5                 = 0x04,
-    XPON_ONU_PRESENCE_FLAG_ONU_ACTIVATION_FAILED     = 0x08,
-} xpon_onu_presence_flags;
-#define XPON_ONU_PRESENCE_FLAGS_DEFINED
-#endif
-
 typedef enum
 {
    BBF_VOMCI_COMMUNICATION_STATUS_CONNECTION_ACTIVE,
@@ -149,8 +138,7 @@ typedef enum
 
 bcmos_errno xpon_v_ani_vomci_endpoint_set(const char *cterm_name, uint16_t onu_id, const char *endpoint_name);
 bcmos_errno xpon_v_ani_vomci_endpoint_clear(const char *cterm_name, uint16_t onu_id);
-typedef bcmos_errno (*xpon_v_ani_state_change_report_cb)(const char *cterm_name, uint16_t onu_id,
-    const uint8_t *serial_number, uint8_t *registration_id, xpon_onu_presence_flags presence_flags);
+typedef bcmos_errno (*xpon_v_ani_state_change_report_cb)(const xpon_v_ani_state_info *state_info);
 bcmos_errno bcm_tr451_onu_state_change_notify_cb_register(xpon_v_ani_state_change_report_cb cb);
 bcmos_errno bcm_tr451_onu_status_get(const char *cterm_name, uint16_t onu_id,
    bbf_vomci_communication_status *status, const char **remote_endpoint,

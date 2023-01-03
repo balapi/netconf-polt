@@ -4,9 +4,9 @@
     <bbf-xpongemtcont:traffic-descriptor-profile>
       <bbf-xpongemtcont:name>TDP_IPV4</bbf-xpongemtcont:name>
       <bbf-xpongemtcont:additional-bw-eligibility-indicator>non-assured-sharing</additional-bw-eligibility-indicator>
-      <bbf-xpongemtcont:assured-bandwidth>80000000</bbf-xpongemtcont:assured-bandwidth>
+      <bbf-xpongemtcont:assured-bandwidth>1000000</bbf-xpongemtcont:assured-bandwidth>
       <bbf-xpongemtcont:fixed-bandwidth>0</bbf-xpongemtcont:fixed-bandwidth>
-      <bbf-xpongemtcont:maximum-bandwidth>100000000</bbf-xpongemtcont:maximum-bandwidth>
+      <bbf-xpongemtcont:maximum-bandwidth>3000000</bbf-xpongemtcont:maximum-bandwidth>
     </bbf-xpongemtcont:traffic-descriptor-profile>
     <bbf-xpongemtcont:traffic-descriptor-profile>
       <bbf-xpongemtcont:name>TDP_PPPOE</bbf-xpongemtcont:name>
@@ -376,3 +376,54 @@
         <port-layer-if xmlns="urn:bbf:yang:bbf-interface-port-reference">uplink_port</port-layer-if>
     </interface>
 </interfaces>
+
+<!-- Configure OLT for gRPC connection -->
+<bbf-polt-vomci:remote-nf-settings xmlns:bbf-polt-vomci="urn:bbf:yang:bbf-polt-vomci">
+  <bbf-polt-vomci:nf-client>
+    <bbf-polt-vomci:enabled>true</bbf-polt-vomci:enabled>
+    <bbf-polt-vomci:client-parameters>
+      <bbf-polt-vomci:nf-initiate>
+        <bbf-polt-vomci:remote-endpoints>
+          <bbf-polt-vomci:name>vOMCIProxy</bbf-polt-vomci:name>
+          <bbf-polt-vomci:type>vOMCI-nf</bbf-polt-vomci:type>
+          <bbf-polt-vomci:remote-endpoint>
+            <bbf-polt-vomci:access-points>
+              <bbf-polt-vomci:name>vOMCIProxy</bbf-polt-vomci:name>
+              <bbf-polt-vomci:grpc>
+                <bbf-polt-vomci:grpc-client-parameters>
+                  <bbf-polt-vomci:remote-address>127.0.0.1</bbf-polt-vomci:remote-address>
+                  <bbf-polt-vomci:remote-port>8433</bbf-polt-vomci:remote-port>
+                </bbf-polt-vomci:grpc-client-parameters>
+              </bbf-polt-vomci:grpc>
+            </bbf-polt-vomci:access-points>
+          </bbf-polt-vomci:remote-endpoint>
+        </bbf-polt-vomci:remote-endpoints>
+      </bbf-polt-vomci:nf-initiate>
+    </bbf-polt-vomci:client-parameters>
+    <bbf-polt-vomci:nf-endpoint-filter>
+      <bbf-polt-vomci:rule>
+        <bbf-polt-vomci:name>client_rule1</bbf-polt-vomci:name>
+        <bbf-polt-vomci:priority>1</bbf-polt-vomci:priority>
+        <bbf-polt-vomci:flexible-match>
+          <!--bbf-polt-vomci:any-onu></bbf-polt-vomci:any-onu-->
+          <bbf-polt-vomci:onu-vendor>BRCM</bbf-polt-vomci:onu-vendor>
+        </bbf-polt-vomci:flexible-match>
+        <bbf-polt-vomci:resulting-endpoint>vOMCIProxy</bbf-polt-vomci:resulting-endpoint>
+      </bbf-polt-vomci:rule>
+    </bbf-polt-vomci:nf-endpoint-filter>
+  </bbf-polt-vomci:nf-client>
+  <bbf-polt-vomci:nf-server>
+    <bbf-polt-vomci:enabled>true</bbf-polt-vomci:enabled>
+    <bbf-polt-vomci:nf-endpoint-filter>
+      <bbf-polt-vomci:rule>
+        <bbf-polt-vomci:name>server_rule1</bbf-polt-vomci:name>
+        <bbf-polt-vomci:priority>1</bbf-polt-vomci:priority>
+        <bbf-polt-vomci:flexible-match>
+          <bbf-polt-vomci:onu-vendor>none</bbf-polt-vomci:onu-vendor>
+        </bbf-polt-vomci:flexible-match>
+        <bbf-polt-vomci:resulting-endpoint>vOMCIProxy</bbf-polt-vomci:resulting-endpoint>
+      </bbf-polt-vomci:rule>
+    </bbf-polt-vomci:nf-endpoint-filter>
+    <bbf-polt-vomci:server-parameters/>
+  </bbf-polt-vomci:nf-server>
+</bbf-polt-vomci:remote-nf-settings>

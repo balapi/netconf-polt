@@ -6,7 +6,6 @@ if(NETCONF_SERVER)
         bcm_module_dependencies(PUBLIC tr451_polt)
     endif()
     bcm_module_header_paths(PUBLIC .)
-    bcm_module_cflags(PUBLIC -Wno-strict-prototypes)
     bcm_module_definitions(PUBLIC -DNETCONF_MODULE_BBF_XPON)
     bcm_module_srcs(
         bbf-xpon.c
@@ -32,5 +31,11 @@ if(NETCONF_SERVER)
         dhcp-relay-utils.c
         bbf-l2-dhcpv4-relay.c
         bbf-xpon-tm-mgmt.c)
+    if(NOT OPEN_SOURCE)
+        bcm_module_srcs(bbf-xpon-proprietary.c)
+    endif()
+    if(MFC_RELAY)
+        bcm_module_dependencies(PUBLIC netconf_bbf-polt-mfc)
+    endif()
     bcm_create_lib_target()
 endif()

@@ -55,13 +55,13 @@ struct dhcp_packet {
     uint16_t flags;             /* 10: Flag bits */
     struct in_addr ciaddr;      /* 12: Client IP address (if already in use) */
     struct in_addr yiaddr;      /* 16: Client IP address */
-    struct in_addr siaddr;      /* 18: IP address of next server to talk to */
-    struct in_addr giaddr;      /* 20: DHCP relay agent IP address */
-    unsigned char chaddr [16];  /* 24: Client hardware address */
-    char sname [DHCP_SNAME_LEN];/* 40: Server name */
-    char file [DHCP_FILE_LEN];  /* 104: Boot filename */
+    struct in_addr siaddr;      /* 20: IP address of next server to talk to */
+    struct in_addr giaddr;      /* 24: DHCP relay agent IP address */
+    unsigned char chaddr [16];  /* 28: Client hardware address */
+    char sname [DHCP_SNAME_LEN];/* 44: Server name */
+    char file [DHCP_FILE_LEN];  /* 108: Boot filename */
     unsigned char options [DHCP_MAX_OPTION_LEN];
-                                /* 212: Optional parameters
+                                /* 236: Optional parameters
                                     (actual length dependent on MTU). */
 };
 

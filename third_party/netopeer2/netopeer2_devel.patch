@@ -1,48 +1,55 @@
-diff -Naur netopeer2-devel.org/CMakeLists.txt netopeer2-devel/CMakeLists.txt
---- netopeer2-devel.org/CMakeLists.txt	2021-06-21 23:20:38.000000000 +1000
-+++ netopeer2-devel/CMakeLists.txt	2021-06-22 13:58:58.151886012 +1000
-@@ -299,6 +299,7 @@
-         set(ENV{NP2_MODULE_PERMS} \"${MODULES_PERMS}\")
-         set(ENV{NP2_MODULE_OWNER} \"${MODULES_OWNER}\")
-         set(ENV{NP2_MODULE_GROUP} \"${MODULES_GROUP}\")
-+        set(ENV{SYSREPOCTL_EXECUTABLE} \"${SYSREPOCTL}\")
-         execute_process(COMMAND \"${SCRIPT_DIR}/setup.sh\" RESULT_VARIABLE SETUP_RES)
-         if(NOT SETUP_RES EQUAL \"0\")
-             message(FATAL_ERROR \" scripts/setup.sh failed: \${SETUP_RES}\")
-@@ -310,6 +311,8 @@
- if(GENERATE_HOSTKEY)
-     install(CODE "
+diff -Naur netopeer2-2.1.36.org/CMakeLists.txt netopeer2-2.1.36/CMakeLists.txt
+--- netopeer2-2.1.36.org/CMakeLists.txt	2022-07-27 00:05:00.000000000 +1000
++++ netopeer2-2.1.36/CMakeLists.txt	2022-07-27 11:11:09.021368084 +1000
+@@ -253,6 +253,8 @@
+ find_library(LIBRT rt)
+ if(LIBRT)
+     target_link_libraries(netopeer2-server ${LIBRT})
++else()
++    target_link_libraries(netopeer2-server rt)
+ endif()
+ 
+ # libnetconf2 (was already found)
+@@ -278,6 +280,7 @@
+ endif()
+ 
+ # libsystemd
++if(NOT NP2SRV_DISABLE_SYSTEMD)
+ if(NOT PKG_CONFIG_FOUND AND NOT SYSTEMD_UNIT_DIR)
+     set(SYSTEMD_UNIT_DIR "/usr/lib/systemd/system")
+ endif()
+@@ -290,6 +293,7 @@
+ else()
+     message(WARNING "Disabling netopeer2-server systemd support because libsystemd was not found.")
+ endif()
++endif()
+ 
+ # pthread
+ set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
+@@ -364,6 +368,7 @@
          message(STATUS \"Generating a new RSA host key \\\"genkey\\\" if not already added...\")
-+        set(ENV{OPENSSL_EXECUTABLE} \"${OPENSSL}\")
-+        set(ENV{SYSREPOCFG_EXECUTABLE} \"${SYSREPOCFG}\")
-         execute_process(COMMAND ${SCRIPT_DIR}/merge_hostkey.sh RESULT_VARIABLE MERGE_HOSTKEY_RES)
+         set(ENV{SYSREPOCTL_EXECUTABLE} \"${SYSREPOCTL_EXECUTABLE}\")
+         set(ENV{SYSREPOCFG_EXECUTABLE} \"${SYSREPOCFG_EXECUTABLE}\")
++        set(ENV{OPENSSL_EXECUTABLE} \"${OPENSSL_EXECUTABLE}\")
+         execute_process(COMMAND \"\$ENV{DESTDIR}${SCRIPT_DIR}/merge_hostkey.sh\" RESULT_VARIABLE MERGE_HOSTKEY_RES)
          if(NOT MERGE_HOSTKEY_RES EQUAL \"0\")
              message(FATAL_ERROR \" scripts/merge_hostkey.sh failed: \${MERGE_HOSTKEY_RES}\")
-@@ -319,6 +322,7 @@
- if(MERGE_LISTEN_CONFIG)
-     install(CODE "
-         message(STATUS \"Merging default server listen configuration if there is none...\")
-+        set(ENV{SYSREPOCFG_EXECUTABLE} \"${SYSREPOCFG}\")
-         execute_process(COMMAND ${SCRIPT_DIR}/merge_config.sh RESULT_VARIABLE MERGE_CONFIG_RES)
-         if(NOT MERGE_CONFIG_RES EQUAL \"0\")
-             message(FATAL_ERROR \" scripts/merge_config.sh failed: \${MERGE_CONFIG_RES}\")
-diff -Naur netopeer2-devel.org/scripts/merge_config.sh netopeer2-devel/scripts/merge_config.sh
---- netopeer2-devel.org/scripts/merge_config.sh	2021-06-21 23:20:38.000000000 +1000
-+++ netopeer2-devel/scripts/merge_config.sh	2021-06-22 13:59:37.560022292 +1000
-@@ -43,8 +43,7 @@
+diff -Naur netopeer2-2.1.36.org/scripts/merge_config.sh netopeer2-2.1.36/scripts/merge_config.sh
+--- netopeer2-2.1.36.org/scripts/merge_config.sh	2022-07-27 00:05:00.000000000 +1000
++++ netopeer2-2.1.36/scripts/merge_config.sh	2022-07-27 11:11:47.673548779 +1000
+@@ -43,7 +43,7 @@
                      <client-authentication>
                          <supported-authentication-methods>
                              <publickey/>
 -                            <passsword/>
--                            <other>interactive</other>
 +                            <password/>
                          </supported-authentication-methods>
                          <users/>
                      </client-authentication>
-diff -Naur netopeer2-devel.org/scripts/merge_hostkey.sh netopeer2-devel/scripts/merge_hostkey.sh
---- netopeer2-devel.org/scripts/merge_hostkey.sh	2021-06-21 23:20:38.000000000 +1000
-+++ netopeer2-devel/scripts/merge_hostkey.sh	2021-06-23 09:25:37.406201707 +1000
-@@ -34,13 +34,14 @@
+diff -Naur netopeer2-2.1.36.org/scripts/merge_hostkey.sh netopeer2-2.1.36/scripts/merge_hostkey.sh
+--- netopeer2-2.1.36.org/scripts/merge_hostkey.sh	2022-07-27 00:05:00.000000000 +1000
++++ netopeer2-2.1.36/scripts/merge_hostkey.sh	2022-07-27 11:12:54.909862988 +1000
+@@ -35,13 +35,14 @@
  PUBKEY=`echo "$PUBPEM" | grep -v -- "-----" | tr -d "\n"`
  
  # generate edit config
@@ -60,10 +67,57 @@ diff -Naur netopeer2-devel.org/scripts/merge_hostkey.sh netopeer2-devel/scripts/
          </asymmetric-key>
      </asymmetric-keys>
  </keystore>"
-diff -Naur netopeer2-devel.org/src/netconf_server.c netopeer2-devel/src/netconf_server.c
---- netopeer2-devel.org/src/netconf_server.c	2021-06-21 23:20:38.000000000 +1000
-+++ netopeer2-devel/src/netconf_server.c	2021-06-25 10:22:42.391428497 +1000
-@@ -32,29 +32,29 @@
+diff -Naur netopeer2-2.1.36.org/src/main.c netopeer2-2.1.36/src/main.c
+--- netopeer2-2.1.36.org/src/main.c	2022-07-27 00:05:00.000000000 +1000
++++ netopeer2-2.1.36/src/main.c	2022-07-27 11:17:23.779118091 +1000
+@@ -837,13 +837,13 @@
+     xpath = "/ietf-netconf-server:netconf-server/listen/endpoint/tls/tcp-server-parameters";
+     SR_CONFIG_SUBSCR(mod_name, xpath, np2srv_endpt_tcp_params_cb);
+ 
+-    xpath = "/ietf-netconf-server:netconf-server/listen/endpoint/tls/tls-server-parameters/server-identity/keystore-reference";
++    xpath = "/ietf-netconf-server:netconf-server/listen/endpoint/tls/tls-server-parameters/server-identity/certificate/keystore-reference";
+     SR_CONFIG_SUBSCR(mod_name, xpath, np2srv_endpt_tls_servercert_cb);
+ 
+     xpath = "/ietf-netconf-server:netconf-server/listen/endpoint/tls/tls-server-parameters/client-authentication";
+     SR_CONFIG_SUBSCR(mod_name, xpath, np2srv_endpt_tls_client_auth_cb);
+ 
+-    xpath = "/ietf-netconf-server:netconf-server/listen/endpoint/tls/tls-server-parameters/client-authentication/cert-maps";
++    xpath = "/ietf-netconf-server:netconf-server/listen/endpoint/tls/netconf-server-parameters/client-identity-mappings/cert-to-name";
+     SR_CONFIG_SUBSCR(mod_name, xpath, np2srv_endpt_tls_client_ctn_cb);
+ #endif
+ 
+@@ -888,15 +888,15 @@
+     SR_CONFIG_SUBSCR(mod_name, xpath, np2srv_ch_client_endpt_tcp_params_cb);
+ 
+     xpath = "/ietf-netconf-server:netconf-server/call-home/netconf-client/endpoints/endpoint/tls/tls-server-parameters/"
+-            "server-identity/keystore-reference";
++            "server-identity/certificate/keystore-reference";
+     SR_CONFIG_SUBSCR(mod_name, xpath, np2srv_ch_client_endpt_tls_servercert_cb);
+ 
+     xpath = "/ietf-netconf-server:netconf-server/call-home/netconf-client/endpoints/endpoint/tls/tls-server-parameters/"
+             "client-authentication";
+     SR_CONFIG_SUBSCR(mod_name, xpath, np2srv_ch_client_endpt_tls_client_auth_cb);
+ 
+-    xpath = "/ietf-netconf-server:netconf-server/call-home/netconf-client/endpoints/endpoint/tls/tls-server-parameters/"
+-            "client-authentication/cert-maps";
++    xpath = "/ietf-netconf-server:netconf-server/call-home/netconf-client/endpoints/endpoint/tls/netconf-server-parameters/"
++            "client-identity-mappings/cert-to-name";
+     SR_CONFIG_SUBSCR(mod_name, xpath, np2srv_ch_client_endpt_tls_client_ctn_cb);
+ #endif
+ 
+@@ -912,7 +912,7 @@
+      * ietf-truststore (just for in-use operational data)
+      */
+     mod_name = "ietf-truststore";
+-    xpath = "/ietf-truststore:truststore/certificates";
++    xpath = "/ietf-truststore:truststore/certificate-bags";
+     SR_CONFIG_SUBSCR(mod_name, xpath, np2srv_dummy_cb);
+ #endif
+ 
+diff -Naur netopeer2-2.1.36.org/src/netconf_server.c netopeer2-2.1.36/src/netconf_server.c
+--- netopeer2-2.1.36.org/src/netconf_server.c	2022-07-27 00:05:00.000000000 +1000
++++ netopeer2-2.1.36/src/netconf_server.c	2022-07-27 11:22:08.920446657 +1000
+@@ -34,29 +34,29 @@
  int
  np2srv_sr_get_privkey(const struct lyd_node *asym_key, char **privkey_data, NC_SSH_KEY_TYPE *privkey_type)
  {
@@ -102,10 +156,10 @@ diff -Naur netopeer2-devel.org/src/netconf_server.c netopeer2-devel/src/netconf_
          return -1;
      }
  
-diff -Naur netopeer2-devel.org/src/netconf_server_ssh.c netopeer2-devel/src/netconf_server_ssh.c
---- netopeer2-devel.org/src/netconf_server_ssh.c	2021-06-21 23:20:38.000000000 +1000
-+++ netopeer2-devel/src/netconf_server_ssh.c	2021-06-22 14:03:37.812854464 +1000
-@@ -280,7 +280,7 @@
+diff -Naur netopeer2-2.1.36.org/src/netconf_server_ssh.c netopeer2-2.1.36/src/netconf_server_ssh.c
+--- netopeer2-2.1.36.org/src/netconf_server_ssh.c	2022-07-27 00:05:00.000000000 +1000
++++ netopeer2-2.1.36/src/netconf_server_ssh.c	2022-07-27 11:23:33.768841546 +1000
+@@ -282,7 +282,7 @@
          } else if (op == SR_OP_DELETED) {
              auth &= ~NC_SSH_AUTH_PUBLICKEY;
          }
@@ -114,3 +168,27 @@ diff -Naur netopeer2-devel.org/src/netconf_server_ssh.c netopeer2-devel/src/netc
          if (op == SR_OP_CREATED) {
              auth |= NC_SSH_AUTH_PASSWORD;
          } else if (op == SR_OP_DELETED) {
+diff -Naur netopeer2-2.1.36.org/src/netconf_server_tls.c netopeer2-2.1.36/src/netconf_server_tls.c
+--- netopeer2-2.1.36.org/src/netconf_server_tls.c	2022-07-27 00:05:00.000000000 +1000
++++ netopeer2-2.1.36/src/netconf_server_tls.c	2022-07-27 11:25:34.577403496 +1000
+@@ -345,7 +345,8 @@
+     return ret;
+ }
+ 
+-/* /ietf-netconf-server:netconf-server/listen/endpoint/tls/tls-server-parameters/client-authentication/cert-maps */
++/* /ietf-netconf-server:netconf-server/listen/endpoint/tls/netconf-server-parameters/
++ * client-identity-mappings/cert-to-name */
+ int
+ np2srv_endpt_tls_client_ctn_cb(sr_session_ctx_t *session, uint32_t UNUSED(sub_id), const char *UNUSED(module_name),
+         const char *xpath, sr_event_t UNUSED(event), uint32_t UNUSED(request_id), void *UNUSED(private_data))
+@@ -576,8 +577,8 @@
+     return SR_ERR_OK;
+ }
+ 
+-/* /ietf-netconf-server:netconf-server/call-home/netconf-client/endpoints/endpoint/tls/tls-server-parameters/"
+- * client-authentication/cert-maps */
++/* /ietf-netconf-server:netconf-server/call-home/netconf-client/endpoints/endpoint/tls/netconf-server-parameters/"
++ * client-identity-mappings/cert-to-name */
+ int
+ np2srv_ch_client_endpt_tls_client_ctn_cb(sr_session_ctx_t *session, uint32_t UNUSED(sub_id),
+         const char *UNUSED(module_name), const char *xpath, sr_event_t UNUSED(event), uint32_t UNUSED(request_id),

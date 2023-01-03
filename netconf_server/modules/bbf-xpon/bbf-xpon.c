@@ -29,40 +29,12 @@
 #include "bbf-xpon-internal.h"
 #include <bcmos_hash_table.h>
 
+#define XPON_MAX_XPATH_LENGTH  256
+
 sr_subscription_ctx_t *sr_ctx;
 static sr_subscription_ctx_t *sr_ctx_intf;
 
-static const char* ietf_interfaces_features[] = {
-    "*",
-    NULL
-};
-
-static const char* xponvani_features[] = {
-    "configurable-v-ani-onu-id",
-    "configurable-v-ani-management-gem-port-id",
-    NULL
-};
-
-static const char* xpongemtcont_features[] = {
-    "configurable-gemport-id",
-    "configurable-alloc-id",
-    NULL
-};
-
-static const char* l2_forwarding_features[] = {
-    "forwarding-databases",
-    "shared-forwarding-databases",
-    "mac-learning",
-    "split-horizon-profiles",
-    NULL
-};
-
-static const char* ietf_hardware_features[] = {
-    "*",
-    NULL
-};
-
-static const char* bbf_hardware_features[] = {
+static const char* all_features[] = {
     "*",
     NULL
 };
@@ -70,6 +42,59 @@ static const char* bbf_hardware_features[] = {
 static sr_session_ctx_t *sr_session;
 
 static bcmos_bool device_connection_status[BCM_MAX_DEVS_PER_OLT];
+static bbf_xpon_dev_info device_info[BCM_MAX_DEVS_PER_OLT];
+static bcmolt_topology olt_topology;
+
+bcmos_errno xpon_device_cfg_get(bcmolt_ldid device, bbf_xpon_dev_info *info)
+{
+    bcmolt_device_key key = { .device_id = device };
+    bcmolt_device_cfg cfg;
+    bcmos_errno err;
+
+    if (device >= BCM_MAX_DEVS_PER_OLT)
+        return BCM_ERR_PARM;
+
+    /* Already have configuration ? */
+    if (device_info[device].chip_family)
+    {
+        *info = device_info[device];
+        return BCM_ERR_OK;
+    }
+
+    BCMOLT_CFG_INIT(&cfg, device, key);
+    BCMOLT_FIELD_SET_PRESENT(&cfg.data, device_cfg_data, system_mode);
+    BCMOLT_FIELD_SET_PRESENT(&cfg.data, device_cfg_data, chip_family);
+    BCMOLT_FIELD_SET_PRESENT(&cfg.data, device_cfg_data, inni_config);
+    err = bcmolt_cfg_get(netconf_agent_olt_id(), &cfg.hdr);
+    if (err != BCM_ERR_OK)
+        return err;
+
+    /* Per-flow mode is supported only for aspen */
+    if (bcmolt_is_per_flow_mode() &&
+        cfg.data.chip_family == BCMOLT_CHIP_FAMILY_CHIP_FAMILY_6862_X)
+    {
+        NC_LOG_ERR("Per-flow mode is not supported for BCM6862x devices. Disabled.\n");
+        bcmolt_per_flow_mode_disable();
+    }
+
+#ifdef BCM_OPEN_SOURCE
+    if (bcmolt_is_per_flow_mode())
+    {
+        NC_LOG_ERR("Per-flow mode is not supported in the Open Source release. Disabled.\n");
+        bcmolt_per_flow_mode_disable();
+    }
+#endif
+
+    device_info[device].chip_family = cfg.data.chip_family;
+    device_info[device].system_mode = cfg.data.system_mode;
+    device_info[device].inni_mode = cfg.data.inni_config.mode;
+    device_info[device].inni_mux = cfg.data.inni_config.mux;
+
+    if (info != NULL)
+        *info = device_info[device];
+
+    return BCM_ERR_OK;
+}
 
 static int num_connected_devices(void)
 {
@@ -90,19 +115,39 @@ static int xpon_interface_state_get_cb(sr_session_ctx_t *session,
     const char *module_name, const char *xpath, const char *request_path, uint32_t request_id,
     struct lyd_node **parent, void *private_data)
 {
+    char full_xpath[XPON_MAX_XPATH_LENGTH];
     NC_LOG_INFO("module=%s xpath=%s request=%s\n", module_name, xpath, request_path);
 
     if (strcmp(module_name, IETF_INTERFACES_MODULE_NAME))
         return SR_ERR_OK;
 
-    xpon_cpair_state_get_cb(session, xpath, parent);
-    xpon_cterm_state_get_cb(session, xpath, parent);
-    xpon_v_ani_state_get_cb(session, xpath, parent);
-    xpon_ani_state_get_cb(session, xpath, parent);
-    xpon_v_ani_v_enet_state_get_cb(session, xpath, parent);
-    xpon_ani_v_enet_state_get_cb(session, xpath, parent);
-    xpon_enet_state_get_cb(session, xpath, parent);
-    xpon_vlan_subif_state_get_cb(session, xpath, parent);
+    if (xpath == NULL)
+    {
+        xpath = request_path;
+        if (xpath == NULL)
+            return SR_ERR_OK;
+    }
+    /* If request_path selects a specific interface (ie, contains [name]), but xpath doesn't,
+       add [name] to xpath
+    */
+    if (request_path != NULL && strchr(request_path, '[') != NULL && strchr(xpath, '[') == NULL)
+    {
+        char keyname[BBF_XPON_MAX_NAME_LENGTH]="";
+        nc_xpath_key_get(request_path, "name", keyname, sizeof(keyname));
+        snprintf(full_xpath, sizeof(full_xpath)-1, "%s[name='%s']", xpath, keyname);
+    }
+    else
+    {
+        strncpy(full_xpath, xpath, sizeof(full_xpath) - 1);
+    }
+    xpon_cpair_state_get_cb(session, full_xpath, parent);
+    xpon_cterm_state_get_cb(session, full_xpath, parent);
+    xpon_v_ani_state_get_cb(session, full_xpath, parent);
+    xpon_ani_state_get_cb(session, full_xpath, parent);
+    xpon_v_ani_v_enet_state_get_cb(session, full_xpath, parent);
+    xpon_ani_v_enet_state_get_cb(session, full_xpath, parent);
+    xpon_enet_state_get_cb(session, full_xpath, parent);
+    xpon_vlan_subif_state_get_cb(session, full_xpath, parent);
     return SR_ERR_OK;
 }
 
@@ -390,6 +435,19 @@ bcmos_errno xpon_interface_get_populate(sr_session_ctx_t *srs, const char *name,
         nc_transact_free(&transact);
         sr_free_values(values, value_cnt);
     }
+    else
+    {
+        /* Object pre-existed. Make sure it is of the correct type */
+        if (expected_obj_type != XPON_OBJ_TYPE_ANY &&
+            expected_obj_type != (*p_obj)->obj_type)
+        {
+            NC_LOG_ERR("interface %s is of unexpected type. Expected %s got %s\n",
+                name, xpon_obj_type_to_str(expected_obj_type),
+                xpon_obj_type_to_str((*p_obj)->obj_type));
+            *p_obj = NULL;
+            err = BCM_ERR_NOENT;
+        }
+    }
     return err;
 }
 
@@ -522,31 +580,25 @@ static void _pon_interface_indication_cb(bcmolt_oltid olt, bcmolt_msg *msg)
     bcmolt_msg_free(msg);
 }
 
-/* Check if device is connected */
-static bcmos_bool _device_is_connected(bcmolt_oltid olt, bcmolt_devid device)
+static bcmos_errno _create_pon_tm_scheds_and_iwf(bcmolt_devid dev)
 {
-    bcmolt_device_cfg cfg;
-    bcmolt_device_key key = { .device_id = device };
-    bcmos_errno err;
-
-    BCMOLT_CFG_INIT(&cfg, device, key);
-    BCMOLT_FIELD_SET_PRESENT(&cfg.data, device_cfg_data, system_mode);
-    err = bcmolt_cfg_get(olt, &cfg.hdr);
-    return (err == BCM_ERR_OK);
-}
-
-static bcmos_errno _create_pon_tm_scheds(bcmolt_devid dev)
-{
-    bcmolt_topology topo;
-    bcmos_errno err;
+    bcmos_errno err = BCM_ERR_OK;
     int i;
 
-    err = xpon_get_olt_topology(&topo);
-    /* Create TM_SCHED objects for all PONs on the device */
-    for (i = 0; i < topo.topology_maps.len && err == BCM_ERR_OK; i++)
+    /* Create TM_SCHED objects and configure iwf for all PONs on the device */
+    for (i = 0; i < olt_topology.topology_maps.len; i++)
     {
-        if (topo.topology_maps.arr[i].olt_device_id == dev)
+        if (olt_topology.topology_maps.arr[i].olt_device_id == dev)
+        {
             err = xpon_tm_sched_create(BCMOLT_INTERFACE_TYPE_PON, i);
+            if (err != BCM_ERR_OK)
+                break;
+#ifndef BCM_OPEN_SOURCE
+            err = xpon_iwf_create(dev, i, &olt_topology);
+            if (err != BCM_ERR_OK)
+                break;
+#endif
+        }
     }
     return err;
 }
@@ -560,7 +612,10 @@ static void _device_indication_cb(bcmolt_oltid olt, bcmolt_msg *msg)
             {
                 bcmolt_device_connection_complete *cc = (bcmolt_device_connection_complete *)msg;
                 NC_LOG_INFO("Got device.connection_complete(%u) indication\n", cc->key.device_id);
-                _create_pon_tm_scheds(cc->key.device_id);
+                /// workaround. small delay here to avoid race condition in BAL
+                bcmos_usleep(100*1000);
+                ///
+                _create_pon_tm_scheds_and_iwf(cc->key.device_id);
                 if (!num_connected_devices())
                     bbf_xpon_subscribe(sr_session);
                 device_connection_status[cc->key.device_id] = BCMOS_TRUE;
@@ -572,7 +627,7 @@ static void _device_indication_cb(bcmolt_oltid olt, bcmolt_msg *msg)
             {
                 bcmolt_device_disconnection_complete *dc = (bcmolt_device_disconnection_complete *)msg;
                 NC_LOG_INFO("Got device.disconnection_complete/device.connection_failure indication\n");
-                device_connection_status[dc->key.device_id] = BCMOS_TRUE;
+                device_connection_status[dc->key.device_id] = BCMOS_FALSE;
                 if (!num_connected_devices())
                     bbf_xpon_unsubscribe(sr_session);
             }
@@ -639,30 +694,32 @@ bcmos_errno bbf_xpon_module_init(sr_session_ctx_t *srs, struct ly_ctx *ly_ctx)
     const struct lys_module *onu_states_mod;
     const struct lys_module *dhcpr_mod;
     const struct lys_module *bbf_interface_pon_ref_mod;
+    const struct lys_module *obbaa_onu_types_mod;
+    const struct lys_module *obbaa_onu_authentication_mod;
 
     do  {
         ietf_intf_mod = nc_ly_ctx_load_module(ly_ctx, IETF_INTERFACES_MODULE_NAME,
-            NULL, ietf_interfaces_features, BCMOS_TRUE);
+            NULL, all_features, BCMOS_TRUE);
         if (ietf_intf_mod == NULL)
             break;
 
         xponvani_mod = nc_ly_ctx_load_module(ly_ctx, BBF_XPONVANI_MODULE_NAME,
-            NULL, xponvani_features, BCMOS_TRUE);
+            NULL, all_features, BCMOS_TRUE);
         if (xponvani_mod == NULL)
             break;
 
         xpongemtcont_mod = nc_ly_ctx_load_module(ly_ctx, BBF_XPONGEMTCONT_MODULE_NAME,
-            NULL, xpongemtcont_features, BCMOS_TRUE);
+            NULL, all_features, BCMOS_TRUE);
         if (xpongemtcont_mod == NULL)
             break;
 
         l2_forwarding_mod = nc_ly_ctx_load_module(ly_ctx, BBF_L2_FORWARDING_MODULE_NAME,
-            NULL, l2_forwarding_features, BCMOS_TRUE);
+            NULL, all_features, BCMOS_TRUE);
         if (l2_forwarding_mod == NULL)
             break;
 
         ietf_hardware_mod = nc_ly_ctx_load_module(ly_ctx, IETF_HARDWARE_MODULE_NAME,
-            NULL, ietf_hardware_features, BCMOS_TRUE);
+            NULL, all_features, BCMOS_TRUE);
         if (ietf_hardware_mod == NULL)
             break;
 
@@ -672,7 +729,7 @@ bcmos_errno bbf_xpon_module_init(sr_session_ctx_t *srs, struct ly_ctx *ly_ctx)
             break;
 
         bbf_hardware_mod = nc_ly_ctx_load_module(ly_ctx, BBF_HARDWARE_MODULE_NAME,
-            NULL, bbf_hardware_features, BCMOS_FALSE);
+            NULL, all_features, BCMOS_FALSE);
 
         bbf_interface_pon_ref_mod = nc_ly_ctx_load_module(ly_ctx, BBF_INTERFACE_PON_REFERENCE,
             NULL, NULL, BCMOS_FALSE);
@@ -695,6 +752,19 @@ bcmos_errno bbf_xpon_module_init(sr_session_ctx_t *srs, struct ly_ctx *ly_ctx)
         if (dhcpr_mod == NULL)
             break;
 
+#ifdef OB_BAA_DEVICE_ADAPTER_VERSION
+        if (strcmp(OB_BAA_DEVICE_ADAPTER_VERSION, "1.0") && strcmp(OB_BAA_DEVICE_ADAPTER_VERSION, "2.0"))
+        {
+            obbaa_onu_types_mod = nc_ly_ctx_load_module(ly_ctx, BBF_OBBAA_XPON_ONU_TYPES,
+                NULL, all_features, BCMOS_FALSE);
+            if (obbaa_onu_types_mod == NULL)
+                break;
+            obbaa_onu_authentication_mod = nc_ly_ctx_load_module(ly_ctx, BBF_OBBAA_XPON_ONU_AUTHENTICATION,
+                NULL, all_features, BCMOS_FALSE);
+            if (obbaa_onu_authentication_mod == NULL)
+                break;
+        }
+#endif
 #if 0
         /* Reset stored configuration if requested */
         if (!netconf_agent_startup_options_get()->reset_cfg)
@@ -756,7 +826,6 @@ bcmos_errno bbf_xpon_module_start(sr_session_ctx_t *srs, struct ly_ctx *ly_ctx)
 {
     bcmos_errno err = BCM_ERR_OK;
     bcmolt_devid dev;
-    bcmolt_oltid olt = 0;
 
     do  {
         int sr_rc;
@@ -771,19 +840,26 @@ bcmos_errno bbf_xpon_module_start(sr_session_ctx_t *srs, struct ly_ctx *ly_ctx)
         }
 
         //_reset_bal();
-
-        /* Create NNI tm_sched */
-        err = xpon_tm_sched_create(BCMOLT_INTERFACE_TYPE_NNI, 0);
+        /* Read topology */
+        err = xpon_get_olt_topology(&olt_topology);
         if (err != BCM_ERR_OK)
             break;
+
+        /* Create NNI tm_sched objects */
+        for (int i = 0; i < olt_topology.num_switch_ports; i++)
+        {
+            err = xpon_tm_sched_create(BCMOLT_INTERFACE_TYPE_NNI, i);
+            if (err != BCM_ERR_OK)
+                break;
+        }
 
         /* Subscribe to changes if device is already active */
         for (dev = 0; dev < BCM_MAX_DEVS_PER_OLT && err == BCM_ERR_OK; dev++)
         {
-            if (_device_is_connected(olt, dev))
+            if (xpon_device_cfg_get(dev, NULL) == BCM_ERR_OK)
             {
                 device_connection_status[dev] = BCMOS_TRUE;
-                err = _create_pon_tm_scheds(dev);
+                err = _create_pon_tm_scheds_and_iwf(dev);
             }
         }
 

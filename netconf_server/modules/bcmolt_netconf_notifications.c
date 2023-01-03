@@ -39,9 +39,7 @@ extern bcmos_bool xpon_cterm_is_onu_state_notifiable(const char *cterm_name, con
    serial_number_string is 4 ASCII characters vendor id followed by 8 hex numbers
    representing 4-byte vendor-specific id
 */
-bcmos_errno bcmolt_xpon_v_ani_state_change(const char *cterm_name, uint16_t onu_id,
-    const uint8_t *serial_number, uint8_t *registration_id,
-    xpon_onu_presence_flags presence_flags)
+bcmos_errno bcmolt_xpon_v_ani_state_change(const xpon_v_ani_state_info *state_info)
 {
     sr_session_ctx_t *session = bcm_netconf_session_get();
     const struct ly_ctx *ctx = sr_get_context(sr_session_get_connection(session));
@@ -51,17 +49,21 @@ bcmos_errno bcmolt_xpon_v_ani_state_change(const char *cterm_name, uint16_t onu_
     char date_time_string[64];
     char serial_number_string[13];
     const char *presence_state;
+    xpon_onu_presence_flags presence_flags = state_info->presence_flags;
     char notif_xpath[200];
     bcmos_errno err = BCM_ERR_INTERNAL;
+
+    if (state_info->v_ani_name != NULL)
+        presence_flags |= XPON_ONU_PRESENCE_FLAG_V_ANI;
 
     /* Don't send notification if ONU was discovered, but not yet activated and v-ani is present.
        In this case NETCONF server will attempt to activate the ONU, so this discovery state is transitional.
     */
     if (presence_flags == (XPON_ONU_PRESENCE_FLAG_V_ANI | XPON_ONU_PRESENCE_FLAG_ONU) &&
-        (onu_id != XPON_ONU_ID_UNDEFINED))
+        (state_info->onu_id != XPON_ONU_ID_UNDEFINED))
     {
         NC_LOG_INFO("Transient discovery state for ONU %s:%u. NOT sending a state-change notification\n",
-            cterm_name, onu_id);
+            state_info->cterm_name, state_info->onu_id);
         return BCM_ERR_OK;
     }
 
@@ -74,16 +76,21 @@ bcmos_errno bcmolt_xpon_v_ani_state_change(const char *cterm_name, uint16_t onu_
             {
                 presence_state = ((presence_flags & XPON_ONU_PRESENCE_FLAG_ONU_IN_O5) != 0) ?
                     "bbf-xpon-onu-types:onu-present-and-on-intended-channel-termination" :
-                    ((onu_id != XPON_ONU_ID_UNDEFINED) ?
+                    ((state_info->onu_id != XPON_ONU_ID_UNDEFINED) ?
                        "bbf-xpon-onu-types:onu-present-and-v-ani-known-and-o5-failed" :
                        "bbf-xpon-onu-types:onu-present-and-v-ani-known-and-o5-failed-no-onu-id");
 
             }
             else
             {
-                presence_state = ((presence_flags & XPON_ONU_PRESENCE_FLAG_ONU_ACTIVATION_FAILED) != 0) ?
-                    "bbf-xpon-onu-types:onu-present-and-no-v-ani-known-and-o5-failed-undefined" :
-                    "bbf-xpon-onu-types:onu-present-and-no-v-ani-known-and-o5-failed-no-onu-id";
+                if ((presence_flags & XPON_ONU_PRESENCE_FLAG_ONU_ACTIVATION_FAILED) != 0)
+                    presence_state = "bbf-xpon-onu-types:onu-present-and-no-v-ani-known-and-o5-failed-undefined";
+                else if ((presence_flags & XPON_ONU_PRESENCE_FLAG_ONU_IN_O5) != 0)
+                    presence_state = "bbf-xpon-onu-types:onu-present-and-no-v-ani-known-and-in-o5";
+                else if ((presence_flags & XPON_ONU_PRESENCE_FLAG_UNCLAIMED) != 0)
+                    presence_state = "bbf-xpon-onu-types:onu-present-and-no-v-ani-known-and-unclaimed";
+                else
+                    presence_state = "bbf-xpon-onu-types:onu-present-and-no-v-ani-known-and-o5-failed-no-onu-id";
             }
         }
         else
@@ -94,24 +101,26 @@ bcmos_errno bcmolt_xpon_v_ani_state_change(const char *cterm_name, uint16_t onu_
         }
 
         /* Check if the new state has to be notified */
-        if (!xpon_cterm_is_onu_state_notifiable(cterm_name, presence_state))
+        if (!xpon_cterm_is_onu_state_notifiable(state_info->cterm_name, presence_state))
         {
             NC_LOG_INFO("cterm %s  onu_id %u: skipping state transition report into presence state %s\n",
-                cterm_name, onu_id, presence_state);
+                state_info->cterm_name, state_info->onu_id, presence_state);
             return BCM_ERR_OK;
         }
 
         snprintf(notif_xpath, sizeof(notif_xpath),
             "/ietf-interfaces:interfaces-state/interface[name='%s']/"
-            "bbf-xpon:channel-termination/bbf-xpon-onu-state:onu-presence-state-change", cterm_name);
+            "bbf-xpon:channel-termination/bbf-xpon-onu-state:onu-presence-state-change", state_info->cterm_name);
         notif = nc_ly_sub_value_add(ctx, NULL, notif_xpath, NULL, NULL);
         if (notif == NULL)
             break;
 
         snprintf(serial_number_string, sizeof(serial_number_string),
             "%c%c%c%c%02X%02X%02X%02X",
-            serial_number[0], serial_number[1], serial_number[2], serial_number[3],
-            serial_number[4], serial_number[5], serial_number[6], serial_number[7]);
+            state_info->serial_number[0], state_info->serial_number[1],
+            state_info->serial_number[2], state_info->serial_number[3],
+            state_info->serial_number[4], state_info->serial_number[5],
+            state_info->serial_number[6], state_info->serial_number[7]);
         if (nc_ly_sub_value_add(NULL, notif, notif_xpath, "detected-serial-number", serial_number_string) == NULL)
         {
             break;
@@ -125,29 +134,75 @@ bcmos_errno bcmolt_xpon_v_ani_state_change(const char *cterm_name, uint16_t onu_
             break;
         }
 
-        if (nc_ly_sub_value_add(NULL, notif, notif_xpath, "onu-presence-state", (void *)(long)presence_state) == NULL)
+        if (nc_ly_sub_value_add(NULL, notif, notif_xpath, "onu-presence-state", presence_state) == NULL)
         {
             break;
         }
 
-        if (onu_id != XPON_ONU_ID_UNDEFINED)
+        if (state_info->onu_id != XPON_ONU_ID_UNDEFINED)
         {
             char onu_id_str[16];
-            snprintf(onu_id_str, sizeof(onu_id_str), "%u", onu_id);
+            snprintf(onu_id_str, sizeof(onu_id_str), "%u", state_info->onu_id);
             if (nc_ly_sub_value_add(NULL, notif, notif_xpath, "onu-id", onu_id_str) == NULL)
             {
                 break;
             }
         }
 
-        if (registration_id != NULL)
+        if (state_info->registration_id != NULL)
         {
             char registration_id_string[73];
-            nc_bin_to_hex(registration_id, 36, registration_id_string);
+            nc_bin_to_hex(state_info->registration_id, 36, registration_id_string);
             if (nc_ly_sub_value_add(NULL, notif, notif_xpath, "detected-registration-id", registration_id_string) == NULL)
             {
                 break;
             }
+        }
+
+        if (state_info->v_ani_name != NULL &&
+            nc_ly_sub_value_add(NULL, notif, notif_xpath, "v-ani-ref", state_info->v_ani_name) == NULL)
+        {
+            break;
+        }
+
+        if (state_info->management_state != XPON_ONU_MANAGEMENT_STATE_UNSET)
+        {
+            const char *management_state_string = NULL;
+            switch(state_info->management_state)
+            {
+            case XPON_ONU_MANAGEMENT_STATE_RELYING_ON_VOMCI:
+                management_state_string = "bbf-obbaa-xpon-onu-types:relying-on-vomci";
+                break;
+            case XPON_ONU_MANAGEMENT_STATE_EOMCI_BEING_USED:
+                management_state_string = "bbf-obbaa-xpon-onu-types:eomci-being-used";
+                break;
+            case XPON_ONU_MANAGEMENT_STATE_VANI_MANAGEMENT_MODE_MISMATCH:
+                management_state_string = "bbf-obbaa-xpon-onu-types:vani-management-mode-mismatch-with-requested-mode";
+                break;
+            case XPON_ONU_MANAGEMENT_STATE_EOMCI_EXPECTED_BUT_MISSING_ONU_CONFIGURATION:
+                management_state_string = "bbf-obbaa-xpon-onu-types:eomci-expected-but-missing-onu-configuration";
+                break;
+            case XPON_ONU_MANAGEMENT_STATE_UDETERMINED:
+                management_state_string = "bbf-obbaa-xpon-onu-types:undetermined";
+                break;
+            default:
+                break;
+            }
+            if (management_state_string != NULL &&
+                (nc_ly_sub_value_add(NULL, notif, notif_xpath,
+                    "bbf-obbaa-xpon-onu-authentication:determined-onu-management-mode",
+                    management_state_string) == NULL))
+            {
+                break;
+            }
+        }
+
+        if (state_info->loid != NULL &&
+            (nc_ly_sub_value_add(NULL, notif, notif_xpath,
+                "bbf-obbaa-xpon-onu-authentication:detected-loid",
+                (const char *)state_info->loid) == NULL))
+        {
+            break;
         }
 
 #else /* #ifdef TR385_ISSUE2 */
@@ -160,8 +215,10 @@ bcmos_errno bcmolt_xpon_v_ani_state_change(const char *cterm_name, uint16_t onu_
 
         snprintf(serial_number_string, sizeof(serial_number_string),
             "%c%c%c%c%02X%02X%02X%02X",
-            serial_number[0], serial_number[1], serial_number[2], serial_number[3],
-            serial_number[4], serial_number[5], serial_number[6], serial_number[7]);
+            state_info->serial_number[0], state_info->serial_number[1],
+            state_info->serial_number[2], state_info->serial_number[3],
+            state_info->serial_number[4], state_info->serial_number[5],
+            state_info->serial_number[6], state_info->serial_number[7]);
         if (nc_ly_sub_value_add(NULL, notif, notif_xpath, "detected-serial-number", serial_number_string) == NULL)
         {
             break;
@@ -192,29 +249,29 @@ bcmos_errno bcmolt_xpon_v_ani_state_change(const char *cterm_name, uint16_t onu_
             break;
         }
 
-        if (onu_id != XPON_ONU_ID_UNDEFINED)
+        if (state_info->onu_id != XPON_ONU_ID_UNDEFINED)
         {
             char onu_id_str[16];
-            snprintf(onu_id_str, sizeof(onu_id_str), "%u", onu_id);
+            snprintf(onu_id_str, sizeof(onu_id_str), "%u", state_info->onu_id);
             if (nc_ly_sub_value_add(NULL, notif, notif_xpath, "onu-id", onu_id_str) == NULL)
             {
                 break;
             }
         }
 
-        if (registration_id != NULL)
+        if (state_info->registration_id != NULL)
         {
             char registration_id_string[73];
-            nc_bin_to_hex(registration_id, 36, registration_id_string);
+            nc_bin_to_hex(state_info->registration_id, 36, registration_id_string);
             if (nc_ly_sub_value_add(NULL, notif, notif_xpath, "detected-registration-id", registration_id_string) == NULL)
             {
                 break;
             }
         }
 
-        if (cterm_name != NULL)
+        if (state_info->cterm_name != NULL)
         {
-            if (nc_ly_sub_value_add(NULL, notif, notif_xpath, "channel-termination-ref", (void *)(long)cterm_name) == NULL)
+            if (nc_ly_sub_value_add(NULL, notif, notif_xpath, "channel-termination-ref", (void *)(long)state_info->cterm_name) == NULL)
             {
                 break;
             }
@@ -225,7 +282,7 @@ bcmos_errno bcmolt_xpon_v_ani_state_change(const char *cterm_name, uint16_t onu_
         if (nc_sr_event_notif_send(session, notif, notif_xpath) != BCM_ERR_OK)
             break;
 
-        NC_LOG_INFO("Sent '%s' notification for ONU %s on %s\n", presence_state, serial_number_string, cterm_name);
+        NC_LOG_INFO("Sent '%s' notification for ONU %s on %s\n", presence_state, serial_number_string, state_info->cterm_name);
         err = BCM_ERR_OK;
 
     } while (0);
