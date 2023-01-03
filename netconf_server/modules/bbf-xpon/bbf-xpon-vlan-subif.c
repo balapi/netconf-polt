@@ -140,6 +140,17 @@ bcmos_errno xpon_vlan_subif_ingress_rule_get(xpon_vlan_subif *subif, const char 
         rule->flows[i].flow_id = BCM_FLOW_ID_INVALID;
     }
     rule->group_id = BCM_GROUP_ID_INVALID;
+    rule->base_gemport_id = -1;
+    for(int i = 0; i < BCM_SIZEOFARRAY(rule->priority_to_tc); i++)
+    {
+        rule->priority_to_tc[i] = -1;
+    }
+    rule->ds_iwf_flow_id = -1;
+    rule->pon_ni = -1;
+#ifdef MFC_RELAY
+    rule->mfc_acl_id = BCMOLT_ACCESS_CONTROL_ID_INVALID;
+#endif
+
     STAILQ_INSERT_TAIL(&subif->ingress, rule, next);
     *is_added = BCMOS_TRUE;
     *p_rule = rule;
@@ -148,12 +159,110 @@ bcmos_errno xpon_vlan_subif_ingress_rule_get(xpon_vlan_subif *subif, const char 
     return BCM_ERR_OK;
 }
 
+#ifdef MFC_RELAY
+
+static bcmolt_access_control_id mfcr_access_control_id = 1;
+
+/* Map flow classifier */
+static bcmos_errno vlan_map_acl_classifier(bbf_subif_ingress_rule *rule, bcmolt_access_control_cfg *acl_cfg)
+{
+    bcmos_errno err = BCM_ERR_OK;
+    bbf_match_criteria match = rule->match;
+
+    if (match.vlan_tag_match.num_tags &&
+        match.vlan_tag_match.tag_match_types[BBF_TAG_INDEX_TYPE_OUTER] != BBF_VLAN_TAG_MATCH_TYPE_ALL)
+    {
+        const bbf_dot1q_tag *tag;
+
+        BCMOLT_MSG_FIELD_SET(acl_cfg, classifier.pkt_tag_type,
+            (match.vlan_tag_match.tag_match_types[BBF_TAG_INDEX_TYPE_OUTER] == BBF_VLAN_TAG_MATCH_TYPE_UNTAGGED) ?
+                BCMOLT_PKT_TAG_TYPE_UNTAGGED :
+                    (match.vlan_tag_match.num_tags == 1) ?
+                        BCMOLT_PKT_TAG_TYPE_SINGLE_TAG : BCMOLT_PKT_TAG_TYPE_DOUBLE_TAG);
+        if (match.vlan_tag_match.num_tags)
+        {
+            tag = &match.vlan_tag_match.tags[BBF_TAG_INDEX_TYPE_OUTER];
+            if (BBF_DOT1Q_TAG_PROP_IS_SET(tag, vlan_id))
+                BCMOLT_MSG_FIELD_SET(acl_cfg, classifier.o_vid, tag->vlan_id);
+            if (BBF_DOT1Q_TAG_PROP_IS_SET(tag, pbit))
+                BCMOLT_MSG_FIELD_SET(acl_cfg, classifier.o_pbits, tag->pbit);
+        }
+        if (match.vlan_tag_match.num_tags > 1)
+        {
+            tag = &match.vlan_tag_match.tags[BBF_TAG_INDEX_TYPE_INNER];
+            if (BBF_DOT1Q_TAG_PROP_IS_SET(tag, vlan_id))
+                BCMOLT_MSG_FIELD_SET(acl_cfg, classifier.i_vid, tag->vlan_id);
+            if (BBF_DOT1Q_TAG_PROP_IS_SET(tag, pbit))
+                BCMOLT_MSG_FIELD_SET(acl_cfg, classifier.i_pbits, tag->pbit);
+        }
+    }
+    if (match.protocol_match.match_type != BBF_PROTOCOL_MATCH_ANY)
+    {
+        BCMOLT_MSG_FIELD_SET(acl_cfg, classifier.ether_type,
+            xpon_map_protocol_match_to_ether_type(&match.protocol_match));
+    }
+    if (match.dest_ip.ipv4.u32)
+    {
+        BCMOLT_MSG_FIELD_SET(acl_cfg, classifier.dst_ip, match.dest_ip.ipv4);
+    }
+
+    return err;
+}
+
+/* Delete ACL rule for MFC Relay */
+static void vlan_subif_mfc_acl_delete(bcmolt_access_control_id acl_id)
+{
+    bcmolt_access_control_key acl_key = {.id = acl_id};
+    bcmolt_access_control_cfg acl_cfg;
+    BCMOLT_CFG_INIT(&acl_cfg, access_control, acl_key);
+    bcmolt_cfg_clear(netconf_agent_olt_id(), &acl_cfg.hdr);
+}
+
+/* Create ACL rule for MFC Relay */
+static bcmos_errno vlan_subif_mfc_acl_create(sr_session_ctx_t *srs, xpon_vlan_subif *subif, bbf_subif_ingress_rule *rule)
+{
+    bcmolt_access_control_key acl_key = {.id = mfcr_access_control_id++};
+    bcmolt_access_control_cfg acl_cfg;
+    bcmos_errno err;
+
+    do
+    {
+        BCMOLT_CFG_INIT(&acl_cfg, access_control, acl_key);
+        err = vlan_map_acl_classifier(rule, &acl_cfg);
+        if (err != BCM_ERR_OK)
+            break;
+
+        BCMOLT_MSG_FIELD_SET(&acl_cfg, forwarding_action.action, BCMOLT_ACCESS_CONTROL_FWD_ACTION_TYPE_TRAP_TO_HOST);
+        BCMOLT_MSG_FIELD_SET(&acl_cfg, statistics_control, BCMOLT_CONTROL_STATE_ENABLE);
+        BCMOLT_MSG_FIELD_SET(&acl_cfg, cookie, (long)subif->hdr.name);
+        err = bcmolt_cfg_set(netconf_agent_olt_id(), &acl_cfg.hdr);
+        if (err != BCM_ERR_OK)
+        {
+            NC_ERROR_REPLY(srs, NULL, "%s: Failed to create access_control object. Error %s\n",
+                subif->hdr.name, bcmos_strerror(err));
+            break;
+        }
+    } while (0);
+
+    return err;
+}
+
+#endif /* #ifdef MFC_RELAY */
+
 /* delete ingress rule */
 void xpon_vlan_subif_ingress_rule_delete(xpon_vlan_subif *subif, bbf_subif_ingress_rule *rule)
 {
     STAILQ_REMOVE_SAFE(&subif->ingress, rule, bbf_subif_ingress_rule, next);
     if (rule->dhcpr_iface != NULL)
         dhcp_relay_interface_delete(rule->dhcpr_iface);
+#ifdef MFC_RELAY
+    if (rule->mfc_acl_id != BCMOLT_ACCESS_CONTROL_ID_INVALID)
+    {
+        vlan_subif_mfc_acl_delete(rule->mfc_acl_id);
+    }
+    if (rule->mfc_endpoint != NULL)
+        bcmos_free((void *)(long)rule->mfc_endpoint);
+#endif
     bcmos_free(rule);
 }
 
@@ -257,6 +366,22 @@ static bcmos_errno xpon_vlan_subif_apply(sr_session_ctx_t *srs, xpon_vlan_subif 
         if (v_ani_v_enet != NULL)
             err = xpon_create_onu_flows_on_subif(srs, info->subif_lower_layer, info);
     }
+
+#ifdef MFC_RELAY
+    if (err == BCM_ERR_OK)
+    {
+        bbf_subif_ingress_rule *rule, *rule_tmp;
+        STAILQ_FOREACH_SAFE(rule, &info->ingress, next, rule_tmp)
+        {
+            if (rule->mfc_action != BBF_MFC_ACTION_NONE && rule->mfc_endpoint != NULL)
+            {
+                err = vlan_subif_mfc_acl_create(srs, info, rule);
+                if (err != BCM_ERR_OK)
+                    break;
+            }
+        }
+    }
+#endif
 
     return err;
 }
@@ -418,7 +543,37 @@ bcmos_errno xpon_vlan_subif_transaction(sr_session_ctx_t *srs, nc_transact *tr)
                 if (err != BCM_ERR_OK)
                     break;
             }
-
+#ifdef MFC_RELAY
+            else if (strstr(rule_xpath, "control-relay") != NULL)
+            {
+                if (!strcmp(leaf, "action"))
+                {
+                    const char *action = val->data.string_val;
+                    if (action)
+                    {
+                        if (strstr(action, "redirect") != NULL)
+                            ingress_rule->mfc_action = BBF_MFC_ACTION_REDIRECT;
+                        else if (strstr(action, "copy") != NULL)
+                        {
+                            ingress_rule->mfc_action = BBF_MFC_ACTION_COPY;
+                            NC_ERROR_REPLY(srs, rule_xpath, "control-relay COPY action is not supported\n");
+                            err = BCM_ERR_NOT_SUPPORTED;
+                            break;
+                        }
+                        else
+                        {
+                            NC_ERROR_REPLY(srs, rule_xpath, "control-relay action is invalid\n");
+                            err = BCM_ERR_PARM;
+                            break;
+                        }
+                    }
+                }
+                else if (!strcmp(leaf, "resulting-endpoint"))
+                {
+                    ingress_rule->mfc_endpoint = bcmos_strdup(val->data.string_val);
+                }
+            }
+#endif
             /* Got rule */
             XPON_PROP_SET_PRESENT(&changes, vlan_subif, ingress);
         }
@@ -530,6 +685,14 @@ bcmos_errno xpon_vlan_subif_transaction(sr_session_ctx_t *srs, nc_transact *tr)
         xpon_qos_policy_profile_delete(changes.qos_policy_profile);
     if (changes.dhcpr.profile != NULL && changes.dhcpr.profile->hdr.created_by_forward_reference)
         xpon_dhcpr_prof_delete(changes.dhcpr.profile);
+    if (!STAILQ_EMPTY(&changes.ingress))
+    {
+        bbf_subif_ingress_rule *rule, *rule_tmp;
+        STAILQ_FOREACH_SAFE(rule, &changes.ingress, next, rule_tmp)
+        {
+            xpon_vlan_subif_ingress_rule_delete(&changes, rule);
+        }
+    }
 
     if (changes.hdr.being_deleted)
         err = BCM_ERR_OK;
@@ -629,3 +792,136 @@ bcmos_errno xpon_vlan_subif_subif_rule_get_next_match(const bbf_subif_ingress_ru
 
     return BCM_ERR_OK;
 }
+
+#ifdef MFC_RELAY
+bcmos_errno bbf_xpon_get_vsi_and_rule_by_acl_id(bcmolt_access_control_id acl_id,
+    const char **p_vsi_name, const char **p_rule_name, const char **p_endpoint_name)
+{
+    /* Fetch access_control object cookie. It contains a pointer to vsi name */
+    bcmolt_access_control_key acl_key = { .id = acl_id };
+    bcmolt_access_control_cfg acl;
+    const char *vsi_name;
+    xpon_vlan_subif *vsi;
+    bbf_subif_ingress_rule *rule, *rule_tmp;
+    bcmos_errno err;
+
+    BCMOLT_CFG_INIT(&acl, access_control, acl_key);
+    BCMOLT_MSG_FIELD_GET(&acl, cookie);
+    err = bcmolt_cfg_get(netconf_agent_olt_id(), &acl.hdr);
+    if (err != BCM_ERR_OK)
+        return err;
+    if (!acl.data.cookie)
+        return BCM_ERR_NOENT;
+    vsi_name = (const char *)(long)acl.data.cookie;
+
+    err = xpon_vlan_subif_get_by_name(vsi_name, &vsi, NULL);
+    if (err != BCM_ERR_OK)
+        return err;
+
+    /* Go over all rules and find the rule with specified acl_id */
+    STAILQ_FOREACH_SAFE(rule, &vsi->ingress, next, rule_tmp)
+    {
+        if (rule->mfc_acl_id == acl_id)
+            break;
+    }
+    if (rule == NULL)
+        return BCM_ERR_NOENT;
+    *p_vsi_name = vsi_name;
+    *p_rule_name = rule->name;
+    *p_endpoint_name = rule->mfc_endpoint;
+
+    return err;
+}
+
+bcmos_errno bbf_xpon_get_intf_by_vsi_rule_prty(
+    const char *vsi_name, const char *rule_name, uint8_t prty,
+    bcmolt_flow_key *flow_key, bcmolt_flow_intf_ref *intf_ref,
+    bcmolt_service_port_id *svc_port_id)
+{
+    xpon_vlan_subif *vsi;
+    bbf_subif_ingress_rule *rule, *rule_tmp;
+    xpon_obj_hdr *lower;
+    const xpon_gem *gem = NULL;
+    bcmos_errno err;
+    int tc;
+
+    if (vsi_name == NULL || rule_name == NULL)
+        return BCM_ERR_PARM;
+
+    /* Find vsi and ingress rule */
+    err = xpon_vlan_subif_get_by_name(vsi_name, &vsi, NULL);
+    if (err != BCM_ERR_OK)
+        return err;
+
+    STAILQ_FOREACH_SAFE(rule, &vsi->ingress, next, rule_tmp)
+    {
+        if (!strcmp(rule->name, rule_name))
+            break;
+    }
+    if (rule == NULL)
+        return BCM_ERR_NOENT;
+
+    tc = (rule->priority_to_tc[prty] > 0) ? rule->priority_to_tc[prty] : 0;
+    if (rule->flows[tc].flow_id != BCM_FLOW_ID_INVALID)
+    {
+        flow_key->flow_id = rule->flows[tc].flow_id;
+        /* Prelimenary flow_type setting */
+        if ((rule->flows[tc].flow_dir & XPON_FLOW_DIR_MULTICAST) != 0)
+            flow_key->flow_type = BCMOLT_FLOW_TYPE_MULTICAST;
+        gem = rule->flows[tc].gem;
+    }
+
+    /* Find physical interface under the VSI */
+    lower = vsi->subif_lower_layer;
+    while (lower != NULL && lower->obj_type == XPON_OBJ_TYPE_VLAN_SUBIF)
+        lower = ((xpon_vlan_subif *)lower)->subif_lower_layer;
+    if (lower == NULL)
+        return BCM_ERR_INTERNAL;
+    switch(lower->obj_type)
+    {
+        case XPON_OBJ_TYPE_ENET:
+            {
+                xpon_enet *enet = (xpon_enet *)lower;
+                intf_ref->intf_id = enet->intf_id;
+                intf_ref->intf_type = BCMOLT_INTERFACE_TYPE_NNI;
+                if (flow_key->flow_type != BCMOLT_FLOW_TYPE_MULTICAST)
+                    flow_key->flow_type = BCMOLT_FLOW_TYPE_DOWNSTREAM;
+                *svc_port_id = 0;
+                break;
+            }
+
+        case XPON_OBJ_TYPE_V_ANI_V_ENET:
+            {
+                xpon_v_ani_v_enet *v_enet = (xpon_v_ani_v_enet *)lower;
+                if (v_enet->v_ani == NULL)
+                {
+                    err = BCM_ERR_INTERNAL;
+                    break;
+                }
+                intf_ref->intf_id = v_enet->v_ani->pon_ni;
+                intf_ref->intf_type = BCMOLT_INTERFACE_TYPE_PON;
+                if (gem == NULL)
+                {
+                    gem = STAILQ_FIRST(&v_enet->v_ani->gems);
+                    if (gem == NULL)
+                    {
+                        NC_LOG_ERR("No GEM ports provisioned on v-ani %s. Can't inhect at ingress for VSI %s, rule %s\n",
+                            v_enet->v_ani->hdr.name, vsi_name, rule_name);
+                        err = BCM_ERR_PARM;
+                        break;
+                    }
+                }
+                *svc_port_id = gem->gemport_id;
+                flow_key->flow_type = BCMOLT_FLOW_TYPE_UPSTREAM;
+                break;
+            }
+
+        default:
+            NC_LOG_ERR("Unexpected lower interface '%s' of VSI '%s'\n", lower->name, vsi->hdr.name);
+            err = BCM_ERR_INTERNAL;
+            break;
+    }
+
+    return err;
+}
+#endif

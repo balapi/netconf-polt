@@ -40,18 +40,21 @@ static int _client_tx_task_handler(long data)
         if (err != BCM_ERR_OK && err != BCM_ERR_TIMEOUT)
             break;
 
-        OmciPacketEntry *omci_packet = connection->PopPacketFromOnuFromTxQueue();
-        if (omci_packet == nullptr)
-            continue;
-
-        // Convert to gRPC and transmit
-        if (owner->OmciTxToVomci(omci_packet) == BCM_ERR_OK)
+        // Got notification that 1 or more OMCI packets are waiting in the queue.
+        // Drain the queue and send all packets to vOMCI peer
+        OmciPacketEntry *omci_packet;
+        while (!self->destroy_request &&
+            (omci_packet = connection->PopPacketFromOnuFromTxQueue()) != nullptr)
         {
-            ++connection->stats.packets_onu_to_vomci_sent;
-        }
-        else
-        {
-            ++connection->stats.packets_onu_to_vomci_disc;
+            // Convert to gRPC and transmit
+            if (owner->OmciTxToVomci(omci_packet) == BCM_ERR_OK)
+            {
+                ++connection->stats.packets_onu_to_vomci_sent;
+            }
+            else
+            {
+                ++connection->stats.packets_onu_to_vomci_disc;
+            }
         }
     }
     self->destroyed = BCMOS_TRUE;

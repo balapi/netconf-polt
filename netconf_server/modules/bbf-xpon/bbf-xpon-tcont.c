@@ -37,7 +37,7 @@ static xpon_tcont *tcont_array[BCM_MAX_PONS_PER_OLT][MAX_DYN_TCONTS_PER_PON];
 
 #define TCONT_BW_GRANULARITY    16000
 #define TCONT_ROUND_BW_TO_GRANULARITY(_bw)  \
-    (((_bw + TCONT_BW_GRANULARITY - 1) / TCONT_BW_GRANULARITY) * TCONT_BW_GRANULARITY)
+    ((((_bw) + TCONT_BW_GRANULARITY - 1) / TCONT_BW_GRANULARITY) * TCONT_BW_GRANULARITY)
 
 
 /* Get free dynamic tcont index */
@@ -291,31 +291,30 @@ static bcmos_errno _tcont_apply(sr_session_ctx_t *srs, const char *xpath,
         tcont_changes->td_profile : tcont->td_profile;
     uint16_t alloc_id = XPON_PROP_IS_SET(tcont_changes, tcont, alloc_id) ?
         tcont_changes->alloc_id : tcont->alloc_id;
+    xpon_v_ani *v_ani = XPON_PROP_IS_SET(tcont_changes, tcont, v_ani) ?
+        tcont_changes->v_ani : tcont->v_ani;
     bcmos_bool is_provision = BCMOS_FALSE;
     bcmos_errno err = BCM_ERR_OK;
 
     NC_LOG_DBG("tcont %s: applying configuration. %s\n",
         tcont->hdr.name, tcont_changes->hdr.being_deleted ? "CLEAR": "PROVISION");
 
+    if (!tcont_changes->hdr.being_deleted)
+    {
+        /* See if there is enough info to provision
+        - pon_ni
+        - onu_id
+        - td_profile
+        */
+        is_provision = v_ani != NULL && td_prof != NULL &&
+            v_ani->pon_ni < BCM_MAX_PONS_PER_OLT &&
+            v_ani->onu_id < XPON_MAX_ONUS_PER_PON;
+    }
+
     do
     {
         if (tcont->state == XPON_RESOURCE_STATE_NOT_CONFIGURED)
         {
-            xpon_v_ani *v_ani = XPON_PROP_IS_SET(tcont_changes, tcont, v_ani) ?
-                tcont_changes->v_ani : tcont->v_ani;
-
-            if (!tcont_changes->hdr.being_deleted)
-            {
-                /* See if there is enough info to provision
-                - pon_ni
-                - onu_id
-                - td_profile
-                */
-                is_provision = v_ani != NULL && td_prof != NULL &&
-                    v_ani->pon_ni < BCM_MAX_PONS_PER_OLT &&
-                    v_ani->onu_id < XPON_MAX_ONUS_PER_PON;
-            }
-
             /* Not provisioned yet */
             if (is_provision)
             {
@@ -390,7 +389,7 @@ static bcmos_errno _tcont_apply(sr_session_ctx_t *srs, const char *xpath,
             {
                 bcmolt_itupon_alloc_cfg cfg;
                 bcmolt_itupon_alloc_key key = {
-                    .pon_ni = tcont->v_ani->pon_ni,
+                    .pon_ni = tcont->pon_ni,
                     .alloc_id = tcont->alloc_id
                 };
                 BCMOLT_CFG_INIT(&cfg, itupon_alloc, key);
@@ -477,12 +476,17 @@ static bcmos_errno _tcont_attribute_populate(sr_session_ctx_t *srs, xpon_tcont *
         {
             const char *v_ani_name = sr_new_val->data.string_val;
             xpon_obj_hdr *v_ani_hdr = NULL;
-            err = xpon_interface_get_populate(srs, v_ani_name, XPON_OBJ_TYPE_V_ANI, &v_ani_hdr);
+            err = xpon_interface_get_populate(srs, v_ani_name, XPON_OBJ_TYPE_ANY, &v_ani_hdr);
             if (err != BCM_ERR_OK)
             {
-                NC_ERROR_REPLY(srs, iter_xpath, "tcont %s references v-ani %s which doesn't exist\n",
+                NC_ERROR_REPLY(srs, iter_xpath, "tcont %s references interface %s which doesn't exist\n",
                     tcont->hdr.name, v_ani_name);
                 err = BCM_ERR_PARM;
+            }
+            /* tcont can refer v-ani or ani. We are NOT interestind in tconts @ ani */
+            if (v_ani_hdr->obj_type != XPON_OBJ_TYPE_V_ANI)
+            {
+                v_ani_hdr = NULL;
             }
             v_ani = (xpon_v_ani *)v_ani_hdr;
         }

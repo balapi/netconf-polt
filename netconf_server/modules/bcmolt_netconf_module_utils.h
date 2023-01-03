@@ -34,6 +34,7 @@
 #include <bcmos_system.h>
 #include <sysrepo.h>
 #include <libyang/libyang.h>
+#include <sysrepo/version.h>
 #include <b64.h>
 #include <bcmolt_netconf_module_init.h>
 
@@ -46,6 +47,26 @@ extern dev_log_id log_id_netconf;
 #if defined(SYSREPO_LIBYANG_V2) && !defined(SR_ERR_NOMEM)
 #define SR_ERR_NOMEM SR_ERR_NO_MEMORY
 #endif
+
+#if SR_VERSION_MAJOR > 6
+
+#define sr_type_t sr_val_type_t
+
+static inline const struct ly_ctx *sr_get_context(sr_conn_ctx_t *conn)
+{
+    return sr_acquire_context(conn);
+}
+
+static inline int sr_oper_get_items_subscribe(sr_session_ctx_t *session, const char *module_name, const char *path,
+        sr_oper_get_items_cb callback, void *private_data, sr_subscr_options_t opts, sr_subscription_ctx_t **subscription)
+{
+    return sr_oper_get_subscribe(session, module_name, path,
+        callback, private_data, opts, subscription);
+}
+
+#define SR_SUBSCR_CTX_REUSE 0
+
+#endif /* #if SR_VERSION_MAJOR > 6 */
 
 #define NC_LOG_ERR(fmt, args...)   BCM_LOG(ERROR, log_id_netconf, fmt, ##args);
 #define NC_LOG_INFO(fmt, args...)  BCM_LOG(INFO, log_id_netconf, fmt, ##args);

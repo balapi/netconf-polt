@@ -87,7 +87,7 @@ static bcmos_errno polt_cli_onu_add(bcmcli_session *session, const bcmcli_cmd_pa
     uint32_t vendor_specific = (uint32_t)parm[3].value.unumber;
 
     bcmolt_serial_number serial_number = {};
-    strncpy((char *)&serial_number.vendor_id.arr[0], vendor_id, sizeof(serial_number.vendor_id.arr));
+    strncpy((char *)&serial_number.vendor_id.arr[0], vendor_id, sizeof(serial_number.vendor_id.arr) - 1);
     serial_number.vendor_specific.arr[0] = (vendor_specific >> 24) & 0xff;
     serial_number.vendor_specific.arr[1] = (vendor_specific >> 16) & 0xff;
     serial_number.vendor_specific.arr[2] = (vendor_specific >> 8) & 0xff;

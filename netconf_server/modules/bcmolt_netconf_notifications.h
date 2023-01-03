@@ -40,15 +40,47 @@ typedef enum
     XPON_ONU_PRESENCE_FLAG_ONU                       = 0x02,
     XPON_ONU_PRESENCE_FLAG_ONU_IN_O5                 = 0x04,
     XPON_ONU_PRESENCE_FLAG_ONU_ACTIVATION_FAILED     = 0x08,
+    XPON_ONU_PRESENCE_FLAG_UNCLAIMED                 = 0x10,
 } xpon_onu_presence_flags;
 #define XPON_ONU_PRESENCE_FLAGS_DEFINED
 #endif
 
+typedef enum
+{
+    XPON_ONU_MANAGEMENT_STATE_UNSET                  = 0,
+    XPON_ONU_MANAGEMENT_STATE_RELYING_ON_VOMCI,
+    XPON_ONU_MANAGEMENT_STATE_EOMCI_BEING_USED,
+    XPON_ONU_MANAGEMENT_STATE_VANI_MANAGEMENT_MODE_MISMATCH,
+    XPON_ONU_MANAGEMENT_STATE_EOMCI_EXPECTED_BUT_MISSING_ONU_CONFIGURATION,
+    XPON_ONU_MANAGEMENT_STATE_UDETERMINED
+} xpon_onu_management_state;
+
+typedef struct xpon_v_ani_state_info
+{
+    const char *cterm_name;
+    const char *v_ani_name;
+    uint16_t onu_id;
+    const uint8_t *serial_number;
+    const uint8_t *registration_id;
+    xpon_onu_presence_flags presence_flags;
+    xpon_onu_management_state management_state;
+    const uint8_t *loid;
+} xpon_v_ani_state_info;
+
+/* onu-authentication-report action outcome */
+typedef enum
+{
+    XPON_ONU_AUTH_ACTION_STATUS_OK,
+    XPON_ONU_AUTH_ACTION_STATUS_MANAGEMENT_MODE_MISMATCH_WITH_V_ANI,
+    XPON_ONU_AUTH_ACTION_STATUS_NAME_MISMATCH_WITH_V_ANI,
+    XPON_ONU_AUTH_ACTION_STATUS_UNDETERMINED_ERROR,
+
+    XPON_ONU_AUTH_ACTION_STATUS__NUM_OF,
+} xpon_onu_auth_action_status;
+
 /* change onu state change event
    serial_number is in 8 byte binary format.
 */
-bcmos_errno bcmolt_xpon_v_ani_state_change(const char *cterm_name, uint16_t onu_id,
-    const uint8_t *serial_number, uint8_t *registration_id,
-    xpon_onu_presence_flags presence_flags);
+bcmos_errno bcmolt_xpon_v_ani_state_change(const xpon_v_ani_state_info *state_info);
 
 #endif

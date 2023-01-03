@@ -76,6 +76,10 @@ void xpon_v_ani_v_enet_delete(xpon_v_ani_v_enet *iface)
     bcmos_mutex_lock(&config_lock);
     xpon_unlink(&iface->linked_if);
     STAILQ_REMOVE_SAFE(&v_ani_v_enet_list, &iface->hdr, xpon_obj_hdr, next);
+    if (iface->v_ani)
+    {
+        STAILQ_REMOVE_SAFE(&iface->v_ani->v_anis, iface, xpon_v_ani_v_enet, next);
+    }
     STAILQ_FOREACH_SAFE(subif, &iface->subifs, next, subif_tmp)
     {
         xpon_vlan_subif_delete(subif);
@@ -99,6 +103,17 @@ static bcmos_errno xpon_v_ani_v_enet_apply(sr_session_ctx_t *srs, xpon_v_ani_v_e
     if (err == BCM_ERR_OK && !changes->hdr.being_deleted)
     {
         /* Update stored configuration */
+        if (changes->v_ani != info->v_ani)
+        {
+            if (info->v_ani)
+            {
+                STAILQ_REMOVE_SAFE(&info->v_ani->v_anis, info, xpon_v_ani_v_enet, next);
+            }
+            if (changes->v_ani)
+            {
+                STAILQ_INSERT_TAIL(&changes->v_ani->v_anis, info, next);
+            }
+        }
         XPON_PROP_COPY(changes, info, v_ani_v_enet, v_ani);
         changes->v_ani = NULL;
     }
@@ -243,12 +258,12 @@ int xpon_v_ani_v_enet_state_get_cb(sr_session_ctx_t *session, const char *xpath,
 
     /* Find interface record */
     bcmos_mutex_lock(&config_lock);
-
     if (xpon_object_get(keyname, &hdr) == BCM_ERR_OK &&
         hdr->obj_type == XPON_OBJ_TYPE_V_ANI_V_ENET)
     {
         sr_rc = xpon_v_ani_v_enet_state_populate1(session, xpath, parent, (xpon_v_ani_v_enet *)hdr);
     }
+    bcmos_mutex_unlock(&config_lock);
 
     return sr_rc;
 }

@@ -66,9 +66,10 @@ typedef struct
 bcmos_errno sim_tr451_vendor_rx_cfg_set(const tr451_polt_sim_rx_cfg *cfg);
 
 /* Report ONU discovered */
-bcmos_errno sim_tr451_vendor_onu_added(const char *cterm, uint16_t onu_id,
-   const tr451_polt_onu_serial_number *serial, uint8_t *registration_id,
-   xpon_onu_presence_flags flags);
+bcmos_errno sim_tr451_vendor_onu_added(const char *cterm, const char *v_ani_name,
+   uint16_t onu_id, const tr451_polt_onu_serial_number *serial, uint8_t *registration_id,
+   xpon_onu_presence_flags flags, xpon_onu_management_state management_state,
+   const uint8_t *loid);
 
 /* Report ONU removed */
 bcmos_errno sim_tr451_vendor_onu_removed(const char *cterm, uint16_t onu_id,

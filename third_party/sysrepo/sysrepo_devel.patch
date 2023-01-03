@@ -1,0 +1,19 @@
+diff -Naur sysrepo-2.1.84.org/CMakeLists.txt sysrepo-2.1.84/CMakeLists.txt
+--- sysrepo-2.1.84.org/CMakeLists.txt	2022-07-26 16:48:44.000000000 +1000
++++ sysrepo-2.1.84/CMakeLists.txt	2022-07-27 11:07:28.988338510 +1000
+@@ -339,6 +339,7 @@
+ endif()
+ 
+ # libsystemd
++if(NOT SR_DISABLE_SYSTEMD)
+ find_package(LibSystemd)
+ if(LIBSYSTEMD_FOUND)
+     set(SR_HAVE_SYSTEMD 1)
+@@ -348,6 +349,7 @@
+ else()
+     message(WARNING "Disabling sysrepo-plugind systemd support because libsystemd was not found.")
+ endif()
++endif()
+ 
+ # pthread
+ set(CMAKE_THREAD_PREFER_PTHREAD TRUE)

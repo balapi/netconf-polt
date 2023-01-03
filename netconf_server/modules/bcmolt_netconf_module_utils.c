@@ -757,7 +757,12 @@ bcmos_errno nc_sr_event_notif_send(sr_session_ctx_t *srs, struct lyd_node *notif
 {
     int sr_rc;
 
-    sr_rc = sr_event_notif_send_tree(srs, notif
+#if SR_VERSION_MAJOR > 6
+    sr_rc = sr_notif_send_tree(
+#else
+    sr_rc = sr_event_notif_send_tree(
+#endif
+        srs, notif
 #ifdef SYSREPO_LIBYANG_V2
                 , 0, 0
 #endif

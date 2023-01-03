@@ -361,7 +361,7 @@ bcmos_errno bcm_tr451_channel_termination_mapper_add(const char *channel_termina
     };
     const channel_term_record *p_rec;
 
-    strncpy((char *)hash_key, channel_termination_name, sizeof(hash_key));
+    strncpy((char *)hash_key, channel_termination_name, sizeof(hash_key) - 1);
     p_rec = (channel_term_record *)hash_table_get(channel_term_hash, hash_key);
     if (p_rec != NULL)
     {
@@ -395,7 +395,7 @@ bcmos_errno bcm_tr451_channel_termination_mapper_get_id_by_name(const char *name
 
     if (name == NULL)
         return BCM_ERR_PARM;
-    strncpy((char *)hash_key, name, sizeof(hash_key));
+    strncpy((char *)hash_key, name, sizeof(hash_key) - 1);
     p_rec = (channel_term_record *)hash_table_get(channel_term_hash, hash_key);
     if (p_rec == NULL)
         return BCM_ERR_NOENT;

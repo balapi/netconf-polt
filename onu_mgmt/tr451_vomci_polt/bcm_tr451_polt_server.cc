@@ -162,16 +162,19 @@ Status BcmPoltServer::OmciServiceMessage::ListenForVomciRx(
         if (err != BCM_ERR_OK && err != BCM_ERR_TIMEOUT)
             break;
 
-        OmciPacketEntry *omci_packet = conn->PopPacketFromOnuFromTxQueue();
-        if (omci_packet == nullptr)
-            continue;
+        // Got notification that 1 or more OMCI packets are waiting in the queue.
+        // Drain the queue and send all packets to vOMCI peer
+        OmciPacketEntry *omci_packet;
+        while (!context->IsCancelled() && !parent_->stopping &&
+            (omci_packet = conn->PopPacketFromOnuFromTxQueue()) != nullptr)
+        {
+            // Send to vOMCI peer
+            VomciMessage tx_msg;
+            tx_msg.set_allocated_omci_packet_msg(omci_packet);
+            writer->Write(tx_msg);
 
-        // Send to vOMCI peer
-        VomciMessage tx_msg;
-        tx_msg.set_allocated_omci_packet_msg(omci_packet);
-        writer->Write(tx_msg);
-
-        ++conn->stats.packets_onu_to_vomci_sent;
+            ++conn->stats.packets_onu_to_vomci_sent;
+        }
     }
     conn->setConnected(false);
     BCM_POLT_LOG(INFO, "%s: Forwarding OMCI messages from pOLT to vOMCI %s disabled\n",

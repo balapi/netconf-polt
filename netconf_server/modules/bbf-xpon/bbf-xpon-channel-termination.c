@@ -53,7 +53,7 @@ bcmos_errno xpon_cterm_get_by_name(const char *name, xpon_channel_termination **
     *p_cterm = (xpon_channel_termination *)obj;
     if (is_added != NULL && *is_added)
     {
-        (*p_cterm)->pon_ni = BCMOLT_INTERFACE_ID_INVALID;
+        (*p_cterm)->pon_ni = BCMOLT_INTERFACE_UNDEFINED;
         STAILQ_INIT(&(*p_cterm)->notifiable_presence_states);
         STAILQ_INSERT_TAIL(&cterm_list, obj, next);
         NC_LOG_INFO("channel-termination %s added\n", name);
@@ -181,7 +181,7 @@ static bcmos_errno _xpon_cterm_pon_disable(xpon_channel_termination *cterm)
     bcmolt_pon_interface_set_pon_interface_state set_state;
     bcmos_errno err;
 
-    if (cterm->pon_ni == BCMOLT_INTERFACE_ID_INVALID || cterm->admin_state != XPON_ADMIN_STATE_ENABLED)
+    if (cterm->pon_ni == BCMOLT_INTERFACE_UNDEFINED || cterm->admin_state != XPON_ADMIN_STATE_ENABLED)
         return BCM_ERR_OK;
 
     BCMOLT_OPER_INIT(&set_state, pon_interface, set_pon_interface_state, key);
@@ -194,7 +194,7 @@ static bcmos_errno _xpon_cterm_pon_disable(xpon_channel_termination *cterm)
 static bcmos_errno xpon_cterm_apply(sr_session_ctx_t *srs,
     xpon_channel_termination *cterm, xpon_channel_termination *cterm_changes)
 {
-    bcmolt_interface pon_ni = (cterm->pon_ni != BCMOLT_INTERFACE_ID_INVALID) ? cterm->pon_ni : cterm_changes->pon_ni;
+    bcmolt_interface pon_ni = (cterm->pon_ni != BCMOLT_INTERFACE_UNDEFINED) ? cterm->pon_ni : cterm_changes->pon_ni;
     bcmolt_pon_interface_key key;
     bcmolt_pon_interface_cfg pon_cfg;
     xpon_channel_pair *cpair = cterm_changes->channel_pair_ref ?
@@ -206,7 +206,7 @@ static bcmos_errno xpon_cterm_apply(sr_session_ctx_t *srs,
 
     do
     {
-        if (pon_ni == BCMOLT_INTERFACE_ID_INVALID)
+        if (pon_ni == BCMOLT_INTERFACE_UNDEFINED)
         {
             NC_ERROR_REPLY(srs, NULL, "channel-termination %s: port-layer-if must be set\n",
                 cterm->hdr.name);
@@ -516,6 +516,8 @@ static int xpon_cterm_state_populate1(sr_session_ctx_t *session, const char *xpa
 {
     const struct ly_ctx *ctx = sr_get_context(sr_session_get_connection(session));
 
+    *parent = nc_ly_sub_value_add(ctx, *parent, xpath,
+        "type", "bbf-xpon-if-type:channel-termination");
     *parent = nc_ly_sub_value_add(ctx, *parent, xpath,
         "admin-status",
         (XPON_PROP_IS_SET(cterm, cterm, admin_state) && (cterm->admin_state == XPON_ADMIN_STATE_ENABLED))?

@@ -1,0 +1,270 @@
+module bbf-obbaa-xpon-onu-authentication {
+  yang-version 1.1;
+  namespace "urn:bbf:yang:obbaa:xpon-onu-authentication";
+  prefix baa-xpon-onu-auth;
+
+  import ietf-interfaces {
+    prefix if;
+  }
+
+  import bbf-xpon-types {
+    prefix bbf-xpon-types;
+  }
+
+  import bbf-xpon {
+    prefix bbf-xpon;
+  }
+
+  import bbf-xpon-onu-state {
+   prefix bbf-xpon-onu-s;
+  }   
+
+  import bbf-yang-types {
+    prefix bbf-yang;
+  }
+
+  import bbf-xpon-if-type {
+    prefix bbf-xponift;
+  }
+
+  import bbf-obbaa-xpon-onu-types {
+    prefix baa-xpon-onu-types;
+  }
+  
+  organization
+    "Broadband Forum <https://www.broadband-forum.org>
+     Fiber Access Networks Work Area";
+  contact
+     "Comments or questions about this Broadband Forum YANG module
+     should be directed to <mailto:obbaa-leaders@broadband-forum.org>.
+    ";
+
+  description
+    "This module contains a collection of YANG definitions for
+     supporting the Broadband Forum requirements on management of
+     ITU-T Passive Optical Network (PON) interfaces as defined in
+     ITU-T G.984.x, G.987.x, ITU-T G.989.x and ITU-T G.9807.x. As
+     such, this module is specific to access network equipment (e.g.,
+     BBF-specified Access Nodes and FTTdp DPUs).
+
+     Specifically, this module defines state data and notifications
+     related to the authentication of Optical Network Units (ONUs) 
+     and how to determine whether an ONU is to be managed by an OMCI
+     function embedded in the OLT (eOMCI) or by a virtualized OMCI 
+     function (vOMCI).
+
+     Copyright 2021 Broadband Forum
+     
+     Licensed under the Apache License, Version 2.0 (the \"License\");
+     you may not use this file except in compliance with the License.
+     You may obtain a copy of the License at
+     
+     http://www.apache.org/licenses/LICENSE-2.0
+     Unless required by applicable law or agreed to in writing, software
+     distributed under the License is distributed on an \"AS IS\" BASIS,
+     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     See the License for the specific language governing permissions and
+     limitations under the License.";
+
+  revision 2021-11-10 {
+    description
+       "Initial revision.";
+    reference
+       "broadband_forum";
+  }
+
+
+//
+// Augments 
+//
+
+  augment "/if:interfaces-state/if:interface/"
+        + "bbf-xpon:channel-termination/"
+        + "bbf-xpon-onu-s:onus-present-on-local-channel-termination/"
+        + "bbf-xpon-onu-s:onu" {
+    description
+      "Augment the list of Optical Network Units (ONUs) present 
+       on the channel termination with the LOID that could be 
+       detected from the ONUs.";
+    leaf detected-loid {
+      type string {
+        length "1..24";
+      }
+      description
+        "The LOID value which the Optical Line Termination (OLT)
+         could fetched from the Optical Network Unit (ONU). 
+         This leaf is not present if the ONU has not provided 
+         any LOID to the OLT. LOID may be useful in identifying 
+         a particular ONU installed at a particular location.";
+      reference
+        "ITU-T G.988 Clause 9.1.1 
+         WT-489";
+    }
+    leaf determined-onu-management-mode {
+      type identityref {
+        base baa-xpon-onu-types:onu-management-state-base;
+      }
+      description
+        "The management mode of the Optical Network Unit (ONU) as
+         best currently determined by the Optical Line Termination 
+         (OLT).";
+      reference
+        "WT-489";
+    }
+  }
+ 
+  augment "/if:interfaces-state/if:interface"
+        + "/bbf-xpon:channel-termination"
+        + "/bbf-xpon-onu-s:onu-presence-state-change" {
+    description
+      "Adds to the onu-presence-state-change notification the 
+       Optical Network Unit (ONU) management mode as determined by
+       the OLT, ideally discriminating between eOMCI and vOMCI.";
+    leaf determined-onu-management-mode {
+      type identityref {
+        base baa-xpon-onu-types:onu-management-state-base;
+      }
+      description
+        "The management mode of the Optical Network Unit (ONU) as
+         best currently determined by the Optical Line Termination 
+         (OLT).";
+      reference
+        "WT-489";
+    }
+    leaf detected-loid {
+      type string {
+        length "1..24";
+      }
+      description
+        "The LOID value which the Optical Line
+         Termination (OLT) has fetched from the Optical Network
+         Unit (ONU). This leaf is not present if the ONU has not
+         provided any LOID to the OLT. LOID can be useful in 
+         identifying a particular ONU installed at a particular 
+         location.";
+      reference
+        "ITU-T G.988 Clause 9.1.1 
+         WT-489";
+    }
+  }
+
+  augment "/if:interfaces-state/if:interface"
+        + "/bbf-xpon:channel-termination" {
+    description
+      "Adds to the channel termination a YANG ACTION to tell 
+       the Optical Line Termination (OLT) the authentication 
+       result for an ONU that has shown-up on the Optical 
+       Network Unit (ONU). In case the ONU has been successfully 
+       authenticated, the YANG action can also provide the 
+       requirement from the YANG ACTION issuer (typically the 
+       Management Plane) about how this ONU should be managed.";
+
+    action onu-authentication-report {
+      description
+        "This YANG ACTION tells the Optical Line Termination 
+        (OLT) the authentication result for an ONU that has 
+        shown-up on the Optical Network Unit (ONU). In case
+        the ONU has been successfully authenticated, the YANG 
+        ACTION SHOULD also provide the 'requested-onu-management-mode'
+        parameter reflecting the requirement from the YANG 
+        ACTION issuer (typically the Management Plane) about
+        how this ONU should be managed, in particular 
+        discriminating between eOMCI and vOMCI. If the 
+        'requested-onu-management-mode' parameter is provided, 
+        the OLT SHOULD check it with the vANI
+        'determined-onu-management-mode' when configured.
+        Per RFC 6241, if the invocation of this action is 
+        unsuccessful the action will be replied with an error
+        and the 'error-app-tag' and 'error-message' in the 
+        <rpc-error> element returned by the server are to 
+        be populated as follows:
+
+          error-app-tag: A string in the form
+                         <module-name>:<identity> where <identity> is 
+                         a string version of an identity value based 
+                         on the identity 
+                         'baa-xpon-onu-types:action-error-tag' that
+                         describes the reason the error occurred and
+                         <module-name> is the name of the module in 
+                         which the identity is defined.
+
+          error-message: A text string describing the cause of the 
+                         error when either no defined reason exists 
+                         or additional information is available 
+                         beyond that defined by the tag itself; it is
+                         a string suitable for human display.";
+      
+      input {
+        leaf serial-number {
+          type bbf-xpon-types:onu-serial-number;
+          mandatory true;
+          description
+            "The serial number of the Optical Network Unit (ONU) 
+             for which the result of the authentication is 
+             reported. This serial number should correspond 
+             to an ONU present on the channel termination.";
+          reference
+            "ITU-T G.984.3, clause 9.2.4.1
+             ITU-T G.987.3, clause 11.3.3.2
+             ITU-T G.9807.1, clauses C11.2.6.1, C11.2.6.2 and
+             C11.3.4.1
+             ITU-T G.989.3, clauses 11.2.6.1, 11.2.6.2 and 11.3.4.1.";
+        }
+        leaf authentication-successful {
+          type boolean;  
+          description
+            "This reports whether the YANG ACTION issuer could 
+             authenticate or not the ONU identified by the 
+             'serial-number' input parameter. If the authentication 
+             was successful the 'v-ani' input parameter MUST be 
+             provided.";
+          reference
+            "WT-489";
+        }
+        leaf v-ani {
+          type if:interface-ref;
+          must "derived-from-or-self(/if:interfaces"
+             + "/if:interface[if:name=current()]/if:type,"
+             + "'bbf-xponift:v-ani')"{
+            error-message
+              "Must reference a configured virtual Access Network 
+               Interface (vANI) virtual ANI interface.";
+          }
+          description
+            "When the YANG ACTION reports a successful Optical
+             Network Unit (ONU) authentication, this YANG leaf 
+             MUST be present and indicates the virtual Access 
+             Network Interface (vANI) corresponding to this ONU.";
+        }
+        leaf onu-name {
+          type bbf-yang:string-ascii64;  
+          description
+            "When the YANG ACTION reports a successful Optical
+             Network Unit (ONU) authentication, this YANG leaf 
+             MUST be present to indicate the name of the ONU device 
+             as known by the Issuer of the YANG ACTION. 
+             If an 'onu-name' is configured in the Optical Line 
+             Termination (OLT) on the reported virtual Access 
+             Network Interface (vANI), this YANG leaf should match
+             it, as a matter of network consistency verification.";
+          reference
+            "WT-489";
+        }
+        leaf requested-onu-management-mode {
+          type identityref {
+            base baa-xpon-onu-types:onu-management-config-base;
+          }
+          description
+            "When the YANG ACTION reports a successful Optical
+             Network Unit (ONU) authentication this YANG leaf
+             indicates - when present - the ONU management mode 
+             that the YANG ACTION issuer, typically the Management 
+             Plane, requires to be applied on the ONU, in particular
+             whether eOMCI or vOMCI must be applied to the ONU.";
+          reference
+            "WT-489";
+        }
+      }
+    }
+  }
+}
