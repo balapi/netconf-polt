@@ -3329,6 +3329,190 @@ bcm_omci_me_protocol_properties me_and_attr_properties_arr[BCM_OMCI_OBJ_ID__NUM_
         .num_properties = BCM_OMCI_ENHANCED_SECURITY_CONTROL_CFG_ID__NUM_OF,
         .me_supported_action_mask = BCM_OMCI_ME_ACTION_MASK(BCM_OMCI_MSG_TYPE_SET) | BCM_OMCI_ME_ACTION_MASK(BCM_OMCI_MSG_TYPE_GET) | BCM_OMCI_ME_ACTION_MASK(BCM_OMCI_MSG_TYPE_GET_NEXT),
     },
+    [BCM_OMCI_TRAFFIC_DESCRIPTOR_OBJ_ID] =
+    {
+        .me_attr_properties =
+        {
+            [BCM_OMCI_TRAFFIC_DESCRIPTOR_CFG_ID_CIR] =
+            {
+                .attr_name = "cir",
+                .attr_access_type  = ATTR_ACCESS_TYPE_READ | ATTR_ACCESS_TYPE_WRITE | ATTR_ACCESS_TYPE_SET_BY_CREATE,
+                .attr_present_type = ATTR_TYPE_OPTIONAL,
+                .attr_len = 4
+            },
+            [BCM_OMCI_TRAFFIC_DESCRIPTOR_CFG_ID_PIR] =
+            {
+                .attr_name = "pir",
+                .attr_access_type  = ATTR_ACCESS_TYPE_READ | ATTR_ACCESS_TYPE_WRITE | ATTR_ACCESS_TYPE_SET_BY_CREATE,
+                .attr_present_type = ATTR_TYPE_OPTIONAL,
+                .attr_len = 4
+            },
+            [BCM_OMCI_TRAFFIC_DESCRIPTOR_CFG_ID_CBS] =
+            {
+                .attr_name = "cbs",
+                .attr_access_type  = ATTR_ACCESS_TYPE_READ | ATTR_ACCESS_TYPE_WRITE | ATTR_ACCESS_TYPE_SET_BY_CREATE,
+                .attr_present_type = ATTR_TYPE_OPTIONAL,
+                .attr_len = 4
+            },
+            [BCM_OMCI_TRAFFIC_DESCRIPTOR_CFG_ID_PBS] =
+            {
+                .attr_name = "pbs",
+                .attr_access_type  = ATTR_ACCESS_TYPE_READ | ATTR_ACCESS_TYPE_WRITE | ATTR_ACCESS_TYPE_SET_BY_CREATE,
+                .attr_present_type = ATTR_TYPE_OPTIONAL,
+                .attr_len = 4
+            },
+            [BCM_OMCI_TRAFFIC_DESCRIPTOR_CFG_ID_COLOUR_MODE] =
+            {
+                .attr_name = "colour_mode",
+                .attr_access_type  = ATTR_ACCESS_TYPE_READ | ATTR_ACCESS_TYPE_WRITE | ATTR_ACCESS_TYPE_SET_BY_CREATE,
+                .attr_present_type = ATTR_TYPE_OPTIONAL,
+                .attr_len = 1
+            },
+            [BCM_OMCI_TRAFFIC_DESCRIPTOR_CFG_ID_ING_COLOR_MARKING] =
+            {
+                .attr_name = "ing_color_marking",
+                .attr_access_type  = ATTR_ACCESS_TYPE_READ | ATTR_ACCESS_TYPE_WRITE | ATTR_ACCESS_TYPE_SET_BY_CREATE,
+                .attr_present_type = ATTR_TYPE_OPTIONAL,
+                .attr_len = 1
+            },
+            [BCM_OMCI_TRAFFIC_DESCRIPTOR_CFG_ID_EG_COLOR_MARKING] =
+            {
+                .attr_name = "eg_color_marking",
+                .attr_access_type  = ATTR_ACCESS_TYPE_READ | ATTR_ACCESS_TYPE_WRITE | ATTR_ACCESS_TYPE_SET_BY_CREATE,
+                .attr_present_type = ATTR_TYPE_OPTIONAL,
+                .attr_len = 1
+            },
+            [BCM_OMCI_TRAFFIC_DESCRIPTOR_CFG_ID_METER_TYPE] =
+            {
+                .attr_name = "meter_type",
+                .attr_access_type  = ATTR_ACCESS_TYPE_READ | ATTR_ACCESS_TYPE_WRITE | ATTR_ACCESS_TYPE_SET_BY_CREATE,
+                .attr_present_type = ATTR_TYPE_OPTIONAL,
+                .attr_len = 1
+            },
+        },
+        .num_properties = BCM_OMCI_TRAFFIC_DESCRIPTOR_CFG_ID__NUM_OF,
+        .me_supported_action_mask = BCM_OMCI_ME_ACTION_MASK(BCM_OMCI_MSG_TYPE_CREATE) | BCM_OMCI_ME_ACTION_MASK(BCM_OMCI_MSG_TYPE_DELETE) | BCM_OMCI_ME_ACTION_MASK(BCM_OMCI_MSG_TYPE_SET) | BCM_OMCI_ME_ACTION_MASK(BCM_OMCI_MSG_TYPE_GET),
+    },
+    [BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_OBJ_ID] =
+    {
+        .me_attr_properties =
+        {
+            [BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_INTERVAL_END_TIME] =
+            {
+                .attr_name = "interval_end_time",
+                .attr_access_type  = ATTR_ACCESS_TYPE_READ,
+                .attr_present_type = ATTR_TYPE_MANDATORY,
+                .attr_len = 1
+            },
+            [BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_CONTROL_BLOCK] =
+            {
+                .attr_name = "control_block",
+                .attr_access_type  = ATTR_ACCESS_TYPE_READ | ATTR_ACCESS_TYPE_WRITE | ATTR_ACCESS_TYPE_SET_BY_CREATE,
+                .attr_present_type = ATTR_TYPE_MANDATORY,
+                .attr_len = 16
+            },
+            [BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_DROP_EVENTS] =
+            {
+                .attr_name = "drop_events",
+                .attr_access_type  = ATTR_ACCESS_TYPE_READ,
+                .attr_present_type = ATTR_TYPE_MANDATORY,
+                .attr_len = 8
+            },
+            [BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_OCTETS] =
+            {
+                .attr_name = "octets",
+                .attr_access_type  = ATTR_ACCESS_TYPE_READ,
+                .attr_present_type = ATTR_TYPE_MANDATORY,
+                .attr_len = 8
+            },
+            [BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_FRAMES] =
+            {
+                .attr_name = "frames",
+                .attr_access_type  = ATTR_ACCESS_TYPE_READ,
+                .attr_present_type = ATTR_TYPE_MANDATORY,
+                .attr_len = 8
+            },
+            [BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_BROADCAST_FRAMES] =
+            {
+                .attr_name = "broadcast_frames",
+                .attr_access_type  = ATTR_ACCESS_TYPE_READ,
+                .attr_present_type = ATTR_TYPE_MANDATORY,
+                .attr_len = 8
+            },
+            [BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_MULTICAST_FRAMES] =
+            {
+                .attr_name = "multicast_frames",
+                .attr_access_type  = ATTR_ACCESS_TYPE_READ,
+                .attr_present_type = ATTR_TYPE_MANDATORY,
+                .attr_len = 8
+            },
+            [BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_CRC_ERRORED_FRAMES] =
+            {
+                .attr_name = "crc_errored_frames",
+                .attr_access_type  = ATTR_ACCESS_TYPE_READ,
+                .attr_present_type = ATTR_TYPE_MANDATORY,
+                .attr_len = 8
+            },
+            [BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_UNDERSIZE_FRAMES] =
+            {
+                .attr_name = "undersize_frames",
+                .attr_access_type  = ATTR_ACCESS_TYPE_READ,
+                .attr_present_type = ATTR_TYPE_MANDATORY,
+                .attr_len = 8
+            },
+            [BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_OVERSIZE_FRAMES] =
+            {
+                .attr_name = "oversize_frames",
+                .attr_access_type  = ATTR_ACCESS_TYPE_READ,
+                .attr_present_type = ATTR_TYPE_MANDATORY,
+                .attr_len = 8
+            },
+            [BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_FRAMES_64OCTETS] =
+            {
+                .attr_name = "frames_64octets",
+                .attr_access_type  = ATTR_ACCESS_TYPE_READ,
+                .attr_present_type = ATTR_TYPE_MANDATORY,
+                .attr_len = 8
+            },
+            [BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_FRAMES_65_TO_127_OCTETS] =
+            {
+                .attr_name = "frames_65_to_127_octets",
+                .attr_access_type  = ATTR_ACCESS_TYPE_READ,
+                .attr_present_type = ATTR_TYPE_MANDATORY,
+                .attr_len = 8
+            },
+            [BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_FRAMES_128_TO_255_OCTETS] =
+            {
+                .attr_name = "frames_128_to_255_octets",
+                .attr_access_type  = ATTR_ACCESS_TYPE_READ,
+                .attr_present_type = ATTR_TYPE_MANDATORY,
+                .attr_len = 8
+            },
+            [BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_FRAMES_256_TO_511_OCTETS] =
+            {
+                .attr_name = "frames_256_to_511_octets",
+                .attr_access_type  = ATTR_ACCESS_TYPE_READ,
+                .attr_present_type = ATTR_TYPE_MANDATORY,
+                .attr_len = 8
+            },
+            [BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_FRAMES_512_TO_1023_OCTETS] =
+            {
+                .attr_name = "frames_512_to_1023_octets",
+                .attr_access_type  = ATTR_ACCESS_TYPE_READ,
+                .attr_present_type = ATTR_TYPE_MANDATORY,
+                .attr_len = 8
+            },
+            [BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_FRAMES_1024_TO_1518_OCTETS] =
+            {
+                .attr_name = "frames_1024_to_1518_octets",
+                .attr_access_type  = ATTR_ACCESS_TYPE_READ,
+                .attr_present_type = ATTR_TYPE_MANDATORY,
+                .attr_len = 8
+            },
+        },
+        .num_properties = BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID__NUM_OF,
+        .me_supported_action_mask = BCM_OMCI_ME_ACTION_MASK(BCM_OMCI_MSG_TYPE_CREATE) | BCM_OMCI_ME_ACTION_MASK(BCM_OMCI_MSG_TYPE_DELETE) | BCM_OMCI_ME_ACTION_MASK(BCM_OMCI_MSG_TYPE_SET) | BCM_OMCI_ME_ACTION_MASK(BCM_OMCI_MSG_TYPE_GET),
+    },
 };
 
 char *bcm_omci_me_class_val_str[] =
@@ -3376,6 +3560,8 @@ char *bcm_omci_me_class_val_str[] =
     [BCM_OMCI_ME_CLASS_VAL_POTS_UNI]  "pots_uni",
     [BCM_OMCI_ME_CLASS_VAL_CIRCUIT_PACK]  "circuit_pack",
     [BCM_OMCI_ME_CLASS_VAL_ENHANCED_SECURITY_CONTROL]  "enhanced_security_control",
+    [BCM_OMCI_ME_CLASS_VAL_TRAFFIC_DESCRIPTOR]  "traffic_descriptor",
+    [BCM_OMCI_ME_CLASS_VAL_ETH_FRAME_EXTENDED_PM_64]  "eth_frame_extended_pm_64",
     /* Additional MEs which are not defined in object model */
     [BCM_OMCI_ME_CLASS_VAL__END] "ME_CLASS_VAL__END"
 };
@@ -3425,6 +3611,8 @@ char *bcm_omci_obj_type_str[] =
     [BCM_OMCI_POTS_UNI_OBJ_ID]  "pots_uni",
     [BCM_OMCI_CIRCUIT_PACK_OBJ_ID]  "circuit_pack",
     [BCM_OMCI_ENHANCED_SECURITY_CONTROL_OBJ_ID]  "enhanced_security_control",
+    [BCM_OMCI_TRAFFIC_DESCRIPTOR_OBJ_ID]  "traffic_descriptor",
+    [BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_OBJ_ID]  "eth_frame_extended_pm_64",
     /* Additional MEs which are not defined in object model */
     [BCM_OMCI_OBJ_ID__NUM_OF] "OBJ_ID__END"
 };
@@ -3474,6 +3662,8 @@ bcm_omci_me_class_val2bcm_omci_obj_id_t bcm_omci_me_class_val2bcm_omci_obj_id[] 
     {BCM_OMCI_ME_CLASS_VAL_POTS_UNI, BCM_OMCI_POTS_UNI_OBJ_ID},
     {BCM_OMCI_ME_CLASS_VAL_CIRCUIT_PACK, BCM_OMCI_CIRCUIT_PACK_OBJ_ID},
     {BCM_OMCI_ME_CLASS_VAL_ENHANCED_SECURITY_CONTROL, BCM_OMCI_ENHANCED_SECURITY_CONTROL_OBJ_ID},
+    {BCM_OMCI_ME_CLASS_VAL_TRAFFIC_DESCRIPTOR, BCM_OMCI_TRAFFIC_DESCRIPTOR_OBJ_ID},
+    {BCM_OMCI_ME_CLASS_VAL_ETH_FRAME_EXTENDED_PM_64, BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_OBJ_ID},
     {-1}
 };
 
@@ -3522,6 +3712,8 @@ bcm_omci_obj_id2bcm_omci_me_class_val_t bcm_omci_obj_id2bcm_omci_me_class_val[] 
     {BCM_OMCI_POTS_UNI_OBJ_ID, BCM_OMCI_ME_CLASS_VAL_POTS_UNI},
     {BCM_OMCI_CIRCUIT_PACK_OBJ_ID, BCM_OMCI_ME_CLASS_VAL_CIRCUIT_PACK},
     {BCM_OMCI_ENHANCED_SECURITY_CONTROL_OBJ_ID, BCM_OMCI_ME_CLASS_VAL_ENHANCED_SECURITY_CONTROL},
+    {BCM_OMCI_TRAFFIC_DESCRIPTOR_OBJ_ID, BCM_OMCI_ME_CLASS_VAL_TRAFFIC_DESCRIPTOR},
+    {BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_OBJ_ID, BCM_OMCI_ME_CLASS_VAL_ETH_FRAME_EXTENDED_PM_64},
     {-1}
 };
 
@@ -3693,6 +3885,14 @@ static bcmos_bool bcm_omci_circuit_pack_cfg_data_decode(bcm_omci_circuit_pack_cf
 static bcmos_errno bcm_omci_me_enhanced_security_control_cfg_copy_partial(const void *src_me_cfg, void *dst_me_cfg);
 static bcmos_bool _bcm_omci_me_enhanced_security_control_cfg_encode(const bcm_omci_enhanced_security_control_cfg *p_me_cfg, bcm_omci_buf *p_bcm_buf, bcm_omci_msg_type omci_msg_type);
 static bcmos_bool bcm_omci_enhanced_security_control_cfg_data_decode(bcm_omci_enhanced_security_control_cfg_data *p_me_cfg_data, bcm_omci_buf *p_bcm_buf, bcm_omci_presence_mask fields_present, bcm_omci_msg_type omci_msg_type);
+/* traffic descriptor profiles */
+static bcmos_errno bcm_omci_me_traffic_descriptor_cfg_copy_partial(const void *src_me_cfg, void *dst_me_cfg);
+static bcmos_bool _bcm_omci_me_traffic_descriptor_cfg_encode(const bcm_omci_traffic_descriptor_cfg *p_me_cfg, bcm_omci_buf *p_bcm_buf, bcm_omci_msg_type omci_msg_type);
+static bcmos_bool bcm_omci_traffic_descriptor_cfg_data_decode(bcm_omci_traffic_descriptor_cfg_data *p_me_cfg_data, bcm_omci_buf *p_bcm_buf, bcm_omci_presence_mask fields_present, bcm_omci_msg_type omci_msg_type);
+/* Ethernet Frame Extended PM */
+static bcmos_errno bcm_omci_me_eth_frame_extended_pm_64_cfg_copy_partial(const void *src_me_cfg, void *dst_me_cfg);
+static bcmos_bool _bcm_omci_me_eth_frame_extended_pm_64_cfg_encode(const bcm_omci_eth_frame_extended_pm_64_cfg *p_me_cfg, bcm_omci_buf *p_bcm_buf, bcm_omci_msg_type omci_msg_type);
+static bcmos_bool bcm_omci_eth_frame_extended_pm_64_cfg_data_decode(bcm_omci_eth_frame_extended_pm_64_cfg_data *p_me_cfg_data, bcm_omci_buf *p_bcm_buf, bcm_omci_presence_mask fields_present, bcm_omci_msg_type omci_msg_type);
 
 /* get cfg struct length based on obj id */
 uint16_t bcm_omci_me_cfg_get_struct_length(bcm_omci_obj_id me_cfg_obj_id)
@@ -3783,6 +3983,10 @@ uint16_t bcm_omci_me_cfg_get_struct_length(bcm_omci_obj_id me_cfg_obj_id)
         return sizeof(bcm_omci_circuit_pack_cfg);
     case BCM_OMCI_ENHANCED_SECURITY_CONTROL_OBJ_ID:
         return sizeof(bcm_omci_enhanced_security_control_cfg);
+    case BCM_OMCI_TRAFFIC_DESCRIPTOR_OBJ_ID:
+        return sizeof(bcm_omci_traffic_descriptor_cfg);
+    case BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_OBJ_ID:
+        return sizeof(bcm_omci_eth_frame_extended_pm_64_cfg);
     default:
         BCM_LOG(ERROR, log_id_bcm_omci_stack_me_layer, "%s : unsupported me cfg obj id = %d\n",
             __FUNCTION__, me_cfg_obj_id);
@@ -3881,6 +4085,10 @@ bcmos_errno bcm_omci_me_cfg_copy_partial(const void *src_me_cfg, void *dst_me_cf
         return bcm_omci_me_circuit_pack_cfg_copy_partial(src_me_cfg, dst_me_cfg);
     case BCM_OMCI_ENHANCED_SECURITY_CONTROL_OBJ_ID:
         return bcm_omci_me_enhanced_security_control_cfg_copy_partial(src_me_cfg, dst_me_cfg);
+    case BCM_OMCI_TRAFFIC_DESCRIPTOR_OBJ_ID:
+        return bcm_omci_me_traffic_descriptor_cfg_copy_partial(src_me_cfg, dst_me_cfg);
+    case BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_OBJ_ID:
+        return bcm_omci_me_eth_frame_extended_pm_64_cfg_copy_partial(src_me_cfg, dst_me_cfg);
     default:
         BCM_LOG(ERROR, log_id_bcm_omci_stack_me_layer, "%s: unsupported ME obj id = %d\n", __FUNCTION__, obj_type);
         return BCM_ERR_NOT_SUPPORTED;
@@ -17291,6 +17499,732 @@ static bcmos_bool bcm_omci_enhanced_security_control_cfg_data_decode(bcm_omci_en
     return BCMOS_TRUE;
 }
 
+/* traffic descriptor profiles */
+
+/* copy ME segment from src to destination */
+static bcmos_errno bcm_omci_me_traffic_descriptor_cfg_copy_partial(const void *src_me_cfg, void *dst_me_cfg)
+{
+    BUG_ON(NULL == src_me_cfg);
+    BUG_ON(NULL == dst_me_cfg);
+
+    const bcm_omci_traffic_descriptor_cfg *p_src_me_traffic_descriptor_cfg = (const bcm_omci_traffic_descriptor_cfg *)src_me_cfg;
+    bcm_omci_traffic_descriptor_cfg *p_dst_me_traffic_descriptor_cfg = (bcm_omci_traffic_descriptor_cfg *)dst_me_cfg;
+
+    p_dst_me_traffic_descriptor_cfg->hdr.presence_mask |= p_src_me_traffic_descriptor_cfg->hdr.presence_mask;
+    bcm_omci_presence_mask  fields_present = p_src_me_traffic_descriptor_cfg->hdr.presence_mask;
+
+    if ((fields_present & (1ULL << BCM_OMCI_TRAFFIC_DESCRIPTOR_CFG_ID_CIR)) != 0)
+    {
+        p_dst_me_traffic_descriptor_cfg->data.cir = p_src_me_traffic_descriptor_cfg->data.cir;
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_TRAFFIC_DESCRIPTOR_CFG_ID_PIR)) != 0)
+    {
+        p_dst_me_traffic_descriptor_cfg->data.pir = p_src_me_traffic_descriptor_cfg->data.pir;
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_TRAFFIC_DESCRIPTOR_CFG_ID_CBS)) != 0)
+    {
+        p_dst_me_traffic_descriptor_cfg->data.cbs = p_src_me_traffic_descriptor_cfg->data.cbs;
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_TRAFFIC_DESCRIPTOR_CFG_ID_PBS)) != 0)
+    {
+        p_dst_me_traffic_descriptor_cfg->data.pbs = p_src_me_traffic_descriptor_cfg->data.pbs;
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_TRAFFIC_DESCRIPTOR_CFG_ID_COLOUR_MODE)) != 0)
+    {
+        p_dst_me_traffic_descriptor_cfg->data.colour_mode = p_src_me_traffic_descriptor_cfg->data.colour_mode;
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_TRAFFIC_DESCRIPTOR_CFG_ID_ING_COLOR_MARKING)) != 0)
+    {
+        p_dst_me_traffic_descriptor_cfg->data.ing_color_marking = p_src_me_traffic_descriptor_cfg->data.ing_color_marking;
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_TRAFFIC_DESCRIPTOR_CFG_ID_EG_COLOR_MARKING)) != 0)
+    {
+        p_dst_me_traffic_descriptor_cfg->data.eg_color_marking = p_src_me_traffic_descriptor_cfg->data.eg_color_marking;
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_TRAFFIC_DESCRIPTOR_CFG_ID_METER_TYPE)) != 0)
+    {
+        p_dst_me_traffic_descriptor_cfg->data.meter_type = p_src_me_traffic_descriptor_cfg->data.meter_type;
+    }
+
+    return BCM_ERR_OK;
+}
+
+/* Top level encode function for a me cfg */
+static bcmos_errno bcm_omci_me_traffic_descriptor_cfg_encode(const bcm_omci_me_hdr *me_hdr, uint8_t **encode_buf, uint32_t *encode_len, bcm_omci_msg_type omci_msg_type)
+{
+    bcmos_errno rc = BCM_ERR_OK;
+    const bcm_omci_traffic_descriptor_cfg *p_me_traffic_descriptor_cfg = (const bcm_omci_traffic_descriptor_cfg *)me_hdr;
+    bcm_omci_me_key_id failed_key_prop = 0;
+    bcm_omci_traffic_descriptor_cfg_id failed_attr_prop = 0;
+    bcm_omci_buf bcm_buf; /* this is actually bcmolt_buf; bcm_omci_buf should be auto-generated as a typedef of bcmolt_buf */
+    uint32_t err_attr_id = BCM_OMCI_TRAFFIC_DESCRIPTOR_CFG_ID__NUM_OF;
+
+    *encode_len = 0;
+    *encode_buf = NULL;
+
+    BUG_ON(NULL == p_me_traffic_descriptor_cfg);
+
+    if (BCMOS_TRUE != bcm_omci_traffic_descriptor_key_bounds_check(&me_hdr->key, BCM_OMCI_PRESENCE_MASK_ALL, &failed_key_prop))
+        return BCM_ERR_PARM;
+
+    if (BCMOS_TRUE != bcm_omci_traffic_descriptor_cfg_data_bounds_check(&p_me_traffic_descriptor_cfg->data, p_me_traffic_descriptor_cfg->hdr.presence_mask, &failed_attr_prop))
+        return BCM_ERR_PARM;
+
+    if (BCMOS_TRUE != bcm_omci_traffic_descriptor_cfg_actions_check(me_hdr->omci_msg_type))
+        return BCM_ERR_PARM;
+
+    if (BCMOS_TRUE != bcm_omci_presence_mask_check(me_hdr, omci_msg_type, &err_attr_id))
+    {
+        BCM_LOG(ERROR, log_id_bcm_omci_stack_me_layer, "%s : error in attr properties check: ME = %s, err attrid = %d\n",
+            __FUNCTION__, BCM_OMCI_ME_CLASS_VAL_STR(me_hdr->key.entity_class), err_attr_id);
+        return BCM_ERR_PARM;
+    }
+
+    if (BCM_ERR_OK != (rc = bcm_omci_encode_buf_alloc(&bcm_buf, me_hdr->omci_format)))
+    {
+        BCM_LOG(ERROR, log_id_bcm_omci_stack_me_layer, "%s : error allocating memory for encode buffer: %s(%d)\n",
+            __FUNCTION__, bcmos_strerror(rc), rc);
+        return BCM_ERR_PARM;
+    }
+
+    if (BCMOS_TRUE != _bcm_omci_me_traffic_descriptor_cfg_encode(p_me_traffic_descriptor_cfg, &bcm_buf, omci_msg_type))
+        return BCM_ERR_PARM;
+
+    /* Bytes 41-48: Skip OMCI Trailer encoding. Transport Layer will fill it in */
+
+    /** Finally set the args out before returning */
+    *encode_len = bcmolt_buf_get_used(&bcm_buf);
+    *encode_buf = bcm_buf.start;
+
+    return BCM_ERR_OK;
+}
+
+/* Top level decode function for a me cfg */
+static bcmos_errno bcm_omci_me_traffic_descriptor_cfg_decode(bcm_omci_me_hdr *me_hdr, bcm_omci_buf *p_bcm_buf, bcm_omci_msg_type omci_msg_type)
+{
+    bcm_omci_traffic_descriptor_cfg *p_me_traffic_descriptor_cfg = (bcm_omci_traffic_descriptor_cfg *)me_hdr;
+
+    /** @todo see if other validations need to be done */
+
+    /* Decode Message Contents - see base msg format in A.3 of G.988 */
+    if (BCMOS_TRUE != bcm_omci_traffic_descriptor_cfg_data_decode(&p_me_traffic_descriptor_cfg->data, p_bcm_buf, me_hdr->presence_mask, omci_msg_type))
+        return BCMOS_FALSE;
+
+    return BCM_ERR_OK;
+}
+
+#ifdef ENABLE_LOG
+/* Logging function(s) for attribute(s) with fields/ sub-fields */
+
+/* Top level log function for a me cfg */
+static bcmos_errno bcm_omci_me_traffic_descriptor_cfg_log(const bcm_omci_me_hdr *me_hdr, dev_log_id log_id, bcm_dev_log_level log_level)
+{
+    const bcm_omci_traffic_descriptor_cfg *p_me_traffic_descriptor_cfg = (const bcm_omci_traffic_descriptor_cfg *)me_hdr;
+    const bcm_omci_traffic_descriptor_cfg_data *p_me_cfg_data = &p_me_traffic_descriptor_cfg->data;
+    bcm_omci_presence_mask fields_present = p_me_traffic_descriptor_cfg->hdr.presence_mask;
+
+    BCM_LOG_LEVEL(log_level, log_id, "{olt=%u pon_if=%u, onu_id=%u, cookie=%lu}: Dump ME: %s (%d), Entity: %d, Action: %s [\n",
+        me_hdr->key.olt_id, me_hdr->key.logical_pon, me_hdr->key.onu_id, me_hdr->key.cookie,
+        BCM_OMCI_ME_CLASS_VAL_STR(me_hdr->key.entity_class), me_hdr->key.entity_class,
+        me_hdr->key.entity_instance, BCM_OMCI_MSG_TYPE_STR(p_me_traffic_descriptor_cfg->hdr.omci_msg_type));
+
+    if ((fields_present & (1ULL << BCM_OMCI_TRAFFIC_DESCRIPTOR_CFG_ID_CIR)) != 0)
+        BCM_LOG_LEVEL(log_level, log_id, "\tcir:\t%u\n", p_me_cfg_data->cir);
+    if ((fields_present & (1ULL << BCM_OMCI_TRAFFIC_DESCRIPTOR_CFG_ID_PIR)) != 0)
+        BCM_LOG_LEVEL(log_level, log_id, "\tpir:\t%u\n", p_me_cfg_data->pir);
+    if ((fields_present & (1ULL << BCM_OMCI_TRAFFIC_DESCRIPTOR_CFG_ID_CBS)) != 0)
+        BCM_LOG_LEVEL(log_level, log_id, "\tcbs:\t%u\n", p_me_cfg_data->cbs);
+    if ((fields_present & (1ULL << BCM_OMCI_TRAFFIC_DESCRIPTOR_CFG_ID_PBS)) != 0)
+        BCM_LOG_LEVEL(log_level, log_id, "\tpbs:\t%u\n", p_me_cfg_data->pbs);
+    if ((fields_present & (1ULL << BCM_OMCI_TRAFFIC_DESCRIPTOR_CFG_ID_COLOUR_MODE)) != 0)
+        BCM_LOG_LEVEL(log_level, log_id, "\tcolour_mode:\t%u\n", p_me_cfg_data->colour_mode);
+    if ((fields_present & (1ULL << BCM_OMCI_TRAFFIC_DESCRIPTOR_CFG_ID_ING_COLOR_MARKING)) != 0)
+        BCM_LOG_LEVEL(log_level, log_id, "\ting_color_marking:\t%u\n", p_me_cfg_data->ing_color_marking);
+    if ((fields_present & (1ULL << BCM_OMCI_TRAFFIC_DESCRIPTOR_CFG_ID_EG_COLOR_MARKING)) != 0)
+        BCM_LOG_LEVEL(log_level, log_id, "\teg_color_marking:\t%u\n", p_me_cfg_data->eg_color_marking);
+    if ((fields_present & (1ULL << BCM_OMCI_TRAFFIC_DESCRIPTOR_CFG_ID_METER_TYPE)) != 0)
+        BCM_LOG_LEVEL(log_level, log_id, "\tmeter_type:\t%u\n", p_me_cfg_data->meter_type);
+
+
+    BCM_LOG_LEVEL(log_level, log_id, "] \n");
+
+    return BCM_ERR_OK;
+}
+
+#endif
+
+/* Encode function(s) for "fields" in attribute(s) of me cfg */
+
+static bcmos_bool bcm_omci_traffic_descriptor_cfg_data_encode(const bcm_omci_traffic_descriptor_cfg_data *p_me_cfg_data, bcm_omci_buf *p_bcm_buf, bcm_omci_presence_mask fields_present, bcm_omci_msg_type omci_msg_type);
+
+/* Encode function for data portion of me cfg */
+static bcmos_bool bcm_omci_traffic_descriptor_cfg_data_encode(const bcm_omci_traffic_descriptor_cfg_data *p_me_cfg_data, bcm_omci_buf *p_bcm_buf, bcm_omci_presence_mask fields_present, bcm_omci_msg_type omci_msg_type)
+{
+    if (!BCM_OMCI_MSG_TYPE_IS_ATTRIBS_PRESENT_IN_SEND_MSG(omci_msg_type))
+        return BCMOS_TRUE;
+
+    if ((fields_present & (1ULL << BCM_OMCI_TRAFFIC_DESCRIPTOR_CFG_ID_CIR)) != 0)
+    {
+        if (!bcm_omci_buf_write_u32(p_bcm_buf, p_me_cfg_data->cir))
+            return BCMOS_FALSE;
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_TRAFFIC_DESCRIPTOR_CFG_ID_PIR)) != 0)
+    {
+        if (!bcm_omci_buf_write_u32(p_bcm_buf, p_me_cfg_data->pir))
+            return BCMOS_FALSE;
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_TRAFFIC_DESCRIPTOR_CFG_ID_CBS)) != 0)
+    {
+        if (!bcm_omci_buf_write_u32(p_bcm_buf, p_me_cfg_data->cbs))
+            return BCMOS_FALSE;
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_TRAFFIC_DESCRIPTOR_CFG_ID_PBS)) != 0)
+    {
+        if (!bcm_omci_buf_write_u32(p_bcm_buf, p_me_cfg_data->pbs))
+            return BCMOS_FALSE;
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_TRAFFIC_DESCRIPTOR_CFG_ID_COLOUR_MODE)) != 0)
+    {
+        if (!bcm_omci_buf_write_u8(p_bcm_buf, p_me_cfg_data->colour_mode))
+            return BCMOS_FALSE;
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_TRAFFIC_DESCRIPTOR_CFG_ID_ING_COLOR_MARKING)) != 0)
+    {
+        if (!bcm_omci_buf_write_u8(p_bcm_buf, p_me_cfg_data->ing_color_marking))
+            return BCMOS_FALSE;
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_TRAFFIC_DESCRIPTOR_CFG_ID_EG_COLOR_MARKING)) != 0)
+    {
+        if (!bcm_omci_buf_write_u8(p_bcm_buf, p_me_cfg_data->eg_color_marking))
+            return BCMOS_FALSE;
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_TRAFFIC_DESCRIPTOR_CFG_ID_METER_TYPE)) != 0)
+    {
+        if (!bcm_omci_buf_write_u8(p_bcm_buf, p_me_cfg_data->meter_type))
+            return BCMOS_FALSE;
+    }
+
+    return BCMOS_TRUE;
+}
+
+static bcmos_bool _bcm_omci_me_traffic_descriptor_cfg_encode(const bcm_omci_traffic_descriptor_cfg *p_me_traffic_descriptor_cfg, bcm_omci_buf *p_bcm_buf, bcm_omci_msg_type omci_msg_type)
+{
+    /** Encode in the Attribute Mask - encoded for Set, Get etc . Not encoded for Create, Delete etc */
+    if (BCMOS_TRUE != _bcm_omci_common_attribute_mask_encode(p_bcm_buf, p_me_traffic_descriptor_cfg->hdr.presence_mask, omci_msg_type))
+        return BCMOS_FALSE;
+
+    /* Encode Message Contents - see base msg format in A.3 of G.988 */
+    if (BCMOS_TRUE != bcm_omci_traffic_descriptor_cfg_data_encode(&p_me_traffic_descriptor_cfg->data, p_bcm_buf, p_me_traffic_descriptor_cfg->hdr.presence_mask, omci_msg_type))
+        return BCMOS_FALSE;
+
+    return BCMOS_TRUE;
+}
+
+/* Decode function(s) for sub-fields in attribute(s) of me cfg */
+
+/* Decode function for data portion of me cfg */
+static bcmos_bool bcm_omci_traffic_descriptor_cfg_data_decode(bcm_omci_traffic_descriptor_cfg_data *p_me_cfg_data, bcm_omci_buf *p_bcm_buf, bcm_omci_presence_mask fields_present, bcm_omci_msg_type omci_msg_type)
+{
+    if ((fields_present & (1ULL << BCM_OMCI_TRAFFIC_DESCRIPTOR_CFG_ID_CIR)) != 0)
+    {
+        if (!bcm_omci_buf_read_u32(p_bcm_buf, &p_me_cfg_data->cir))
+            return BCMOS_FALSE;
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_TRAFFIC_DESCRIPTOR_CFG_ID_PIR)) != 0)
+    {
+        if (!bcm_omci_buf_read_u32(p_bcm_buf, &p_me_cfg_data->pir))
+            return BCMOS_FALSE;
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_TRAFFIC_DESCRIPTOR_CFG_ID_CBS)) != 0)
+    {
+        if (!bcm_omci_buf_read_u32(p_bcm_buf, &p_me_cfg_data->cbs))
+            return BCMOS_FALSE;
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_TRAFFIC_DESCRIPTOR_CFG_ID_PBS)) != 0)
+    {
+        if (!bcm_omci_buf_read_u32(p_bcm_buf, &p_me_cfg_data->pbs))
+            return BCMOS_FALSE;
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_TRAFFIC_DESCRIPTOR_CFG_ID_COLOUR_MODE)) != 0)
+    {
+        if (!bcm_omci_buf_read_u8(p_bcm_buf, (uint8_t *)&p_me_cfg_data->colour_mode))
+            return BCMOS_FALSE;
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_TRAFFIC_DESCRIPTOR_CFG_ID_ING_COLOR_MARKING)) != 0)
+    {
+        if (!bcm_omci_buf_read_u8(p_bcm_buf, (uint8_t *)&p_me_cfg_data->ing_color_marking))
+            return BCMOS_FALSE;
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_TRAFFIC_DESCRIPTOR_CFG_ID_EG_COLOR_MARKING)) != 0)
+    {
+        if (!bcm_omci_buf_read_u8(p_bcm_buf, (uint8_t *)&p_me_cfg_data->eg_color_marking))
+            return BCMOS_FALSE;
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_TRAFFIC_DESCRIPTOR_CFG_ID_METER_TYPE)) != 0)
+    {
+        if (!bcm_omci_buf_read_u8(p_bcm_buf, (uint8_t *)&p_me_cfg_data->meter_type))
+            return BCMOS_FALSE;
+    }
+
+    return BCMOS_TRUE;
+}
+
+/* Ethernet Frame Extended PM */
+
+/* copy ME segment from src to destination */
+static bcmos_errno bcm_omci_me_eth_frame_extended_pm_64_cfg_copy_partial(const void *src_me_cfg, void *dst_me_cfg)
+{
+    BUG_ON(NULL == src_me_cfg);
+    BUG_ON(NULL == dst_me_cfg);
+
+    const bcm_omci_eth_frame_extended_pm_64_cfg *p_src_me_eth_frame_extended_pm_64_cfg = (const bcm_omci_eth_frame_extended_pm_64_cfg *)src_me_cfg;
+    bcm_omci_eth_frame_extended_pm_64_cfg *p_dst_me_eth_frame_extended_pm_64_cfg = (bcm_omci_eth_frame_extended_pm_64_cfg *)dst_me_cfg;
+
+    p_dst_me_eth_frame_extended_pm_64_cfg->hdr.presence_mask |= p_src_me_eth_frame_extended_pm_64_cfg->hdr.presence_mask;
+    bcm_omci_presence_mask  fields_present = p_src_me_eth_frame_extended_pm_64_cfg->hdr.presence_mask;
+
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_INTERVAL_END_TIME)) != 0)
+    {
+        p_dst_me_eth_frame_extended_pm_64_cfg->data.interval_end_time = p_src_me_eth_frame_extended_pm_64_cfg->data.interval_end_time;
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_CONTROL_BLOCK)) != 0)
+    {
+        /* doing struct copy */
+        p_dst_me_eth_frame_extended_pm_64_cfg->data.control_block = p_src_me_eth_frame_extended_pm_64_cfg->data.control_block;
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_DROP_EVENTS)) != 0)
+    {
+        memcpy(p_dst_me_eth_frame_extended_pm_64_cfg->data.drop_events, p_src_me_eth_frame_extended_pm_64_cfg->data.drop_events, 8);
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_OCTETS)) != 0)
+    {
+        memcpy(p_dst_me_eth_frame_extended_pm_64_cfg->data.octets, p_src_me_eth_frame_extended_pm_64_cfg->data.octets, 8);
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_FRAMES)) != 0)
+    {
+        memcpy(p_dst_me_eth_frame_extended_pm_64_cfg->data.frames, p_src_me_eth_frame_extended_pm_64_cfg->data.frames, 8);
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_BROADCAST_FRAMES)) != 0)
+    {
+        memcpy(p_dst_me_eth_frame_extended_pm_64_cfg->data.broadcast_frames, p_src_me_eth_frame_extended_pm_64_cfg->data.broadcast_frames, 8);
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_MULTICAST_FRAMES)) != 0)
+    {
+        memcpy(p_dst_me_eth_frame_extended_pm_64_cfg->data.multicast_frames, p_src_me_eth_frame_extended_pm_64_cfg->data.multicast_frames, 8);
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_CRC_ERRORED_FRAMES)) != 0)
+    {
+        memcpy(p_dst_me_eth_frame_extended_pm_64_cfg->data.crc_errored_frames, p_src_me_eth_frame_extended_pm_64_cfg->data.crc_errored_frames, 8);
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_UNDERSIZE_FRAMES)) != 0)
+    {
+        memcpy(p_dst_me_eth_frame_extended_pm_64_cfg->data.undersize_frames, p_src_me_eth_frame_extended_pm_64_cfg->data.undersize_frames, 8);
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_OVERSIZE_FRAMES)) != 0)
+    {
+        memcpy(p_dst_me_eth_frame_extended_pm_64_cfg->data.oversize_frames, p_src_me_eth_frame_extended_pm_64_cfg->data.oversize_frames, 8);
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_FRAMES_64OCTETS)) != 0)
+    {
+        memcpy(p_dst_me_eth_frame_extended_pm_64_cfg->data.frames_64octets, p_src_me_eth_frame_extended_pm_64_cfg->data.frames_64octets, 8);
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_FRAMES_65_TO_127_OCTETS)) != 0)
+    {
+        memcpy(p_dst_me_eth_frame_extended_pm_64_cfg->data.frames_65_to_127_octets, p_src_me_eth_frame_extended_pm_64_cfg->data.frames_65_to_127_octets, 8);
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_FRAMES_128_TO_255_OCTETS)) != 0)
+    {
+        memcpy(p_dst_me_eth_frame_extended_pm_64_cfg->data.frames_128_to_255_octets, p_src_me_eth_frame_extended_pm_64_cfg->data.frames_128_to_255_octets, 8);
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_FRAMES_256_TO_511_OCTETS)) != 0)
+    {
+        memcpy(p_dst_me_eth_frame_extended_pm_64_cfg->data.frames_256_to_511_octets, p_src_me_eth_frame_extended_pm_64_cfg->data.frames_256_to_511_octets, 8);
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_FRAMES_512_TO_1023_OCTETS)) != 0)
+    {
+        memcpy(p_dst_me_eth_frame_extended_pm_64_cfg->data.frames_512_to_1023_octets, p_src_me_eth_frame_extended_pm_64_cfg->data.frames_512_to_1023_octets, 8);
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_FRAMES_1024_TO_1518_OCTETS)) != 0)
+    {
+        memcpy(p_dst_me_eth_frame_extended_pm_64_cfg->data.frames_1024_to_1518_octets, p_src_me_eth_frame_extended_pm_64_cfg->data.frames_1024_to_1518_octets, 8);
+    }
+
+    return BCM_ERR_OK;
+}
+
+/* Top level encode function for a me cfg */
+static bcmos_errno bcm_omci_me_eth_frame_extended_pm_64_cfg_encode(const bcm_omci_me_hdr *me_hdr, uint8_t **encode_buf, uint32_t *encode_len, bcm_omci_msg_type omci_msg_type)
+{
+    bcmos_errno rc = BCM_ERR_OK;
+    const bcm_omci_eth_frame_extended_pm_64_cfg *p_me_eth_frame_extended_pm_64_cfg = (const bcm_omci_eth_frame_extended_pm_64_cfg *)me_hdr;
+    bcm_omci_me_key_id failed_key_prop = 0;
+    bcm_omci_eth_frame_extended_pm_64_cfg_id failed_attr_prop = 0;
+    bcm_omci_buf bcm_buf; /* this is actually bcmolt_buf; bcm_omci_buf should be auto-generated as a typedef of bcmolt_buf */
+    uint32_t err_attr_id = BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID__NUM_OF;
+
+    *encode_len = 0;
+    *encode_buf = NULL;
+
+    BUG_ON(NULL == p_me_eth_frame_extended_pm_64_cfg);
+
+    if (BCMOS_TRUE != bcm_omci_eth_frame_extended_pm_64_key_bounds_check(&me_hdr->key, BCM_OMCI_PRESENCE_MASK_ALL, &failed_key_prop))
+        return BCM_ERR_PARM;
+
+    if (BCMOS_TRUE != bcm_omci_eth_frame_extended_pm_64_cfg_data_bounds_check(&p_me_eth_frame_extended_pm_64_cfg->data, p_me_eth_frame_extended_pm_64_cfg->hdr.presence_mask, &failed_attr_prop))
+        return BCM_ERR_PARM;
+
+    if (BCMOS_TRUE != bcm_omci_eth_frame_extended_pm_64_cfg_actions_check(me_hdr->omci_msg_type))
+        return BCM_ERR_PARM;
+
+    if (BCMOS_TRUE != bcm_omci_presence_mask_check(me_hdr, omci_msg_type, &err_attr_id))
+    {
+        BCM_LOG(ERROR, log_id_bcm_omci_stack_me_layer, "%s : error in attr properties check: ME = %s, err attrid = %d\n",
+            __FUNCTION__, BCM_OMCI_ME_CLASS_VAL_STR(me_hdr->key.entity_class), err_attr_id);
+        return BCM_ERR_PARM;
+    }
+
+    if (BCM_ERR_OK != (rc = bcm_omci_encode_buf_alloc(&bcm_buf, me_hdr->omci_format)))
+    {
+        BCM_LOG(ERROR, log_id_bcm_omci_stack_me_layer, "%s : error allocating memory for encode buffer: %s(%d)\n",
+            __FUNCTION__, bcmos_strerror(rc), rc);
+        return BCM_ERR_PARM;
+    }
+
+    if (BCMOS_TRUE != _bcm_omci_me_eth_frame_extended_pm_64_cfg_encode(p_me_eth_frame_extended_pm_64_cfg, &bcm_buf, omci_msg_type))
+        return BCM_ERR_PARM;
+
+    /* Bytes 41-48: Skip OMCI Trailer encoding. Transport Layer will fill it in */
+
+    /** Finally set the args out before returning */
+    *encode_len = bcmolt_buf_get_used(&bcm_buf);
+    *encode_buf = bcm_buf.start;
+
+    return BCM_ERR_OK;
+}
+
+/* Top level decode function for a me cfg */
+static bcmos_errno bcm_omci_me_eth_frame_extended_pm_64_cfg_decode(bcm_omci_me_hdr *me_hdr, bcm_omci_buf *p_bcm_buf, bcm_omci_msg_type omci_msg_type)
+{
+    bcm_omci_eth_frame_extended_pm_64_cfg *p_me_eth_frame_extended_pm_64_cfg = (bcm_omci_eth_frame_extended_pm_64_cfg *)me_hdr;
+
+    /** @todo see if other validations need to be done */
+
+    /* Decode Message Contents - see base msg format in A.3 of G.988 */
+    if (BCMOS_TRUE != bcm_omci_eth_frame_extended_pm_64_cfg_data_decode(&p_me_eth_frame_extended_pm_64_cfg->data, p_bcm_buf, me_hdr->presence_mask, omci_msg_type))
+        return BCMOS_FALSE;
+
+    return BCM_ERR_OK;
+}
+
+#ifdef ENABLE_LOG
+/* Logging function(s) for attribute(s) with fields/ sub-fields */
+static bcmos_bool bcm_omci_eth_frame_extended_pm_64_control_block_log(const bcm_omci_me_key *key, const bcm_omci_eth_frame_extended_pm_64_control_block *this, dev_log_id log_id, bcm_dev_log_level log_level)
+{
+    BCM_LOG_LEVEL(log_level, log_id, "\t\tthreshold_data_id: %u\n", this->threshold_data_id);
+    BCM_LOG_LEVEL(log_level, log_id, "\t\tparent_me_class: %u\n", this->parent_me_class);
+    BCM_LOG_LEVEL(log_level, log_id, "\t\tparent_me_instance: %u\n", this->parent_me_instance);
+    BCM_LOG_LEVEL(log_level, log_id, "\t\taccumulation_disbale: %u\n", this->accumulation_disbale);
+    BCM_LOG_LEVEL(log_level, log_id, "\t\ttca_disable: %u\n", this->tca_disable);
+    BCM_LOG_LEVEL(log_level, log_id, "\t\tcontrol_fields: %u\n", this->control_fields);
+    BCM_LOG_LEVEL(log_level, log_id, "\t\ttci: %u\n", this->tci);
+    BCM_LOG_LEVEL(log_level, log_id, "\t\treserved: %u\n", this->reserved);
+
+    return BCM_ERR_OK;
+}
+
+/* Top level log function for a me cfg */
+static bcmos_errno bcm_omci_me_eth_frame_extended_pm_64_cfg_log(const bcm_omci_me_hdr *me_hdr, dev_log_id log_id, bcm_dev_log_level log_level)
+{
+    const bcm_omci_eth_frame_extended_pm_64_cfg *p_me_eth_frame_extended_pm_64_cfg = (const bcm_omci_eth_frame_extended_pm_64_cfg *)me_hdr;
+    const bcm_omci_eth_frame_extended_pm_64_cfg_data *p_me_cfg_data = &p_me_eth_frame_extended_pm_64_cfg->data;
+    bcm_omci_presence_mask fields_present = p_me_eth_frame_extended_pm_64_cfg->hdr.presence_mask;
+
+    BCM_LOG_LEVEL(log_level, log_id, "{olt=%u pon_if=%u, onu_id=%u, cookie=%lu}: Dump ME: %s (%d), Entity: %d, Action: %s [\n",
+        me_hdr->key.olt_id, me_hdr->key.logical_pon, me_hdr->key.onu_id, me_hdr->key.cookie,
+        BCM_OMCI_ME_CLASS_VAL_STR(me_hdr->key.entity_class), me_hdr->key.entity_class,
+        me_hdr->key.entity_instance, BCM_OMCI_MSG_TYPE_STR(p_me_eth_frame_extended_pm_64_cfg->hdr.omci_msg_type));
+
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_INTERVAL_END_TIME)) != 0)
+        BCM_LOG_LEVEL(log_level, log_id, "\tinterval_end_time:\t%u\n", p_me_cfg_data->interval_end_time);
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_CONTROL_BLOCK)) != 0)
+        BCM_LOG_LEVEL(log_level, log_id, "\tcontrol_block:\t%02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x\n", ((const uint8_t *)&p_me_cfg_data->control_block)[0], ((const uint8_t *)&p_me_cfg_data->control_block)[1], ((const uint8_t *)&p_me_cfg_data->control_block)[2], ((const uint8_t *)&p_me_cfg_data->control_block)[3], ((const uint8_t *)&p_me_cfg_data->control_block)[4], ((const uint8_t *)&p_me_cfg_data->control_block)[5], ((const uint8_t *)&p_me_cfg_data->control_block)[6], ((const uint8_t *)&p_me_cfg_data->control_block)[7], ((const uint8_t *)&p_me_cfg_data->control_block)[8], ((const uint8_t *)&p_me_cfg_data->control_block)[9], ((const uint8_t *)&p_me_cfg_data->control_block)[10], ((const uint8_t *)&p_me_cfg_data->control_block)[11], ((const uint8_t *)&p_me_cfg_data->control_block)[12], ((const uint8_t *)&p_me_cfg_data->control_block)[13], ((const uint8_t *)&p_me_cfg_data->control_block)[14], ((const uint8_t *)&p_me_cfg_data->control_block)[15]);
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_DROP_EVENTS)) != 0)
+        BCM_LOG_LEVEL(log_level, log_id, "\tdrop_events:\t%02x %02x %02x %02x %02x %02x %02x %02x\n", ((const uint8_t *)&p_me_cfg_data->drop_events)[0], ((const uint8_t *)&p_me_cfg_data->drop_events)[1], ((const uint8_t *)&p_me_cfg_data->drop_events)[2], ((const uint8_t *)&p_me_cfg_data->drop_events)[3], ((const uint8_t *)&p_me_cfg_data->drop_events)[4], ((const uint8_t *)&p_me_cfg_data->drop_events)[5], ((const uint8_t *)&p_me_cfg_data->drop_events)[6], ((const uint8_t *)&p_me_cfg_data->drop_events)[7]);
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_OCTETS)) != 0)
+        BCM_LOG_LEVEL(log_level, log_id, "\toctets:\t%02x %02x %02x %02x %02x %02x %02x %02x\n", ((const uint8_t *)&p_me_cfg_data->octets)[0], ((const uint8_t *)&p_me_cfg_data->octets)[1], ((const uint8_t *)&p_me_cfg_data->octets)[2], ((const uint8_t *)&p_me_cfg_data->octets)[3], ((const uint8_t *)&p_me_cfg_data->octets)[4], ((const uint8_t *)&p_me_cfg_data->octets)[5], ((const uint8_t *)&p_me_cfg_data->octets)[6], ((const uint8_t *)&p_me_cfg_data->octets)[7]);
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_FRAMES)) != 0)
+        BCM_LOG_LEVEL(log_level, log_id, "\tframes:\t%02x %02x %02x %02x %02x %02x %02x %02x\n", ((const uint8_t *)&p_me_cfg_data->frames)[0], ((const uint8_t *)&p_me_cfg_data->frames)[1], ((const uint8_t *)&p_me_cfg_data->frames)[2], ((const uint8_t *)&p_me_cfg_data->frames)[3], ((const uint8_t *)&p_me_cfg_data->frames)[4], ((const uint8_t *)&p_me_cfg_data->frames)[5], ((const uint8_t *)&p_me_cfg_data->frames)[6], ((const uint8_t *)&p_me_cfg_data->frames)[7]);
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_BROADCAST_FRAMES)) != 0)
+        BCM_LOG_LEVEL(log_level, log_id, "\tbroadcast_frames:\t%02x %02x %02x %02x %02x %02x %02x %02x\n", ((const uint8_t *)&p_me_cfg_data->broadcast_frames)[0], ((const uint8_t *)&p_me_cfg_data->broadcast_frames)[1], ((const uint8_t *)&p_me_cfg_data->broadcast_frames)[2], ((const uint8_t *)&p_me_cfg_data->broadcast_frames)[3], ((const uint8_t *)&p_me_cfg_data->broadcast_frames)[4], ((const uint8_t *)&p_me_cfg_data->broadcast_frames)[5], ((const uint8_t *)&p_me_cfg_data->broadcast_frames)[6], ((const uint8_t *)&p_me_cfg_data->broadcast_frames)[7]);
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_MULTICAST_FRAMES)) != 0)
+        BCM_LOG_LEVEL(log_level, log_id, "\tmulticast_frames:\t%02x %02x %02x %02x %02x %02x %02x %02x\n", ((const uint8_t *)&p_me_cfg_data->multicast_frames)[0], ((const uint8_t *)&p_me_cfg_data->multicast_frames)[1], ((const uint8_t *)&p_me_cfg_data->multicast_frames)[2], ((const uint8_t *)&p_me_cfg_data->multicast_frames)[3], ((const uint8_t *)&p_me_cfg_data->multicast_frames)[4], ((const uint8_t *)&p_me_cfg_data->multicast_frames)[5], ((const uint8_t *)&p_me_cfg_data->multicast_frames)[6], ((const uint8_t *)&p_me_cfg_data->multicast_frames)[7]);
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_CRC_ERRORED_FRAMES)) != 0)
+        BCM_LOG_LEVEL(log_level, log_id, "\tcrc_errored_frames:\t%02x %02x %02x %02x %02x %02x %02x %02x\n", ((const uint8_t *)&p_me_cfg_data->crc_errored_frames)[0], ((const uint8_t *)&p_me_cfg_data->crc_errored_frames)[1], ((const uint8_t *)&p_me_cfg_data->crc_errored_frames)[2], ((const uint8_t *)&p_me_cfg_data->crc_errored_frames)[3], ((const uint8_t *)&p_me_cfg_data->crc_errored_frames)[4], ((const uint8_t *)&p_me_cfg_data->crc_errored_frames)[5], ((const uint8_t *)&p_me_cfg_data->crc_errored_frames)[6], ((const uint8_t *)&p_me_cfg_data->crc_errored_frames)[7]);
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_UNDERSIZE_FRAMES)) != 0)
+        BCM_LOG_LEVEL(log_level, log_id, "\tundersize_frames:\t%02x %02x %02x %02x %02x %02x %02x %02x\n", ((const uint8_t *)&p_me_cfg_data->undersize_frames)[0], ((const uint8_t *)&p_me_cfg_data->undersize_frames)[1], ((const uint8_t *)&p_me_cfg_data->undersize_frames)[2], ((const uint8_t *)&p_me_cfg_data->undersize_frames)[3], ((const uint8_t *)&p_me_cfg_data->undersize_frames)[4], ((const uint8_t *)&p_me_cfg_data->undersize_frames)[5], ((const uint8_t *)&p_me_cfg_data->undersize_frames)[6], ((const uint8_t *)&p_me_cfg_data->undersize_frames)[7]);
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_OVERSIZE_FRAMES)) != 0)
+        BCM_LOG_LEVEL(log_level, log_id, "\toversize_frames:\t%02x %02x %02x %02x %02x %02x %02x %02x\n", ((const uint8_t *)&p_me_cfg_data->oversize_frames)[0], ((const uint8_t *)&p_me_cfg_data->oversize_frames)[1], ((const uint8_t *)&p_me_cfg_data->oversize_frames)[2], ((const uint8_t *)&p_me_cfg_data->oversize_frames)[3], ((const uint8_t *)&p_me_cfg_data->oversize_frames)[4], ((const uint8_t *)&p_me_cfg_data->oversize_frames)[5], ((const uint8_t *)&p_me_cfg_data->oversize_frames)[6], ((const uint8_t *)&p_me_cfg_data->oversize_frames)[7]);
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_FRAMES_64OCTETS)) != 0)
+        BCM_LOG_LEVEL(log_level, log_id, "\tframes_64octets:\t%02x %02x %02x %02x %02x %02x %02x %02x\n", ((const uint8_t *)&p_me_cfg_data->frames_64octets)[0], ((const uint8_t *)&p_me_cfg_data->frames_64octets)[1], ((const uint8_t *)&p_me_cfg_data->frames_64octets)[2], ((const uint8_t *)&p_me_cfg_data->frames_64octets)[3], ((const uint8_t *)&p_me_cfg_data->frames_64octets)[4], ((const uint8_t *)&p_me_cfg_data->frames_64octets)[5], ((const uint8_t *)&p_me_cfg_data->frames_64octets)[6], ((const uint8_t *)&p_me_cfg_data->frames_64octets)[7]);
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_FRAMES_65_TO_127_OCTETS)) != 0)
+        BCM_LOG_LEVEL(log_level, log_id, "\tframes_65_to_127_octets:\t%02x %02x %02x %02x %02x %02x %02x %02x\n", ((const uint8_t *)&p_me_cfg_data->frames_65_to_127_octets)[0], ((const uint8_t *)&p_me_cfg_data->frames_65_to_127_octets)[1], ((const uint8_t *)&p_me_cfg_data->frames_65_to_127_octets)[2], ((const uint8_t *)&p_me_cfg_data->frames_65_to_127_octets)[3], ((const uint8_t *)&p_me_cfg_data->frames_65_to_127_octets)[4], ((const uint8_t *)&p_me_cfg_data->frames_65_to_127_octets)[5], ((const uint8_t *)&p_me_cfg_data->frames_65_to_127_octets)[6], ((const uint8_t *)&p_me_cfg_data->frames_65_to_127_octets)[7]);
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_FRAMES_128_TO_255_OCTETS)) != 0)
+        BCM_LOG_LEVEL(log_level, log_id, "\tframes_128_to_255_octets:\t%02x %02x %02x %02x %02x %02x %02x %02x\n", ((const uint8_t *)&p_me_cfg_data->frames_128_to_255_octets)[0], ((const uint8_t *)&p_me_cfg_data->frames_128_to_255_octets)[1], ((const uint8_t *)&p_me_cfg_data->frames_128_to_255_octets)[2], ((const uint8_t *)&p_me_cfg_data->frames_128_to_255_octets)[3], ((const uint8_t *)&p_me_cfg_data->frames_128_to_255_octets)[4], ((const uint8_t *)&p_me_cfg_data->frames_128_to_255_octets)[5], ((const uint8_t *)&p_me_cfg_data->frames_128_to_255_octets)[6], ((const uint8_t *)&p_me_cfg_data->frames_128_to_255_octets)[7]);
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_FRAMES_256_TO_511_OCTETS)) != 0)
+        BCM_LOG_LEVEL(log_level, log_id, "\tframes_256_to_511_octets:\t%02x %02x %02x %02x %02x %02x %02x %02x\n", ((const uint8_t *)&p_me_cfg_data->frames_256_to_511_octets)[0], ((const uint8_t *)&p_me_cfg_data->frames_256_to_511_octets)[1], ((const uint8_t *)&p_me_cfg_data->frames_256_to_511_octets)[2], ((const uint8_t *)&p_me_cfg_data->frames_256_to_511_octets)[3], ((const uint8_t *)&p_me_cfg_data->frames_256_to_511_octets)[4], ((const uint8_t *)&p_me_cfg_data->frames_256_to_511_octets)[5], ((const uint8_t *)&p_me_cfg_data->frames_256_to_511_octets)[6], ((const uint8_t *)&p_me_cfg_data->frames_256_to_511_octets)[7]);
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_FRAMES_512_TO_1023_OCTETS)) != 0)
+        BCM_LOG_LEVEL(log_level, log_id, "\tframes_512_to_1023_octets:\t%02x %02x %02x %02x %02x %02x %02x %02x\n", ((const uint8_t *)&p_me_cfg_data->frames_512_to_1023_octets)[0], ((const uint8_t *)&p_me_cfg_data->frames_512_to_1023_octets)[1], ((const uint8_t *)&p_me_cfg_data->frames_512_to_1023_octets)[2], ((const uint8_t *)&p_me_cfg_data->frames_512_to_1023_octets)[3], ((const uint8_t *)&p_me_cfg_data->frames_512_to_1023_octets)[4], ((const uint8_t *)&p_me_cfg_data->frames_512_to_1023_octets)[5], ((const uint8_t *)&p_me_cfg_data->frames_512_to_1023_octets)[6], ((const uint8_t *)&p_me_cfg_data->frames_512_to_1023_octets)[7]);
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_FRAMES_1024_TO_1518_OCTETS)) != 0)
+        BCM_LOG_LEVEL(log_level, log_id, "\tframes_1024_to_1518_octets:\t%02x %02x %02x %02x %02x %02x %02x %02x\n", ((const uint8_t *)&p_me_cfg_data->frames_1024_to_1518_octets)[0], ((const uint8_t *)&p_me_cfg_data->frames_1024_to_1518_octets)[1], ((const uint8_t *)&p_me_cfg_data->frames_1024_to_1518_octets)[2], ((const uint8_t *)&p_me_cfg_data->frames_1024_to_1518_octets)[3], ((const uint8_t *)&p_me_cfg_data->frames_1024_to_1518_octets)[4], ((const uint8_t *)&p_me_cfg_data->frames_1024_to_1518_octets)[5], ((const uint8_t *)&p_me_cfg_data->frames_1024_to_1518_octets)[6], ((const uint8_t *)&p_me_cfg_data->frames_1024_to_1518_octets)[7]);
+
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_CONTROL_BLOCK)) != 0)
+        bcm_omci_eth_frame_extended_pm_64_control_block_log(&me_hdr->key, &p_me_cfg_data->control_block, log_id, log_level);
+
+    BCM_LOG_LEVEL(log_level, log_id, "] \n");
+
+    return BCM_ERR_OK;
+}
+
+#endif
+
+/* Encode function(s) for "fields" in attribute(s) of me cfg */
+static bcmos_bool bcm_omci_eth_frame_extended_pm_64_control_block_cfg_data_encode(bcm_omci_buf *p_bcm_buf, const bcm_omci_eth_frame_extended_pm_64_control_block *this)
+{
+    if (!bcm_omci_buf_write_u16(p_bcm_buf, this->threshold_data_id))
+        return BCMOS_FALSE;
+    if (!bcm_omci_buf_write_u16(p_bcm_buf, this->parent_me_class))
+        return BCMOS_FALSE;
+    if (!bcm_omci_buf_write_u16(p_bcm_buf, this->parent_me_instance))
+        return BCMOS_FALSE;
+    if (!bcm_omci_buf_write_u16(p_bcm_buf, this->accumulation_disbale))
+        return BCMOS_FALSE;
+    if (!bcm_omci_buf_write_u16(p_bcm_buf, this->tca_disable))
+        return BCMOS_FALSE;
+    if (!bcm_omci_buf_write_u16(p_bcm_buf, this->control_fields))
+        return BCMOS_FALSE;
+    if (!bcm_omci_buf_write_u16(p_bcm_buf, this->tci))
+        return BCMOS_FALSE;
+    if (!bcm_omci_buf_write_u16(p_bcm_buf, this->reserved))
+        return BCMOS_FALSE;
+
+    return BCMOS_TRUE;
+}
+
+static bcmos_bool bcm_omci_eth_frame_extended_pm_64_cfg_data_encode(const bcm_omci_eth_frame_extended_pm_64_cfg_data *p_me_cfg_data, bcm_omci_buf *p_bcm_buf, bcm_omci_presence_mask fields_present, bcm_omci_msg_type omci_msg_type);
+
+/* Encode function for data portion of me cfg */
+static bcmos_bool bcm_omci_eth_frame_extended_pm_64_cfg_data_encode(const bcm_omci_eth_frame_extended_pm_64_cfg_data *p_me_cfg_data, bcm_omci_buf *p_bcm_buf, bcm_omci_presence_mask fields_present, bcm_omci_msg_type omci_msg_type)
+{
+    if (!BCM_OMCI_MSG_TYPE_IS_ATTRIBS_PRESENT_IN_SEND_MSG(omci_msg_type))
+        return BCMOS_TRUE;
+
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_INTERVAL_END_TIME)) != 0)
+    {
+        if (!bcm_omci_buf_write_u8(p_bcm_buf, p_me_cfg_data->interval_end_time))
+            return BCMOS_FALSE;
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_CONTROL_BLOCK)) != 0)
+    {
+        if (!bcm_omci_eth_frame_extended_pm_64_control_block_cfg_data_encode(p_bcm_buf, &p_me_cfg_data->control_block))
+            return BCMOS_FALSE;
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_DROP_EVENTS)) != 0)
+    {
+        if (!bcm_omci_buf_write(p_bcm_buf, p_me_cfg_data->drop_events, 8))
+            return BCMOS_FALSE;
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_OCTETS)) != 0)
+    {
+        if (!bcm_omci_buf_write(p_bcm_buf, p_me_cfg_data->octets, 8))
+            return BCMOS_FALSE;
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_FRAMES)) != 0)
+    {
+        if (!bcm_omci_buf_write(p_bcm_buf, p_me_cfg_data->frames, 8))
+            return BCMOS_FALSE;
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_BROADCAST_FRAMES)) != 0)
+    {
+        if (!bcm_omci_buf_write(p_bcm_buf, p_me_cfg_data->broadcast_frames, 8))
+            return BCMOS_FALSE;
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_MULTICAST_FRAMES)) != 0)
+    {
+        if (!bcm_omci_buf_write(p_bcm_buf, p_me_cfg_data->multicast_frames, 8))
+            return BCMOS_FALSE;
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_CRC_ERRORED_FRAMES)) != 0)
+    {
+        if (!bcm_omci_buf_write(p_bcm_buf, p_me_cfg_data->crc_errored_frames, 8))
+            return BCMOS_FALSE;
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_UNDERSIZE_FRAMES)) != 0)
+    {
+        if (!bcm_omci_buf_write(p_bcm_buf, p_me_cfg_data->undersize_frames, 8))
+            return BCMOS_FALSE;
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_OVERSIZE_FRAMES)) != 0)
+    {
+        if (!bcm_omci_buf_write(p_bcm_buf, p_me_cfg_data->oversize_frames, 8))
+            return BCMOS_FALSE;
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_FRAMES_64OCTETS)) != 0)
+    {
+        if (!bcm_omci_buf_write(p_bcm_buf, p_me_cfg_data->frames_64octets, 8))
+            return BCMOS_FALSE;
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_FRAMES_65_TO_127_OCTETS)) != 0)
+    {
+        if (!bcm_omci_buf_write(p_bcm_buf, p_me_cfg_data->frames_65_to_127_octets, 8))
+            return BCMOS_FALSE;
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_FRAMES_128_TO_255_OCTETS)) != 0)
+    {
+        if (!bcm_omci_buf_write(p_bcm_buf, p_me_cfg_data->frames_128_to_255_octets, 8))
+            return BCMOS_FALSE;
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_FRAMES_256_TO_511_OCTETS)) != 0)
+    {
+        if (!bcm_omci_buf_write(p_bcm_buf, p_me_cfg_data->frames_256_to_511_octets, 8))
+            return BCMOS_FALSE;
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_FRAMES_512_TO_1023_OCTETS)) != 0)
+    {
+        if (!bcm_omci_buf_write(p_bcm_buf, p_me_cfg_data->frames_512_to_1023_octets, 8))
+            return BCMOS_FALSE;
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_FRAMES_1024_TO_1518_OCTETS)) != 0)
+    {
+        if (!bcm_omci_buf_write(p_bcm_buf, p_me_cfg_data->frames_1024_to_1518_octets, 8))
+            return BCMOS_FALSE;
+    }
+
+    return BCMOS_TRUE;
+}
+
+static bcmos_bool _bcm_omci_me_eth_frame_extended_pm_64_cfg_encode(const bcm_omci_eth_frame_extended_pm_64_cfg *p_me_eth_frame_extended_pm_64_cfg, bcm_omci_buf *p_bcm_buf, bcm_omci_msg_type omci_msg_type)
+{
+    /** Encode in the Attribute Mask - encoded for Set, Get etc . Not encoded for Create, Delete etc */
+    if (BCMOS_TRUE != _bcm_omci_common_attribute_mask_encode(p_bcm_buf, p_me_eth_frame_extended_pm_64_cfg->hdr.presence_mask, omci_msg_type))
+        return BCMOS_FALSE;
+
+    /* Encode Message Contents - see base msg format in A.3 of G.988 */
+    if (BCMOS_TRUE != bcm_omci_eth_frame_extended_pm_64_cfg_data_encode(&p_me_eth_frame_extended_pm_64_cfg->data, p_bcm_buf, p_me_eth_frame_extended_pm_64_cfg->hdr.presence_mask, omci_msg_type))
+        return BCMOS_FALSE;
+
+    return BCMOS_TRUE;
+}
+
+/* Decode function(s) for sub-fields in attribute(s) of me cfg */
+static bcmos_bool bcm_omci_eth_frame_extended_pm_64_control_block_cfg_data_decode(bcm_omci_buf *p_bcm_buf, bcm_omci_eth_frame_extended_pm_64_control_block *this)
+{
+     if (!bcm_omci_buf_read_u16(p_bcm_buf, &this->threshold_data_id))
+        return BCMOS_FALSE;
+     if (!bcm_omci_buf_read_u16(p_bcm_buf, &this->parent_me_class))
+        return BCMOS_FALSE;
+     if (!bcm_omci_buf_read_u16(p_bcm_buf, &this->parent_me_instance))
+        return BCMOS_FALSE;
+     if (!bcm_omci_buf_read_u16(p_bcm_buf, &this->accumulation_disbale))
+        return BCMOS_FALSE;
+     if (!bcm_omci_buf_read_u16(p_bcm_buf, &this->tca_disable))
+        return BCMOS_FALSE;
+     if (!bcm_omci_buf_read_u16(p_bcm_buf, &this->control_fields))
+        return BCMOS_FALSE;
+     if (!bcm_omci_buf_read_u16(p_bcm_buf, &this->tci))
+        return BCMOS_FALSE;
+     if (!bcm_omci_buf_read_u16(p_bcm_buf, &this->reserved))
+        return BCMOS_FALSE;
+
+    return BCMOS_TRUE;
+}
+
+/* Decode function for data portion of me cfg */
+static bcmos_bool bcm_omci_eth_frame_extended_pm_64_cfg_data_decode(bcm_omci_eth_frame_extended_pm_64_cfg_data *p_me_cfg_data, bcm_omci_buf *p_bcm_buf, bcm_omci_presence_mask fields_present, bcm_omci_msg_type omci_msg_type)
+{
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_INTERVAL_END_TIME)) != 0)
+    {
+        if (!bcm_omci_buf_read_u8(p_bcm_buf, &p_me_cfg_data->interval_end_time))
+            return BCMOS_FALSE;
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_CONTROL_BLOCK)) != 0)
+    {
+        if (!bcm_omci_eth_frame_extended_pm_64_control_block_cfg_data_decode(p_bcm_buf, &p_me_cfg_data->control_block))
+            return BCMOS_FALSE;
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_DROP_EVENTS)) != 0)
+    {
+        if (!bcm_omci_buf_read(p_bcm_buf, p_me_cfg_data->drop_events, 8))
+            return BCMOS_FALSE;
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_OCTETS)) != 0)
+    {
+        if (!bcm_omci_buf_read(p_bcm_buf, p_me_cfg_data->octets, 8))
+            return BCMOS_FALSE;
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_FRAMES)) != 0)
+    {
+        if (!bcm_omci_buf_read(p_bcm_buf, p_me_cfg_data->frames, 8))
+            return BCMOS_FALSE;
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_BROADCAST_FRAMES)) != 0)
+    {
+        if (!bcm_omci_buf_read(p_bcm_buf, p_me_cfg_data->broadcast_frames, 8))
+            return BCMOS_FALSE;
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_MULTICAST_FRAMES)) != 0)
+    {
+        if (!bcm_omci_buf_read(p_bcm_buf, p_me_cfg_data->multicast_frames, 8))
+            return BCMOS_FALSE;
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_CRC_ERRORED_FRAMES)) != 0)
+    {
+        if (!bcm_omci_buf_read(p_bcm_buf, p_me_cfg_data->crc_errored_frames, 8))
+            return BCMOS_FALSE;
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_UNDERSIZE_FRAMES)) != 0)
+    {
+        if (!bcm_omci_buf_read(p_bcm_buf, p_me_cfg_data->undersize_frames, 8))
+            return BCMOS_FALSE;
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_OVERSIZE_FRAMES)) != 0)
+    {
+        if (!bcm_omci_buf_read(p_bcm_buf, p_me_cfg_data->oversize_frames, 8))
+            return BCMOS_FALSE;
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_FRAMES_64OCTETS)) != 0)
+    {
+        if (!bcm_omci_buf_read(p_bcm_buf, p_me_cfg_data->frames_64octets, 8))
+            return BCMOS_FALSE;
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_FRAMES_65_TO_127_OCTETS)) != 0)
+    {
+        if (!bcm_omci_buf_read(p_bcm_buf, p_me_cfg_data->frames_65_to_127_octets, 8))
+            return BCMOS_FALSE;
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_FRAMES_128_TO_255_OCTETS)) != 0)
+    {
+        if (!bcm_omci_buf_read(p_bcm_buf, p_me_cfg_data->frames_128_to_255_octets, 8))
+            return BCMOS_FALSE;
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_FRAMES_256_TO_511_OCTETS)) != 0)
+    {
+        if (!bcm_omci_buf_read(p_bcm_buf, p_me_cfg_data->frames_256_to_511_octets, 8))
+            return BCMOS_FALSE;
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_FRAMES_512_TO_1023_OCTETS)) != 0)
+    {
+        if (!bcm_omci_buf_read(p_bcm_buf, p_me_cfg_data->frames_512_to_1023_octets, 8))
+            return BCMOS_FALSE;
+    }
+    if ((fields_present & (1ULL << BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_FRAMES_1024_TO_1518_OCTETS)) != 0)
+    {
+        if (!bcm_omci_buf_read(p_bcm_buf, p_me_cfg_data->frames_1024_to_1518_octets, 8))
+            return BCMOS_FALSE;
+    }
+
+    return BCMOS_TRUE;
+}
+
 
 /* Top level encode function with switch/case per object type */
 bcmos_errno bcm_omci_me_encode(const bcm_omci_me_hdr *me_hdr, uint8_t **encode_buf, uint32_t *encode_len, bcm_omci_msg_type omci_msg_type)
@@ -17423,6 +18357,12 @@ bcmos_errno bcm_omci_me_encode(const bcm_omci_me_hdr *me_hdr, uint8_t **encode_b
         break;
     case BCM_OMCI_ENHANCED_SECURITY_CONTROL_OBJ_ID:
         rc = bcm_omci_me_enhanced_security_control_cfg_encode(me_hdr, encode_buf, encode_len, omci_msg_type);
+        break;
+    case BCM_OMCI_TRAFFIC_DESCRIPTOR_OBJ_ID:
+        rc = bcm_omci_me_traffic_descriptor_cfg_encode(me_hdr, encode_buf, encode_len, omci_msg_type);
+        break;
+    case BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_OBJ_ID:
+        rc = bcm_omci_me_eth_frame_extended_pm_64_cfg_encode(me_hdr, encode_buf, encode_len, omci_msg_type);
         break;
     default:
         BCM_LOG(ERROR, log_id_bcm_omci_stack_me_layer, "%s : unsupported me cfg entity class = %d\n",
@@ -17592,6 +18532,12 @@ bcmos_errno bcm_omci_me_decode(bcm_omci_me_hdr *me_hdr, uint8_t *decode_buf, uin
     case BCM_OMCI_ENHANCED_SECURITY_CONTROL_OBJ_ID:
         rc = bcm_omci_me_enhanced_security_control_cfg_decode(me_hdr, &bcm_buf, omci_msg_type);
         break;
+    case BCM_OMCI_TRAFFIC_DESCRIPTOR_OBJ_ID:
+        rc = bcm_omci_me_traffic_descriptor_cfg_decode(me_hdr, &bcm_buf, omci_msg_type);
+        break;
+    case BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_OBJ_ID:
+        rc = bcm_omci_me_eth_frame_extended_pm_64_cfg_decode(me_hdr, &bcm_buf, omci_msg_type);
+        break;
     default:
         BCM_LOG(ERROR, log_id_bcm_omci_stack_me_layer, "%s : unsupported me cfg entity class = %d\n",
             __FUNCTION__, me_hdr->key.entity_class);
@@ -17732,6 +18678,12 @@ bcmos_errno bcm_omci_me_log(const bcm_omci_me_hdr *me_hdr, dev_log_id log_id, bc
         break;
     case BCM_OMCI_ENHANCED_SECURITY_CONTROL_OBJ_ID:
         rc = bcm_omci_me_enhanced_security_control_cfg_log(me_hdr, log_id, log_level);
+        break;
+    case BCM_OMCI_TRAFFIC_DESCRIPTOR_OBJ_ID:
+        rc = bcm_omci_me_traffic_descriptor_cfg_log(me_hdr, log_id, log_level);
+        break;
+    case BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_OBJ_ID:
+        rc = bcm_omci_me_eth_frame_extended_pm_64_cfg_log(me_hdr, log_id, log_level);
         break;
     default:
         BCM_LOG(ERROR, log_id_bcm_omci_stack_me_layer, "%s : unsupported me cfg entity class = %d\n",

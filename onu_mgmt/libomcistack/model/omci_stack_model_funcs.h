@@ -279,4 +279,16 @@ void bcm_omci_enhanced_security_control_cfg_data_set_default(bcm_omci_enhanced_s
 bcmos_bool bcm_omci_enhanced_security_control_key_bounds_check(const bcm_omci_me_key *this, bcm_omci_presence_mask fields_present, bcm_omci_me_key_id *failed_prop);
 bcmos_bool bcm_omci_enhanced_security_control_cfg_actions_check(bcm_omci_msg_type msg_type);
 
+/* traffic descriptor profiles */
+bcmos_bool bcm_omci_traffic_descriptor_cfg_data_bounds_check(const bcm_omci_traffic_descriptor_cfg_data *this, bcm_omci_presence_mask fields_present, bcm_omci_traffic_descriptor_cfg_id *failed_prop);
+void bcm_omci_traffic_descriptor_cfg_data_set_default(bcm_omci_traffic_descriptor_cfg_data *this, bcm_omci_presence_mask fields_present);
+bcmos_bool bcm_omci_traffic_descriptor_key_bounds_check(const bcm_omci_me_key *this, bcm_omci_presence_mask fields_present, bcm_omci_me_key_id *failed_prop);
+bcmos_bool bcm_omci_traffic_descriptor_cfg_actions_check(bcm_omci_msg_type msg_type);
+
+/* Ethernet Frame Extended PM */
+bcmos_bool bcm_omci_eth_frame_extended_pm_64_cfg_data_bounds_check(const bcm_omci_eth_frame_extended_pm_64_cfg_data *this, bcm_omci_presence_mask fields_present, bcm_omci_eth_frame_extended_pm_64_cfg_id *failed_prop);
+void bcm_omci_eth_frame_extended_pm_64_cfg_data_set_default(bcm_omci_eth_frame_extended_pm_64_cfg_data *this, bcm_omci_presence_mask fields_present);
+bcmos_bool bcm_omci_eth_frame_extended_pm_64_key_bounds_check(const bcm_omci_me_key *this, bcm_omci_presence_mask fields_present, bcm_omci_me_key_id *failed_prop);
+bcmos_bool bcm_omci_eth_frame_extended_pm_64_cfg_actions_check(bcm_omci_msg_type msg_type);
+
 #endif

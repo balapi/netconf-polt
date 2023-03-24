@@ -2555,5 +2555,142 @@ bcmos_bool bcm_omci_enhanced_security_control_cfg_data_bounds_check(const bcm_om
 void bcm_omci_enhanced_security_control_cfg_data_set_default(bcm_omci_enhanced_security_control_cfg_data *me, bcm_omci_presence_mask fields_present);
 bcmos_bool bcm_omci_enhanced_security_control_key_bounds_check(const bcm_omci_me_key *me, bcm_omci_presence_mask fields_present, bcm_omci_me_key_id *failed_prop);
 
+typedef enum
+{
+    BCM_OMCI_TRAFFIC_DESCRIPTOR_COLOUR_MODE_COLUR_BLIND = 0,
+    BCM_OMCI_TRAFFIC_DESCRIPTOR_COLOUR_MODE_COLUR_AWARE = 1,
+    BCM_OMCI_TRAFFIC_DESCRIPTOR_COLOUR_MODE__NUM_OF /**< Number of enum entries, not an entry itself. */
+} bcm_omci_traffic_descriptor_colour_mode;
+
+typedef enum
+{
+    BCM_OMCI_TRAFFIC_DESCRIPTOR_ING_COLOR_MARKING_NO_MARKING = 0,
+    BCM_OMCI_TRAFFIC_DESCRIPTOR_ING_COLOR_MARKING_DEI = 2,
+    BCM_OMCI_TRAFFIC_DESCRIPTOR_ING_COLOR_MARKING_PCP_8P0D = 3,
+    BCM_OMCI_TRAFFIC_DESCRIPTOR_ING_COLOR_MARKING_PCP_7P1D = 4,
+    BCM_OMCI_TRAFFIC_DESCRIPTOR_ING_COLOR_MARKING_PCP_6P2D = 5,
+    BCM_OMCI_TRAFFIC_DESCRIPTOR_ING_COLOR_MARKING_PCP_5P3D = 6,
+    BCM_OMCI_TRAFFIC_DESCRIPTOR_ING_COLOR_MARKING_DSCP_AF_CLASS = 7,
+    BCM_OMCI_TRAFFIC_DESCRIPTOR_ING_COLOR_MARKING__NUM_OF /**< Number of enum entries, not an entry itself. */
+} bcm_omci_traffic_descriptor_ing_color_marking;
+
+typedef enum
+{
+    BCM_OMCI_TRAFFIC_DESCRIPTOR_EG_COLOR_MARKING_NO_MARKING = 0,
+    BCM_OMCI_TRAFFIC_DESCRIPTOR_EG_COLOR_MARKING_INTERNAL_MARKING_ONLY = 1,
+    BCM_OMCI_TRAFFIC_DESCRIPTOR_EG_COLOR_MARKING_DEI = 2,
+    BCM_OMCI_TRAFFIC_DESCRIPTOR_EG_COLOR_MARKING_PCP_8P0D = 3,
+    BCM_OMCI_TRAFFIC_DESCRIPTOR_EG_COLOR_MARKING_PCP_7P1D = 4,
+    BCM_OMCI_TRAFFIC_DESCRIPTOR_EG_COLOR_MARKING_PCP_6P2D = 5,
+    BCM_OMCI_TRAFFIC_DESCRIPTOR_EG_COLOR_MARKING_PCP_5P3D = 6,
+    BCM_OMCI_TRAFFIC_DESCRIPTOR_EG_COLOR_MARKING_DSCP_AF_CLASS = 7,
+    BCM_OMCI_TRAFFIC_DESCRIPTOR_EG_COLOR_MARKING__NUM_OF /**< Number of enum entries, not an entry itself. */
+} bcm_omci_traffic_descriptor_eg_color_marking;
+
+typedef enum
+{
+    BCM_OMCI_TRAFFIC_DESCRIPTOR_METER_TYPE_NOT_SPECIFIED = 0,
+    BCM_OMCI_TRAFFIC_DESCRIPTOR_METER_TYPE_RFC_4115 = 1,
+    BCM_OMCI_TRAFFIC_DESCRIPTOR_METER_TYPE_RFC_2698 = 2,
+    BCM_OMCI_TRAFFIC_DESCRIPTOR_METER_TYPE__NUM_OF /**< Number of enum entries, not an entry itself. */
+} bcm_omci_traffic_descriptor_meter_type;
+
+
+/** traffic descriptor profiles ME cfg data */
+#define BCM_OMCI_CFG_DATA_CIR_LEN 4
+#define BCM_OMCI_CFG_DATA_PIR_LEN 4
+#define BCM_OMCI_CFG_DATA_CBS_LEN 4
+#define BCM_OMCI_CFG_DATA_PBS_LEN 4
+#define BCM_OMCI_CFG_DATA_COLOUR_MODE_LEN 1
+#define BCM_OMCI_CFG_DATA_ING_COLOR_MARKING_LEN 1
+#define BCM_OMCI_CFG_DATA_EG_COLOR_MARKING_LEN 1
+#define BCM_OMCI_CFG_DATA_METER_TYPE_LEN 1
+
+typedef struct
+{
+    uint32_t cir;
+    uint32_t pir;
+    uint32_t cbs;
+    uint32_t pbs;
+    bcm_omci_traffic_descriptor_colour_mode colour_mode;
+    bcm_omci_traffic_descriptor_ing_color_marking ing_color_marking;
+    bcm_omci_traffic_descriptor_eg_color_marking eg_color_marking;
+    bcm_omci_traffic_descriptor_meter_type meter_type;
+} bcm_omci_traffic_descriptor_cfg_data;
+
+/** traffic descriptor profiles ME cfg */
+typedef struct
+{
+    bcm_omci_me_hdr hdr;
+    bcm_omci_traffic_descriptor_cfg_data data;
+} bcm_omci_traffic_descriptor_cfg;
+
+bcmos_bool bcm_omci_traffic_descriptor_cfg_data_bounds_check(const bcm_omci_traffic_descriptor_cfg_data *me, bcm_omci_presence_mask fields_present, bcm_omci_traffic_descriptor_cfg_id *failed_prop);
+void bcm_omci_traffic_descriptor_cfg_data_set_default(bcm_omci_traffic_descriptor_cfg_data *me, bcm_omci_presence_mask fields_present);
+bcmos_bool bcm_omci_traffic_descriptor_key_bounds_check(const bcm_omci_me_key *me, bcm_omci_presence_mask fields_present, bcm_omci_me_key_id *failed_prop);
+
+
+/** Ethernet Frame Extended PM ME cfg data */
+#define BCM_OMCI_CFG_DATA_INTERVAL_END_TIME_LEN 1
+#define BCM_OMCI_CFG_DATA_CONTROL_BLOCK_LEN 16
+#define BCM_OMCI_CFG_DATA_DROP_EVENTS_LEN 8
+#define BCM_OMCI_CFG_DATA_OCTETS_LEN 8
+#define BCM_OMCI_CFG_DATA_FRAMES_LEN 8
+#define BCM_OMCI_CFG_DATA_BROADCAST_FRAMES_LEN 8
+#define BCM_OMCI_CFG_DATA_MULTICAST_FRAMES_LEN 8
+#define BCM_OMCI_CFG_DATA_CRC_ERRORED_FRAMES_LEN 8
+#define BCM_OMCI_CFG_DATA_UNDERSIZE_FRAMES_LEN 8
+#define BCM_OMCI_CFG_DATA_OVERSIZE_FRAMES_LEN 8
+#define BCM_OMCI_CFG_DATA_FRAMES_64OCTETS_LEN 8
+#define BCM_OMCI_CFG_DATA_FRAMES_65_TO_127_OCTETS_LEN 8
+#define BCM_OMCI_CFG_DATA_FRAMES_128_TO_255_OCTETS_LEN 8
+#define BCM_OMCI_CFG_DATA_FRAMES_256_TO_511_OCTETS_LEN 8
+#define BCM_OMCI_CFG_DATA_FRAMES_512_TO_1023_OCTETS_LEN 8
+#define BCM_OMCI_CFG_DATA_FRAMES_1024_TO_1518_OCTETS_LEN 8
+
+typedef struct
+{
+    uint16_t threshold_data_id;
+    uint16_t parent_me_class;
+    uint16_t parent_me_instance;
+    uint16_t accumulation_disbale;
+    uint16_t tca_disable;
+    uint16_t control_fields;
+    uint16_t tci;
+    uint16_t reserved;
+} bcm_omci_eth_frame_extended_pm_64_control_block;
+
+
+typedef struct
+{
+    uint8_t interval_end_time;
+    bcm_omci_eth_frame_extended_pm_64_control_block control_block;
+    uint8_t drop_events[8];
+    uint8_t octets[8];
+    uint8_t frames[8];
+    uint8_t broadcast_frames[8];
+    uint8_t multicast_frames[8];
+    uint8_t crc_errored_frames[8];
+    uint8_t undersize_frames[8];
+    uint8_t oversize_frames[8];
+    uint8_t frames_64octets[8];
+    uint8_t frames_65_to_127_octets[8];
+    uint8_t frames_128_to_255_octets[8];
+    uint8_t frames_256_to_511_octets[8];
+    uint8_t frames_512_to_1023_octets[8];
+    uint8_t frames_1024_to_1518_octets[8];
+} bcm_omci_eth_frame_extended_pm_64_cfg_data;
+
+/** Ethernet Frame Extended PM ME cfg */
+typedef struct
+{
+    bcm_omci_me_hdr hdr;
+    bcm_omci_eth_frame_extended_pm_64_cfg_data data;
+} bcm_omci_eth_frame_extended_pm_64_cfg;
+
+bcmos_bool bcm_omci_eth_frame_extended_pm_64_cfg_data_bounds_check(const bcm_omci_eth_frame_extended_pm_64_cfg_data *me, bcm_omci_presence_mask fields_present, bcm_omci_eth_frame_extended_pm_64_cfg_id *failed_prop);
+void bcm_omci_eth_frame_extended_pm_64_cfg_data_set_default(bcm_omci_eth_frame_extended_pm_64_cfg_data *me, bcm_omci_presence_mask fields_present);
+bcmos_bool bcm_omci_eth_frame_extended_pm_64_key_bounds_check(const bcm_omci_me_key *me, bcm_omci_presence_mask fields_present, bcm_omci_me_key_id *failed_prop);
+
 
 #endif
