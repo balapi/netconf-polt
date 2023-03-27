@@ -707,6 +707,42 @@ typedef enum bcm_omci_enhanced_security_control_cfg_id
     BCM_OMCI_ENHANCED_SECURITY_CONTROL_CFG_ID__NUM_OF /**< Number of enum entries, not an entry itself. */
 } bcm_omci_enhanced_security_control_cfg_id;
 
+/** Identifiers for all attributes contained in traffic descriptor profiles ME */
+typedef enum bcm_omci_traffic_descriptor_cfg_id
+{
+    BCM_OMCI_TRAFFIC_DESCRIPTOR_CFG_ID_CIR = 0,
+    BCM_OMCI_TRAFFIC_DESCRIPTOR_CFG_ID_PIR = 1,
+    BCM_OMCI_TRAFFIC_DESCRIPTOR_CFG_ID_CBS = 2,
+    BCM_OMCI_TRAFFIC_DESCRIPTOR_CFG_ID_PBS = 3,
+    BCM_OMCI_TRAFFIC_DESCRIPTOR_CFG_ID_COLOUR_MODE = 4, /* Color Mode */
+    BCM_OMCI_TRAFFIC_DESCRIPTOR_CFG_ID_ING_COLOR_MARKING = 5, /* Ing Color Marking */
+    BCM_OMCI_TRAFFIC_DESCRIPTOR_CFG_ID_EG_COLOR_MARKING = 6, /* Eg Color Marking */
+    BCM_OMCI_TRAFFIC_DESCRIPTOR_CFG_ID_METER_TYPE = 7, /* Meter Type */
+    BCM_OMCI_TRAFFIC_DESCRIPTOR_CFG_ID__NUM_OF /**< Number of enum entries, not an entry itself. */
+} bcm_omci_traffic_descriptor_cfg_id;
+
+/** Identifiers for all attributes contained in Ethernet Frame Extended PM ME */
+typedef enum bcm_omci_eth_frame_extended_pm_64_cfg_id
+{
+    BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_INTERVAL_END_TIME = 0, /* Interval end time */
+    BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_CONTROL_BLOCK = 1, /* Control Block */
+    BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_DROP_EVENTS = 2, /* Drop events */
+    BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_OCTETS = 3, /* Octets */
+    BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_FRAMES = 4, /* Frames */
+    BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_BROADCAST_FRAMES = 5, /* Broadcast frames */
+    BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_MULTICAST_FRAMES = 6, /* Multicast frames */
+    BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_CRC_ERRORED_FRAMES = 7, /* CRC errored frames */
+    BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_UNDERSIZE_FRAMES = 8, /* Undersize frames */
+    BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_OVERSIZE_FRAMES = 9, /* Oversize frames */
+    BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_FRAMES_64OCTETS = 10, /* Frames 64 octets */
+    BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_FRAMES_65_TO_127_OCTETS = 11, /* Frames 65 to 127 octests */
+    BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_FRAMES_128_TO_255_OCTETS = 12, /* Frames 128 to 255 octests */
+    BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_FRAMES_256_TO_511_OCTETS = 13, /* Frames 256 to 511 octests */
+    BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_FRAMES_512_TO_1023_OCTETS = 14, /* Frames 512 to 1023 octests */
+    BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_FRAMES_1024_TO_1518_OCTETS = 15, /* Frames 1024 to 1518 octests */
+    BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID__NUM_OF /**< Number of enum entries, not an entry itself. */
+} bcm_omci_eth_frame_extended_pm_64_cfg_id;
+
 /** Identifiers for all objects in the system. */
 typedef enum
 {
@@ -753,6 +789,8 @@ typedef enum
     BCM_OMCI_POTS_UNI_OBJ_ID = 40, /* Physical path termination point POTS UNI (9.9.1) */
     BCM_OMCI_CIRCUIT_PACK_OBJ_ID = 41, /* Circuit pack (9.1.6) */
     BCM_OMCI_ENHANCED_SECURITY_CONTROL_OBJ_ID = 42, /* Enhanced Security Control (9.13.11) */
+    BCM_OMCI_TRAFFIC_DESCRIPTOR_OBJ_ID = 43, /* traffic descriptor profiles */
+    BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_OBJ_ID = 44, /* Ethernet Frame Extended PM */
     BCM_OMCI_OBJ_ID__NUM_OF  /**< Number of enum entries, not an entry itself. */
 } bcm_omci_obj_id;
 
@@ -798,6 +836,8 @@ typedef enum
 #define bcm_omci_pots_uni_obj_id BCM_OMCI_POTS_UNI_OBJ_ID
 #define bcm_omci_circuit_pack_obj_id BCM_OMCI_CIRCUIT_PACK_OBJ_ID
 #define bcm_omci_enhanced_security_control_obj_id BCM_OMCI_ENHANCED_SECURITY_CONTROL_OBJ_ID
+#define bcm_omci_traffic_descriptor_obj_id BCM_OMCI_TRAFFIC_DESCRIPTOR_OBJ_ID
+#define bcm_omci_eth_frame_extended_pm_64_obj_id BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_OBJ_ID
 
 #define bcm_omci_me_key_id_all_properties BCM_OMCI_ME_KEY_ID__NUM_OF
 #define bcm_omci_me_key_id_logical_pon BCM_OMCI_ME_KEY_ID_LOGICAL_PON
@@ -1353,6 +1393,36 @@ typedef enum
 #define bcm_omci_enhanced_security_control_cfg_id_effective_key_length BCM_OMCI_ENHANCED_SECURITY_CONTROL_CFG_ID_EFFECTIVE_KEY_LENGTH
 #define bcm_omci_enhanced_security_control_cfg_id_all_properties BCM_OMCI_ENHANCED_SECURITY_CONTROL_CFG_ID__NUM_OF
 
+/* traffic descriptor profiles */
+#define bcm_omci_traffic_descriptor_cfg_id_cir BCM_OMCI_TRAFFIC_DESCRIPTOR_CFG_ID_CIR
+#define bcm_omci_traffic_descriptor_cfg_id_pir BCM_OMCI_TRAFFIC_DESCRIPTOR_CFG_ID_PIR
+#define bcm_omci_traffic_descriptor_cfg_id_cbs BCM_OMCI_TRAFFIC_DESCRIPTOR_CFG_ID_CBS
+#define bcm_omci_traffic_descriptor_cfg_id_pbs BCM_OMCI_TRAFFIC_DESCRIPTOR_CFG_ID_PBS
+#define bcm_omci_traffic_descriptor_cfg_id_colour_mode BCM_OMCI_TRAFFIC_DESCRIPTOR_CFG_ID_COLOUR_MODE
+#define bcm_omci_traffic_descriptor_cfg_id_ing_color_marking BCM_OMCI_TRAFFIC_DESCRIPTOR_CFG_ID_ING_COLOR_MARKING
+#define bcm_omci_traffic_descriptor_cfg_id_eg_color_marking BCM_OMCI_TRAFFIC_DESCRIPTOR_CFG_ID_EG_COLOR_MARKING
+#define bcm_omci_traffic_descriptor_cfg_id_meter_type BCM_OMCI_TRAFFIC_DESCRIPTOR_CFG_ID_METER_TYPE
+#define bcm_omci_traffic_descriptor_cfg_id_all_properties BCM_OMCI_TRAFFIC_DESCRIPTOR_CFG_ID__NUM_OF
+
+/* Ethernet Frame Extended PM */
+#define bcm_omci_eth_frame_extended_pm_64_cfg_id_interval_end_time BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_INTERVAL_END_TIME
+#define bcm_omci_eth_frame_extended_pm_64_cfg_id_control_block BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_CONTROL_BLOCK
+#define bcm_omci_eth_frame_extended_pm_64_cfg_id_drop_events BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_DROP_EVENTS
+#define bcm_omci_eth_frame_extended_pm_64_cfg_id_octets BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_OCTETS
+#define bcm_omci_eth_frame_extended_pm_64_cfg_id_frames BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_FRAMES
+#define bcm_omci_eth_frame_extended_pm_64_cfg_id_broadcast_frames BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_BROADCAST_FRAMES
+#define bcm_omci_eth_frame_extended_pm_64_cfg_id_multicast_frames BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_MULTICAST_FRAMES
+#define bcm_omci_eth_frame_extended_pm_64_cfg_id_crc_errored_frames BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_CRC_ERRORED_FRAMES
+#define bcm_omci_eth_frame_extended_pm_64_cfg_id_undersize_frames BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_UNDERSIZE_FRAMES
+#define bcm_omci_eth_frame_extended_pm_64_cfg_id_oversize_frames BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_OVERSIZE_FRAMES
+#define bcm_omci_eth_frame_extended_pm_64_cfg_id_frames_64octets BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_FRAMES_64OCTETS
+#define bcm_omci_eth_frame_extended_pm_64_cfg_id_frames_65_to_127_octets BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_FRAMES_65_TO_127_OCTETS
+#define bcm_omci_eth_frame_extended_pm_64_cfg_id_frames_128_to_255_octets BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_FRAMES_128_TO_255_OCTETS
+#define bcm_omci_eth_frame_extended_pm_64_cfg_id_frames_256_to_511_octets BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_FRAMES_256_TO_511_OCTETS
+#define bcm_omci_eth_frame_extended_pm_64_cfg_id_frames_512_to_1023_octets BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_FRAMES_512_TO_1023_OCTETS
+#define bcm_omci_eth_frame_extended_pm_64_cfg_id_frames_1024_to_1518_octets BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID_FRAMES_1024_TO_1518_OCTETS
+#define bcm_omci_eth_frame_extended_pm_64_cfg_id_all_properties BCM_OMCI_ETH_FRAME_EXTENDED_PM_64_CFG_ID__NUM_OF
+
 
 /* ME class Ids */
 typedef enum
@@ -1400,6 +1470,8 @@ typedef enum
     BCM_OMCI_ME_CLASS_VAL_POTS_UNI = 53,
     BCM_OMCI_ME_CLASS_VAL_CIRCUIT_PACK = 6,
     BCM_OMCI_ME_CLASS_VAL_ENHANCED_SECURITY_CONTROL = 332,
+    BCM_OMCI_ME_CLASS_VAL_TRAFFIC_DESCRIPTOR = 280,
+    BCM_OMCI_ME_CLASS_VAL_ETH_FRAME_EXTENDED_PM_64 = 425,
     BCM_OMCI_ME_CLASS_VAL__END = 401 /*reserved start range in spec */
 } bcm_omci_me_class_val;
 
@@ -1445,6 +1517,8 @@ typedef enum
 #define bcm_omci_me_class_val_pots_uni BCM_OMCI_ME_CLASS_VAL_POTS_UNI
 #define bcm_omci_me_class_val_circuit_pack BCM_OMCI_ME_CLASS_VAL_CIRCUIT_PACK
 #define bcm_omci_me_class_val_enhanced_security_control BCM_OMCI_ME_CLASS_VAL_ENHANCED_SECURITY_CONTROL
+#define bcm_omci_me_class_val_traffic_descriptor BCM_OMCI_ME_CLASS_VAL_TRAFFIC_DESCRIPTOR
+#define bcm_omci_me_class_val_eth_frame_extended_pm_64 BCM_OMCI_ME_CLASS_VAL_ETH_FRAME_EXTENDED_PM_64
 
 extern char *bcm_omci_me_class_val_str[];
 extern char *bcm_omci_obj_type_str[];
